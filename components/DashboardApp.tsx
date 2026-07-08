@@ -168,9 +168,14 @@ export default function DashboardApp() {
           <p className={label}>Practitioner dashboard</p>
           <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">Welcome back, {p.name.split(' ')[0]}</h1>
         </div>
-        <button onClick={logout} className="text-xs uppercase tracking-[0.15em] text-ink2/70 underline hover:text-terracotta">
-          Log out
-        </button>
+        <div className="flex items-baseline gap-5">
+          <a href="/assistant" className="text-xs uppercase tracking-[0.15em] text-terracotta underline">
+            Protocol Assistant
+          </a>
+          <button onClick={logout} className="text-xs uppercase tracking-[0.15em] text-ink2/70 underline hover:text-terracotta">
+            Log out
+          </button>
+        </div>
       </div>
 
       {/* Referral assets */}

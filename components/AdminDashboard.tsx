@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import AdminAiQueries from '@/components/AdminAiQueries';
 
 interface Verification {
   reasonCode: string;
@@ -23,6 +24,7 @@ const TABS = [
   { id: 'approved', label: 'Approved' },
   { id: 'rejected', label: 'Rejected' },
   { id: '', label: 'All' },
+  { id: 'ai', label: 'AI queries' },
 ];
 
 const REASON_LABELS: Record<string, string> = {
@@ -45,6 +47,12 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (currentTab: string) => {
+    if (currentTab === 'ai') {
+      // AI tab loads its own data; just confirm the session is valid.
+      const res = await fetch('/api/admin/practitioners');
+      setAuthed(res.status !== 401);
+      return;
+    }
     const res = await fetch(`/api/admin/practitioners${currentTab ? `?status=${currentTab}` : ''}`);
     if (res.status === 401) { setAuthed(false); return; }
     setAuthed(true);
@@ -118,6 +126,9 @@ export default function AdminDashboard() {
           </button>
         ))}
       </div>
+      {tab === 'ai' ? (
+        <AdminAiQueries />
+      ) : (
       <div className="mt-6 grid gap-8 lg:grid-cols-[1.3fr_1fr]">
         <table className="w-full border-collapse bg-white text-sm">
           <thead>
@@ -210,6 +221,7 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
