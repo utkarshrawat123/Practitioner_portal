@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { randomBytes } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
@@ -61,6 +62,18 @@ CREATE TABLE IF NOT EXISTS events (
   practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
   type TEXT NOT NULL,
   detail TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS auth_tokens (
+  token TEXT PRIMARY KEY,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  expires_at TEXT NOT NULL,
+  used_at TEXT
+);
+CREATE TABLE IF NOT EXISTS clicks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  code TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `;
@@ -218,6 +231,53 @@ export function addEvent(practitionerId: number, type: string, detail: string): 
   getDb()
     .prepare(`INSERT INTO events (practitioner_id, type, detail) VALUES (?, ?, ?)`)
     .run(practitionerId, type, detail);
+}
+
+export function createAuthToken(practitionerId: number): string {
+  const token = randomBytes(32).toString('hex');
+  getDb()
+    .prepare(
+      `INSERT INTO auth_tokens (token, practitioner_id, expires_at)
+       VALUES (?, ?, datetime('now', '+15 minutes'))`
+    )
+    .run(token, practitionerId);
+  return token;
+}
+
+export function consumeAuthToken(token: string): number | null {
+  const row = getDb()
+    .prepare(
+      `SELECT practitioner_id FROM auth_tokens
+       WHERE token = ? AND used_at IS NULL AND expires_at > datetime('now')`
+    )
+    .get(token) as { practitioner_id: number } | undefined;
+  if (!row) return null;
+  getDb().prepare(`UPDATE auth_tokens SET used_at = datetime('now') WHERE token = ?`).run(token);
+  return row.practitioner_id;
+}
+
+export function findByCode(code: string): Practitioner | null {
+  const row = getDb().prepare(`SELECT * FROM practitioners WHERE affiliate_code = ?`).get(code);
+  return row ? rowToPractitioner(row) : null;
+}
+
+export function recordClick(practitionerId: number, code: string): void {
+  getDb().prepare(`INSERT INTO clicks (practitioner_id, code) VALUES (?, ?)`).run(practitionerId, code);
+}
+
+export function clickStats(practitionerId: number): {
+  clicksThisMonth: number;
+  clicksAllTime: number;
+} {
+  const row = getDb()
+    .prepare(
+      `SELECT
+         COUNT(*) AS all_time,
+         SUM(CASE WHEN strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END) AS this_month
+       FROM clicks WHERE practitioner_id = ?`
+    )
+    .get(practitionerId) as { all_time: number; this_month: number | null };
+  return { clicksThisMonth: row.this_month ?? 0, clicksAllTime: row.all_time };
 }
 
 export function listEvents(practitionerId: number): EventRow[] {
