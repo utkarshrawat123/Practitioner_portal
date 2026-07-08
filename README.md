@@ -47,6 +47,21 @@ Without credentials the app runs fully — external calls are mocked and logged:
 Shopify Collabs has no write API; discount code + UTM link is the supported
 programmatic equivalent.
 
+## Practitioner dashboard
+
+`/dashboard` — practitioners log in with a magic link (enter email → one-time
+15-minute link → 30-day session). Only approved practitioners can log in. In
+mock mode (no transactional email sender configured) the login link is shown
+on screen and logged to the server console.
+
+Referral links route through the portal (`{PORTAL_URL}/r/CODE`) so clicks are
+counted locally, then redirect to the Shopify discount URL. Stats shown:
+clicks, orders, conversion rate, and commission (`COMMISSION_PERCENT`, default
+20%) — this month and all time. Orders/revenue come from the Shopify Admin API
+when credentials exist, otherwise zeros (mock). Stats refresh every 60s
+without a page reload and degrade to the last cached values (flagged as stale)
+if Shopify is unreachable.
+
 ## Data
 
 SQLite at `DB_PATH` (default `data/practitioners.db`). Tables: `practitioners`
