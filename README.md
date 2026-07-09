@@ -62,6 +62,26 @@ when credentials exist, otherwise zeros (mock). Stats refresh every 60s
 without a page reload and degrade to the last cached values (flagged as stale)
 if Shopify is unreachable.
 
+## AI protocol assistant
+
+`/assistant` (practitioner login required) — enter a client profile in plain
+language, get a suggested Wild Nutrition protocol plus a printable branded
+client handout carrying the practitioner's referral code. Requires
+`ANTHROPIC_API_KEY`; without it the page shows a setup notice.
+
+Grounding: the entire markdown knowledge base in `knowledge/` is loaded into
+the model's system prompt (with prompt caching), the model may only recommend
+products from `knowledge/products/*.md` with label doses quoted verbatim, and
+a post-generation check strips anything not found in the KB. The shipped
+dossiers are **samples** — replace them with approved clinical content before
+live use (each file is marked).
+
+Safety: a deterministic pre-screen flags pregnancy, medications, minors and
+serious conditions before the model runs; the model must emit safety flags and
+defer to practitioner judgement / technical support; out-of-scope requests are
+declined. Every query and output is logged to the `ai_queries` table and
+visible in the admin "AI queries" tab for spot-checking.
+
 ## Data
 
 SQLite at `DB_PATH` (default `data/practitioners.db`). Tables: `practitioners`

@@ -76,6 +76,19 @@ CREATE TABLE IF NOT EXISTS clicks (
   code TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS ai_queries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  profile_input TEXT NOT NULL,
+  status TEXT NOT NULL,
+  safety_flags TEXT NOT NULL,
+  output_json TEXT,
+  grounding_warnings TEXT,
+  model TEXT,
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 let db: Database.Database | null = null;
@@ -278,6 +291,77 @@ export function clickStats(practitionerId: number): {
     )
     .get(practitionerId) as { all_time: number; this_month: number | null };
   return { clicksThisMonth: row.this_month ?? 0, clicksAllTime: row.all_time };
+}
+
+export interface AiQueryRow {
+  id: number;
+  practitionerId: number;
+  practitionerName: string | null;
+  profileInput: string;
+  status: string;
+  safetyFlags: unknown[];
+  output: unknown | null;
+  groundingWarnings: string[];
+  model: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  createdAt: string;
+}
+
+export function recordAiQuery(q: {
+  practitionerId: number;
+  profileInput: string;
+  status: 'ok' | 'out_of_scope' | 'error';
+  safetyFlags: unknown[];
+  output?: unknown;
+  groundingWarnings?: string[];
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+}): number {
+  const res = getDb()
+    .prepare(
+      `INSERT INTO ai_queries
+         (practitioner_id, profile_input, status, safety_flags, output_json,
+          grounding_warnings, model, input_tokens, output_tokens)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      q.practitionerId,
+      q.profileInput,
+      q.status,
+      JSON.stringify(q.safetyFlags),
+      q.output === undefined ? null : JSON.stringify(q.output),
+      JSON.stringify(q.groundingWarnings ?? []),
+      q.model ?? null,
+      q.inputTokens ?? null,
+      q.outputTokens ?? null
+    );
+  return Number(res.lastInsertRowid);
+}
+
+export function listAiQueries(limit = 200): AiQueryRow[] {
+  return getDb()
+    .prepare(
+      `SELECT q.*, p.name AS practitioner_name FROM ai_queries q
+       LEFT JOIN practitioners p ON p.id = q.practitioner_id
+       ORDER BY q.id DESC LIMIT ?`
+    )
+    .all(limit)
+    .map((r: any) => ({
+      id: r.id,
+      practitionerId: r.practitioner_id,
+      practitionerName: r.practitioner_name,
+      profileInput: r.profile_input,
+      status: r.status,
+      safetyFlags: JSON.parse(r.safety_flags),
+      output: r.output_json ? JSON.parse(r.output_json) : null,
+      groundingWarnings: r.grounding_warnings ? JSON.parse(r.grounding_warnings) : [],
+      model: r.model,
+      inputTokens: r.input_tokens,
+      outputTokens: r.output_tokens,
+      createdAt: r.created_at,
+    }));
 }
 
 export function listEvents(practitionerId: number): EventRow[] {
