@@ -116,9 +116,21 @@ CREATE TABLE IF NOT EXISTS lesson_completions (
 
 let db: Database.Database | null = null;
 
+function defaultDbPath(): string {
+  if (process.env.DB_PATH) return process.env.DB_PATH;
+  // Serverless platforms (Vercel/AWS Lambda) have a read-only filesystem except
+  // for /tmp. Fall back there so the app boots. NOTE: /tmp is per-instance and
+  // ephemeral — data does not persist across cold starts. Point DB_PATH at a
+  // hosted database (or a Turso/libSQL URL) for durable production storage.
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join('/tmp', 'practitioners.db');
+  }
+  return path.join(process.cwd(), 'data', 'practitioners.db');
+}
+
 export function getDb(): Database.Database {
   if (!db) {
-    const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'data', 'practitioners.db');
+    const dbPath = defaultDbPath();
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
