@@ -89,6 +89,29 @@ CREATE TABLE IF NOT EXISTS ai_queries (
   output_tokens INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS lessons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_file TEXT,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  takeaways_json TEXT NOT NULL,
+  quiz_json TEXT NOT NULL,
+  topics_json TEXT NOT NULL,
+  claim_flags_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  model TEXT,
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  decided_at TEXT
+);
+CREATE TABLE IF NOT EXISTS lesson_completions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  lesson_id INTEGER NOT NULL REFERENCES lessons(id),
+  completed_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(practitioner_id, lesson_id)
+);
 `;
 
 let db: Database.Database | null = null;
@@ -362,6 +385,176 @@ export function listAiQueries(limit = 200): AiQueryRow[] {
       outputTokens: r.output_tokens,
       createdAt: r.created_at,
     }));
+}
+
+export interface Quiz {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface LessonRow {
+  id: number;
+  sourceFile: string | null;
+  title: string;
+  summary: string;
+  takeaways: string[];
+  quiz: Quiz;
+  topics: string[];
+  claimFlags: string[];
+  status: string;
+  model: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  createdAt: string;
+  decidedAt: string | null;
+}
+
+function rowToLesson(r: any): LessonRow {
+  return {
+    id: r.id,
+    sourceFile: r.source_file,
+    title: r.title,
+    summary: r.summary,
+    takeaways: JSON.parse(r.takeaways_json),
+    quiz: JSON.parse(r.quiz_json),
+    topics: JSON.parse(r.topics_json),
+    claimFlags: JSON.parse(r.claim_flags_json),
+    status: r.status,
+    model: r.model,
+    inputTokens: r.input_tokens,
+    outputTokens: r.output_tokens,
+    createdAt: r.created_at,
+    decidedAt: r.decided_at,
+  };
+}
+
+export function insertLesson(l: {
+  sourceFile: string;
+  title: string;
+  summary: string;
+  takeaways: string[];
+  quiz: Quiz;
+  topics: string[];
+  claimFlags: string[];
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+}): number {
+  const res = getDb()
+    .prepare(
+      `INSERT INTO lessons
+        (source_file, title, summary, takeaways_json, quiz_json, topics_json,
+         claim_flags_json, model, input_tokens, output_tokens)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      l.sourceFile,
+      l.title,
+      l.summary,
+      JSON.stringify(l.takeaways),
+      JSON.stringify(l.quiz),
+      JSON.stringify(l.topics),
+      JSON.stringify(l.claimFlags),
+      l.model ?? null,
+      l.inputTokens ?? null,
+      l.outputTokens ?? null
+    );
+  return Number(res.lastInsertRowid);
+}
+
+export function getLesson(id: number): LessonRow | null {
+  const row = getDb().prepare(`SELECT * FROM lessons WHERE id = ?`).get(id);
+  return row ? rowToLesson(row) : null;
+}
+
+export function listLessons(status?: string): LessonRow[] {
+  const rows = status
+    ? getDb().prepare(`SELECT * FROM lessons WHERE status = ? ORDER BY id DESC`).all(status)
+    : getDb().prepare(`SELECT * FROM lessons ORDER BY id DESC`).all();
+  return rows.map(rowToLesson);
+}
+
+export function updateLessonFields(
+  id: number,
+  f: { title: string; summary: string; takeaways: string[]; quiz: Quiz; topics: string[] }
+): void {
+  getDb()
+    .prepare(
+      `UPDATE lessons SET title = ?, summary = ?, takeaways_json = ?, quiz_json = ?, topics_json = ?
+       WHERE id = ?`
+    )
+    .run(
+      f.title,
+      f.summary,
+      JSON.stringify(f.takeaways),
+      JSON.stringify(f.quiz),
+      JSON.stringify(f.topics),
+      id
+    );
+}
+
+export function setLessonStatus(
+  id: number,
+  status: 'published' | 'rejected' | 'draft'
+): LessonRow {
+  getDb()
+    .prepare(`UPDATE lessons SET status = ?, decided_at = datetime('now') WHERE id = ?`)
+    .run(status, id);
+  return getLesson(id)!;
+}
+
+export function listPublishedLessons(opts: { topic?: string; q?: string } = {}): LessonRow[] {
+  const clauses = [`status = 'published'`];
+  const params: string[] = [];
+  if (opts.topic) {
+    clauses.push(`topics_json LIKE ?`);
+    params.push(`%"${opts.topic}"%`);
+  }
+  if (opts.q) {
+    clauses.push(`(title LIKE ? OR summary LIKE ? OR takeaways_json LIKE ?)`);
+    const like = `%${opts.q}%`;
+    params.push(like, like, like);
+  }
+  return getDb()
+    .prepare(`SELECT * FROM lessons WHERE ${clauses.join(' AND ')} ORDER BY id DESC`)
+    .all(...params)
+    .map(rowToLesson);
+}
+
+/** Insert-or-delete the unique (practitioner, lesson) pair. Returns the new completed state.
+ *  No-op returning false if the lesson is not published (or does not exist). */
+export function toggleCompletion(practitionerId: number, lessonId: number): boolean {
+  const lesson = getLesson(lessonId);
+  if (!lesson || lesson.status !== 'published') return false;
+  const existing = getDb()
+    .prepare(`SELECT id FROM lesson_completions WHERE practitioner_id = ? AND lesson_id = ?`)
+    .get(practitionerId, lessonId);
+  if (existing) {
+    getDb()
+      .prepare(`DELETE FROM lesson_completions WHERE practitioner_id = ? AND lesson_id = ?`)
+      .run(practitionerId, lessonId);
+    return false;
+  }
+  getDb()
+    .prepare(`INSERT INTO lesson_completions (practitioner_id, lesson_id) VALUES (?, ?)`)
+    .run(practitionerId, lessonId);
+  return true;
+}
+
+export function completedLessonIds(practitionerId: number): number[] {
+  return getDb()
+    .prepare(`SELECT lesson_id FROM lesson_completions WHERE practitioner_id = ? ORDER BY lesson_id`)
+    .all(practitionerId)
+    .map((r: any) => r.lesson_id);
+}
+
+export function countCompletions(practitionerId: number): number {
+  const row = getDb()
+    .prepare(`SELECT COUNT(*) AS n FROM lesson_completions WHERE practitioner_id = ?`)
+    .get(practitionerId) as { n: number };
+  return row.n;
 }
 
 export function listEvents(practitionerId: number): EventRow[] {
