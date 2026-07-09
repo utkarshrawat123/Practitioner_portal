@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AdminAiQueries from '@/components/AdminAiQueries';
 import AdminLessons from '@/components/AdminLessons';
+import AdminReporting from '@/components/AdminReporting';
 
 interface Verification {
   reasonCode: string;
@@ -27,6 +28,7 @@ const TABS = [
   { id: '', label: 'All' },
   { id: 'ai', label: 'AI queries' },
   { id: 'lessons', label: 'Lessons' },
+  { id: 'reporting', label: 'Reporting' },
 ];
 
 const REASON_LABELS: Record<string, string> = {
@@ -49,7 +51,7 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (currentTab: string) => {
-    if (currentTab === 'ai' || currentTab === 'lessons') {
+    if (currentTab === 'ai' || currentTab === 'lessons' || currentTab === 'reporting') {
       // These tabs load their own data; just confirm the session is valid.
       const res = await fetch('/api/admin/practitioners');
       setAuthed(res.status !== 401);
@@ -132,6 +134,8 @@ export default function AdminDashboard() {
         <AdminAiQueries />
       ) : tab === 'lessons' ? (
         <AdminLessons />
+      ) : tab === 'reporting' ? (
+        <AdminReporting />
       ) : (
       <div className="mt-6 grid gap-8 lg:grid-cols-[1.3fr_1fr]">
         <table className="w-full border-collapse bg-white text-sm">
