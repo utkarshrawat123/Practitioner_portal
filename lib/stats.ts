@@ -1,4 +1,4 @@
-import { clickStats, type Practitioner } from '@/lib/db';
+import { clickStats, countCompletions, type Practitioner } from '@/lib/db';
 
 export interface OrderStats {
   ordersThisMonth: number;
@@ -19,6 +19,7 @@ export interface DashboardStats extends OrderStats {
   commissionThisMonth: number;
   commissionAllTime: number;
   conversionRate: number;
+  lessonsCompleted: number;
   stale: boolean;
 }
 
@@ -97,16 +98,22 @@ export async function computeStats(
   provider: StatsProvider = getStatsProvider()
 ): Promise<DashboardStats> {
   const code = practitioner.affiliateCode ?? '';
-  const cached = cache.get(code);
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.data;
-
+  // Local-DB figures (clicks, lesson completions) are always fresh — only the
+  // Shopify order pull is cached, so merge these in on every return path.
   const clicks = clickStats(practitioner.id);
+  const lessonsCompleted = countCompletions(practitioner.id);
+
+  const cached = cache.get(code);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+    return { ...cached.data, ...clicks, lessonsCompleted };
+  }
+
   let orders: OrderStats;
   let stale = false;
   try {
     orders = await provider.getOrderStats(code);
   } catch {
-    if (cached) return { ...cached.data, ...clicks, stale: true };
+    if (cached) return { ...cached.data, ...clicks, lessonsCompleted, stale: true };
     orders = { ...ZERO_ORDERS };
     stale = true;
   }
@@ -121,6 +128,7 @@ export async function computeStats(
       clicks.clicksAllTime > 0
         ? Math.round((orders.ordersAllTime / clicks.clicksAllTime) * 1000) / 10
         : 0,
+    lessonsCompleted,
     stale,
   };
   if (!stale) cache.set(code, { at: Date.now(), data });

@@ -12,7 +12,7 @@ interface Stats {
   ordersThisMonth: number; ordersAllTime: number;
   revenueThisMonth: number; revenueAllTime: number;
   commissionThisMonth: number; commissionAllTime: number;
-  conversionRate: number; stale: boolean;
+  conversionRate: number; lessonsCompleted: number; stale: boolean;
 }
 
 const card = 'border border-stone bg-white p-6';
@@ -225,6 +225,23 @@ export default function DashboardApp() {
           )}
         </div>
       )}
+
+      {/* Learning / CPD */}
+      <div className={`${card} mt-6 flex flex-wrap items-center justify-between gap-4`}>
+        <div>
+          <p className={label}>Lessons completed</p>
+          <p className="mt-2 font-heading text-3xl text-ink">
+            {stats ? stats.lessonsCompleted : '—'}
+          </p>
+          <p className="mt-1 text-xs text-ink2/60">Continuing professional development</p>
+        </div>
+        <a
+          href="/library"
+          className="bg-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta"
+        >
+          Open the learning library
+        </a>
+      </div>
 
       {/* Tier + profile */}
       <div className="mt-6 grid gap-6 md:grid-cols-2">
