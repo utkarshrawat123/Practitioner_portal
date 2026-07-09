@@ -112,6 +112,11 @@ CREATE TABLE IF NOT EXISTS lesson_completions (
   completed_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(practitioner_id, lesson_id)
 );
+CREATE TABLE IF NOT EXISTS login_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `;
 
 let db: Database.Database | null = null;
@@ -566,6 +571,64 @@ export function countCompletions(practitionerId: number): number {
   const row = getDb()
     .prepare(`SELECT COUNT(*) AS n FROM lesson_completions WHERE practitioner_id = ?`)
     .get(practitionerId) as { n: number };
+  return row.n;
+}
+
+export function recordLogin(practitionerId: number): void {
+  getDb().prepare(`INSERT INTO login_events (practitioner_id) VALUES (?)`).run(practitionerId);
+}
+
+/** Login counts in the last 30 days (0–30) and the prior 30 (30–60), plus most-recent time. */
+export function loginStats(practitionerId: number): {
+  last30: number;
+  prior30: number;
+  lastAt: string | null;
+} {
+  const row = getDb()
+    .prepare(
+      `SELECT
+         SUM(CASE WHEN created_at >= datetime('now','-30 days') THEN 1 ELSE 0 END) AS last30,
+         SUM(CASE WHEN created_at < datetime('now','-30 days')
+                   AND created_at >= datetime('now','-60 days') THEN 1 ELSE 0 END) AS prior30,
+         MAX(created_at) AS last_at
+       FROM login_events WHERE practitioner_id = ?`
+    )
+    .get(practitionerId) as { last30: number | null; prior30: number | null; last_at: string | null };
+  return { last30: row.last30 ?? 0, prior30: row.prior30 ?? 0, lastAt: row.last_at };
+}
+
+export function clickWindows(practitionerId: number): {
+  last30: number;
+  prior30: number;
+  total: number;
+  lastAt: string | null;
+} {
+  const row = getDb()
+    .prepare(
+      `SELECT
+         SUM(CASE WHEN created_at >= datetime('now','-30 days') THEN 1 ELSE 0 END) AS last30,
+         SUM(CASE WHEN created_at < datetime('now','-30 days')
+                   AND created_at >= datetime('now','-60 days') THEN 1 ELSE 0 END) AS prior30,
+         COUNT(*) AS total,
+         MAX(created_at) AS last_at
+       FROM clicks WHERE practitioner_id = ?`
+    )
+    .get(practitionerId) as {
+    last30: number | null;
+    prior30: number | null;
+    total: number;
+    last_at: string | null;
+  };
+  return { last30: row.last30 ?? 0, prior30: row.prior30 ?? 0, total: row.total, lastAt: row.last_at };
+}
+
+export function aiQueryCount(practitionerId: number, days: number): number {
+  const row = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS n FROM ai_queries
+       WHERE practitioner_id = ? AND created_at >= datetime('now', ?)`
+    )
+    .get(practitionerId, `-${days} days`) as { n: number };
   return row.n;
 }
 

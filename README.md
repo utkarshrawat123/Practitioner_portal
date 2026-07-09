@@ -104,6 +104,25 @@ by topic, take the interactive quiz self-check, and "Mark as complete". Each
 practitioner's completed count (CPD tracking) appears on their dashboard, which
 links straight to the library.
 
+## Internal reporting
+
+Admin-only (`/admin` → "Reporting" tab) — **not practitioner-facing**. One row per
+practitioner combining referral revenue, portal engagement, education completion,
+and derived tier/risk, sortable and filterable, with CSV export for review meetings.
+
+- **Tier** (self-contained): Standard/Silver/Gold at £0/£1k/£3k rolling-12-month
+  referred revenue.
+- **Engagement score** (0–100): weighted blend of logins, referral clicks, lesson
+  completions and AI-assistant usage. Logins are recorded on each magic-link verify.
+- **Power user**: revenue > 0 and top 20% by referred revenue — an ambassador shortlist.
+- **Churn risk**: approved, no referral in 60 days, and activity trending down.
+- **Dormant**: no referral in 90 days.
+
+All thresholds live in `SCORING` (`lib/reporting/scoring.ts`). Revenue comes from the
+Shopify provider (mock = 0 without keys — engagement/education/logins/flags/CSV are
+all real from local data regardless). The report is cached ~5 minutes server-side.
+Export via `/api/admin/reporting/export`.
+
 ## Data
 
 SQLite at `DB_PATH` (default `data/practitioners.db`). Tables: `practitioners`
