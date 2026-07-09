@@ -7,9 +7,18 @@ export interface SourceDoc {
 }
 
 async function extractPdf(fullPath: string): Promise<string> {
-  // Dynamic import so the dependency is only needed when a PDF is present.
-  const pdfParse = (await import('pdf-parse')).default as (b: Buffer) => Promise<{ text: string }>;
-  const result = await pdfParse(fs.readFileSync(fullPath));
+  // Optional dependency — only needed if a PDF source is present. The non-literal
+  // specifier keeps `pdf-parse` out of the type/build graph so it isn't a hard dep.
+  const spec = 'pdf-parse';
+  let mod: { default: (b: Buffer) => Promise<{ text: string }> };
+  try {
+    mod = (await import(/* @vite-ignore */ spec)) as typeof mod;
+  } catch {
+    throw new Error(
+      `A PDF source was found but "pdf-parse" is not installed. Run "npm i pdf-parse" or convert the file to markdown/txt.`
+    );
+  }
+  const result = await mod.default(fs.readFileSync(fullPath));
   return result.text;
 }
 

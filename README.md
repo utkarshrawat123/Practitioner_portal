@@ -82,6 +82,28 @@ defer to practitioner judgement / technical support; out-of-scope requests are
 declined. Every query and output is logged to the `ai_queries` table and
 visible in the admin "AI queries" tab for spot-checking.
 
+## Educational hub
+
+Content pipeline + practitioner learning library.
+
+**Pipeline (offline):** drop source files (webinar transcripts, notes,
+formulation docs, case studies — markdown/txt/PDF) into `content-sources/` and
+run `npm run generate-lessons` (needs `ANTHROPIC_API_KEY`). Claude turns each
+source into 1–4 microlearning lessons (title, 200–400-word summary, 3–5
+takeaways, one multiple-choice quiz, topic tags) written to the review queue as
+`draft` — **never auto-published**. Any clinical claim not traceable to the
+source is flagged, by the model and by a deterministic post-scan, for the
+reviewer. Shipped sample sources are marked and should be replaced.
+
+**Review:** the admin "Lessons" tab shows each draft with its claim flags,
+every field inline-editable, then Approve → published or Reject. Only published
+lessons reach practitioners.
+
+**Library (`/library`, practitioner login):** browse/search published lessons
+by topic, take the interactive quiz self-check, and "Mark as complete". Each
+practitioner's completed count (CPD tracking) appears on their dashboard, which
+links straight to the library.
+
 ## Data
 
 SQLite at `DB_PATH` (default `data/practitioners.db`). Tables: `practitioners`
