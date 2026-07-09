@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { createClient, type Client, type InValue, type Row } from '@libsql/client';
 import { randomBytes } from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -119,112 +119,165 @@ CREATE TABLE IF NOT EXISTS login_events (
 );
 `;
 
-let db: Database.Database | null = null;
+let client: Client | null = null;
+let schemaReady: Promise<unknown> | null = null;
 
-function defaultDbPath(): string {
-  if (process.env.DB_PATH) return process.env.DB_PATH;
-  // Serverless platforms (Vercel/AWS Lambda) have a read-only filesystem except
-  // for /tmp. Fall back there so the app boots. NOTE: /tmp is per-instance and
-  // ephemeral — data does not persist across cold starts. Point DB_PATH at a
-  // hosted database (or a Turso/libSQL URL) for durable production storage.
+/**
+ * Resolve the database URL. In production, TURSO_DATABASE_URL points at a hosted
+ * libSQL/Turso database (durable, shared across all serverless instances). Locally
+ * and in tests we use a libSQL file: URL. On Vercel without Turso configured we fall
+ * back to /tmp (ephemeral per-instance) so the app still boots.
+ */
+function dbUrl(): string {
+  if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
+  if (process.env.DB_PATH) return `file:${process.env.DB_PATH}`;
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    return path.join('/tmp', 'practitioners.db');
+    return 'file:/tmp/practitioners.db';
   }
-  return path.join(process.cwd(), 'data', 'practitioners.db');
+  return `file:${path.join(process.cwd(), 'data', 'practitioners.db')}`;
 }
 
-export function getDb(): Database.Database {
-  if (!db) {
-    const dbPath = defaultDbPath();
-    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    db = new Database(dbPath);
-    db.pragma('journal_mode = WAL');
-    db.exec(SCHEMA);
+function rawClient(): Client {
+  if (!client) {
+    const url = dbUrl();
+    if (url.startsWith('file:')) {
+      fs.mkdirSync(path.dirname(url.slice('file:'.length)), { recursive: true });
+    }
+    client = createClient({
+      url,
+      authToken: process.env.TURSO_AUTH_TOKEN,
+      intMode: 'number',
+    });
   }
-  return db;
+  return client;
 }
 
-export function resetDbForTests(): void {
-  if (db) {
-    db.close();
-    db = null;
+/** Returns a ready client, ensuring the schema exists exactly once per process. */
+async function getClient(): Promise<Client> {
+  const c = rawClient();
+  if (!schemaReady) {
+    schemaReady = c.executeMultiple(SCHEMA);
   }
+  await schemaReady;
+  return c;
 }
 
-function rowToPractitioner(row: any): Practitioner {
+async function one(sql: string, args: InValue[] = []): Promise<Row | undefined> {
+  const c = await getClient();
+  const res = await c.execute({ sql, args });
+  return res.rows[0];
+}
+
+async function all(sql: string, args: InValue[] = []): Promise<Row[]> {
+  const c = await getClient();
+  const res = await c.execute({ sql, args });
+  return res.rows;
+}
+
+async function run(sql: string, args: InValue[] = []): Promise<{ lastInsertRowid: number; rowsAffected: number }> {
+  const c = await getClient();
+  const res = await c.execute({ sql, args });
   return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    registerBody: row.register_body,
-    registerNumber: row.register_number,
-    qualificationStatus: row.qualification_status,
-    tier: row.tier,
-    status: row.status,
-    verification: row.verification_json ? JSON.parse(row.verification_json) : null,
-    affiliateCode: row.affiliate_code,
-    affiliateLink: row.affiliate_link,
-    pendingSync: row.pending_sync === 1,
-    createdAt: row.created_at,
-    decidedAt: row.decided_at,
-    decidedBy: row.decided_by,
+    lastInsertRowid: res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0,
+    rowsAffected: res.rowsAffected,
   };
 }
 
-export function insertApplication(input: {
+export function resetDbForTests(): void {
+  if (client) {
+    client.close();
+    client = null;
+  }
+  schemaReady = null;
+}
+
+/** Test-only raw SQL escape hatch (e.g. inserting rows at back-dated timestamps). */
+export async function execForTests(
+  sql: string,
+  args: InValue[] = []
+): Promise<{ rows: Row[]; lastInsertRowid: number; rowsAffected: number }> {
+  const c = await getClient();
+  const res = await c.execute({ sql, args });
+  return {
+    rows: res.rows,
+    lastInsertRowid: res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0,
+    rowsAffected: res.rowsAffected,
+  };
+}
+
+function num(v: unknown): number {
+  return typeof v === 'number' ? v : Number(v ?? 0);
+}
+
+function rowToPractitioner(row: Row): Practitioner {
+  return {
+    id: num(row.id),
+    name: row.name as string,
+    email: row.email as string,
+    registerBody: row.register_body as string,
+    registerNumber: row.register_number as string,
+    qualificationStatus: row.qualification_status as QualificationStatus,
+    tier: row.tier as string,
+    status: row.status as Status,
+    verification: row.verification_json ? JSON.parse(row.verification_json as string) : null,
+    affiliateCode: (row.affiliate_code as string | null) ?? null,
+    affiliateLink: (row.affiliate_link as string | null) ?? null,
+    pendingSync: num(row.pending_sync) === 1,
+    createdAt: row.created_at as string,
+    decidedAt: (row.decided_at as string | null) ?? null,
+    decidedBy: (row.decided_by as string | null) ?? null,
+  };
+}
+
+export async function insertApplication(input: {
   name: string;
   email: string;
   registerBody: string;
   registerNumber: string;
   qualificationStatus: QualificationStatus;
-}): Practitioner {
-  const res = getDb()
-    .prepare(
-      `INSERT INTO practitioners (name, email, register_body, register_number, qualification_status)
-       VALUES (?, ?, ?, ?, ?)`
-    )
-    .run(input.name, input.email, input.registerBody, input.registerNumber, input.qualificationStatus);
-  return getPractitioner(Number(res.lastInsertRowid))!;
+}): Promise<Practitioner> {
+  const res = await run(
+    `INSERT INTO practitioners (name, email, register_body, register_number, qualification_status)
+     VALUES (?, ?, ?, ?, ?)`,
+    [input.name, input.email, input.registerBody, input.registerNumber, input.qualificationStatus]
+  );
+  return (await getPractitioner(res.lastInsertRowid))!;
 }
 
-export function getPractitioner(id: number): Practitioner | null {
-  const row = getDb().prepare(`SELECT * FROM practitioners WHERE id = ?`).get(id);
+export async function getPractitioner(id: number): Promise<Practitioner | null> {
+  const row = await one(`SELECT * FROM practitioners WHERE id = ?`, [id]);
   return row ? rowToPractitioner(row) : null;
 }
 
-export function findByEmail(email: string): Practitioner | null {
-  const row = getDb()
-    .prepare(`SELECT * FROM practitioners WHERE email = ? COLLATE NOCASE`)
-    .get(email);
+export async function findByEmail(email: string): Promise<Practitioner | null> {
+  const row = await one(`SELECT * FROM practitioners WHERE email = ? COLLATE NOCASE`, [email]);
   return row ? rowToPractitioner(row) : null;
 }
 
-export function hasDuplicateRegistration(
+export async function hasDuplicateRegistration(
   registerBody: string,
   registerNumber: string,
   excludeId: number
-): boolean {
-  const row = getDb()
-    .prepare(
-      `SELECT id FROM practitioners
-       WHERE register_body = ? AND register_number = ? COLLATE NOCASE AND id != ?`
-    )
-    .get(registerBody, registerNumber, excludeId);
+): Promise<boolean> {
+  const row = await one(
+    `SELECT id FROM practitioners
+     WHERE register_body = ? AND register_number = ? COLLATE NOCASE AND id != ?`,
+    [registerBody, registerNumber, excludeId]
+  );
   return !!row;
 }
 
-export function flagPractitioner(id: number, verification: Verification): Practitioner {
-  getDb()
-    .prepare(
-      `UPDATE practitioners
-       SET status = 'flagged', verification_json = ?, decided_at = datetime('now'), decided_by = 'system'
-       WHERE id = ?`
-    )
-    .run(JSON.stringify(verification), id);
-  return getPractitioner(id)!;
+export async function flagPractitioner(id: number, verification: Verification): Promise<Practitioner> {
+  await run(
+    `UPDATE practitioners
+     SET status = 'flagged', verification_json = ?, decided_at = datetime('now'), decided_by = 'system'
+     WHERE id = ?`,
+    [JSON.stringify(verification), id]
+  );
+  return (await getPractitioner(id))!;
 }
 
-export function markApproved(
+export async function markApproved(
   id: number,
   opts: {
     verification?: Verification;
@@ -233,104 +286,99 @@ export function markApproved(
     pendingSync: boolean;
     decidedBy: string;
   }
-): Practitioner {
-  const existing = getPractitioner(id)!;
+): Promise<Practitioner> {
+  const existing = (await getPractitioner(id))!;
   const verification = opts.verification ?? existing.verification;
-  getDb()
-    .prepare(
-      `UPDATE practitioners
-       SET status = 'approved', verification_json = ?, affiliate_code = ?, affiliate_link = ?,
-           pending_sync = ?, decided_at = datetime('now'), decided_by = ?
-       WHERE id = ?`
-    )
-    .run(
+  await run(
+    `UPDATE practitioners
+     SET status = 'approved', verification_json = ?, affiliate_code = ?, affiliate_link = ?,
+         pending_sync = ?, decided_at = datetime('now'), decided_by = ?
+     WHERE id = ?`,
+    [
       verification ? JSON.stringify(verification) : null,
       opts.affiliateCode,
       opts.affiliateLink,
       opts.pendingSync ? 1 : 0,
       opts.decidedBy,
-      id
-    );
-  return getPractitioner(id)!;
+      id,
+    ]
+  );
+  return (await getPractitioner(id))!;
 }
 
-export function markRejected(id: number, decidedBy: string): Practitioner {
-  getDb()
-    .prepare(
-      `UPDATE practitioners
-       SET status = 'rejected', decided_at = datetime('now'), decided_by = ?
-       WHERE id = ?`
-    )
-    .run(decidedBy, id);
-  return getPractitioner(id)!;
+export async function markRejected(id: number, decidedBy: string): Promise<Practitioner> {
+  await run(
+    `UPDATE practitioners SET status = 'rejected', decided_at = datetime('now'), decided_by = ? WHERE id = ?`,
+    [decidedBy, id]
+  );
+  return (await getPractitioner(id))!;
 }
 
-export function setPendingSync(id: number, pending: boolean): void {
-  getDb().prepare(`UPDATE practitioners SET pending_sync = ? WHERE id = ?`).run(pending ? 1 : 0, id);
+export async function setPendingSync(id: number, pending: boolean): Promise<void> {
+  await run(`UPDATE practitioners SET pending_sync = ? WHERE id = ?`, [pending ? 1 : 0, id]);
 }
 
-export function isCodeTaken(code: string): boolean {
-  return !!getDb().prepare(`SELECT id FROM practitioners WHERE affiliate_code = ?`).get(code);
+export async function isCodeTaken(code: string): Promise<boolean> {
+  return !!(await one(`SELECT id FROM practitioners WHERE affiliate_code = ?`, [code]));
 }
 
-export function listPractitioners(status?: Status): Practitioner[] {
+export async function listPractitioners(status?: Status): Promise<Practitioner[]> {
   const rows = status
-    ? getDb().prepare(`SELECT * FROM practitioners WHERE status = ? ORDER BY created_at DESC, id DESC`).all(status)
-    : getDb().prepare(`SELECT * FROM practitioners ORDER BY created_at DESC, id DESC`).all();
+    ? await all(`SELECT * FROM practitioners WHERE status = ? ORDER BY created_at DESC, id DESC`, [status])
+    : await all(`SELECT * FROM practitioners ORDER BY created_at DESC, id DESC`);
   return rows.map(rowToPractitioner);
 }
 
-export function addEvent(practitionerId: number, type: string, detail: string): void {
-  getDb()
-    .prepare(`INSERT INTO events (practitioner_id, type, detail) VALUES (?, ?, ?)`)
-    .run(practitionerId, type, detail);
+export async function addEvent(practitionerId: number, type: string, detail: string): Promise<void> {
+  await run(`INSERT INTO events (practitioner_id, type, detail) VALUES (?, ?, ?)`, [
+    practitionerId,
+    type,
+    detail,
+  ]);
 }
 
-export function createAuthToken(practitionerId: number): string {
+export async function createAuthToken(practitionerId: number): Promise<string> {
   const token = randomBytes(32).toString('hex');
-  getDb()
-    .prepare(
-      `INSERT INTO auth_tokens (token, practitioner_id, expires_at)
-       VALUES (?, ?, datetime('now', '+15 minutes'))`
-    )
-    .run(token, practitionerId);
+  await run(
+    `INSERT INTO auth_tokens (token, practitioner_id, expires_at)
+     VALUES (?, ?, datetime('now', '+15 minutes'))`,
+    [token, practitionerId]
+  );
   return token;
 }
 
-export function consumeAuthToken(token: string): number | null {
-  const row = getDb()
-    .prepare(
-      `SELECT practitioner_id FROM auth_tokens
-       WHERE token = ? AND used_at IS NULL AND expires_at > datetime('now')`
-    )
-    .get(token) as { practitioner_id: number } | undefined;
+export async function consumeAuthToken(token: string): Promise<number | null> {
+  const row = await one(
+    `SELECT practitioner_id FROM auth_tokens
+     WHERE token = ? AND used_at IS NULL AND expires_at > datetime('now')`,
+    [token]
+  );
   if (!row) return null;
-  getDb().prepare(`UPDATE auth_tokens SET used_at = datetime('now') WHERE token = ?`).run(token);
-  return row.practitioner_id;
+  await run(`UPDATE auth_tokens SET used_at = datetime('now') WHERE token = ?`, [token]);
+  return num(row.practitioner_id);
 }
 
-export function findByCode(code: string): Practitioner | null {
-  const row = getDb().prepare(`SELECT * FROM practitioners WHERE affiliate_code = ?`).get(code);
+export async function findByCode(code: string): Promise<Practitioner | null> {
+  const row = await one(`SELECT * FROM practitioners WHERE affiliate_code = ?`, [code]);
   return row ? rowToPractitioner(row) : null;
 }
 
-export function recordClick(practitionerId: number, code: string): void {
-  getDb().prepare(`INSERT INTO clicks (practitioner_id, code) VALUES (?, ?)`).run(practitionerId, code);
+export async function recordClick(practitionerId: number, code: string): Promise<void> {
+  await run(`INSERT INTO clicks (practitioner_id, code) VALUES (?, ?)`, [practitionerId, code]);
 }
 
-export function clickStats(practitionerId: number): {
+export async function clickStats(practitionerId: number): Promise<{
   clicksThisMonth: number;
   clicksAllTime: number;
-} {
-  const row = getDb()
-    .prepare(
-      `SELECT
-         COUNT(*) AS all_time,
-         SUM(CASE WHEN strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END) AS this_month
-       FROM clicks WHERE practitioner_id = ?`
-    )
-    .get(practitionerId) as { all_time: number; this_month: number | null };
-  return { clicksThisMonth: row.this_month ?? 0, clicksAllTime: row.all_time };
+}> {
+  const row = await one(
+    `SELECT
+       COUNT(*) AS all_time,
+       SUM(CASE WHEN strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END) AS this_month
+     FROM clicks WHERE practitioner_id = ?`,
+    [practitionerId]
+  );
+  return { clicksThisMonth: num(row?.this_month), clicksAllTime: num(row?.all_time) };
 }
 
 export interface AiQueryRow {
@@ -348,7 +396,7 @@ export interface AiQueryRow {
   createdAt: string;
 }
 
-export function recordAiQuery(q: {
+export async function recordAiQuery(q: {
   practitionerId: number;
   profileInput: string;
   status: 'ok' | 'out_of_scope' | 'error';
@@ -358,15 +406,13 @@ export function recordAiQuery(q: {
   model?: string;
   inputTokens?: number;
   outputTokens?: number;
-}): number {
-  const res = getDb()
-    .prepare(
-      `INSERT INTO ai_queries
-         (practitioner_id, profile_input, status, safety_flags, output_json,
-          grounding_warnings, model, input_tokens, output_tokens)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
+}): Promise<number> {
+  const res = await run(
+    `INSERT INTO ai_queries
+       (practitioner_id, profile_input, status, safety_flags, output_json,
+        grounding_warnings, model, input_tokens, output_tokens)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
       q.practitionerId,
       q.profileInput,
       q.status,
@@ -375,33 +421,33 @@ export function recordAiQuery(q: {
       JSON.stringify(q.groundingWarnings ?? []),
       q.model ?? null,
       q.inputTokens ?? null,
-      q.outputTokens ?? null
-    );
-  return Number(res.lastInsertRowid);
+      q.outputTokens ?? null,
+    ]
+  );
+  return res.lastInsertRowid;
 }
 
-export function listAiQueries(limit = 200): AiQueryRow[] {
-  return getDb()
-    .prepare(
-      `SELECT q.*, p.name AS practitioner_name FROM ai_queries q
-       LEFT JOIN practitioners p ON p.id = q.practitioner_id
-       ORDER BY q.id DESC LIMIT ?`
-    )
-    .all(limit)
-    .map((r: any) => ({
-      id: r.id,
-      practitionerId: r.practitioner_id,
-      practitionerName: r.practitioner_name,
-      profileInput: r.profile_input,
-      status: r.status,
-      safetyFlags: JSON.parse(r.safety_flags),
-      output: r.output_json ? JSON.parse(r.output_json) : null,
-      groundingWarnings: r.grounding_warnings ? JSON.parse(r.grounding_warnings) : [],
-      model: r.model,
-      inputTokens: r.input_tokens,
-      outputTokens: r.output_tokens,
-      createdAt: r.created_at,
-    }));
+export async function listAiQueries(limit = 200): Promise<AiQueryRow[]> {
+  const rows = await all(
+    `SELECT q.*, p.name AS practitioner_name FROM ai_queries q
+     LEFT JOIN practitioners p ON p.id = q.practitioner_id
+     ORDER BY q.id DESC LIMIT ?`,
+    [limit]
+  );
+  return rows.map((r) => ({
+    id: num(r.id),
+    practitionerId: num(r.practitioner_id),
+    practitionerName: (r.practitioner_name as string | null) ?? null,
+    profileInput: r.profile_input as string,
+    status: r.status as string,
+    safetyFlags: JSON.parse(r.safety_flags as string),
+    output: r.output_json ? JSON.parse(r.output_json as string) : null,
+    groundingWarnings: r.grounding_warnings ? JSON.parse(r.grounding_warnings as string) : [],
+    model: (r.model as string | null) ?? null,
+    inputTokens: r.input_tokens === null ? null : num(r.input_tokens),
+    outputTokens: r.output_tokens === null ? null : num(r.output_tokens),
+    createdAt: r.created_at as string,
+  }));
 }
 
 export interface Quiz {
@@ -428,26 +474,26 @@ export interface LessonRow {
   decidedAt: string | null;
 }
 
-function rowToLesson(r: any): LessonRow {
+function rowToLesson(r: Row): LessonRow {
   return {
-    id: r.id,
-    sourceFile: r.source_file,
-    title: r.title,
-    summary: r.summary,
-    takeaways: JSON.parse(r.takeaways_json),
-    quiz: JSON.parse(r.quiz_json),
-    topics: JSON.parse(r.topics_json),
-    claimFlags: JSON.parse(r.claim_flags_json),
-    status: r.status,
-    model: r.model,
-    inputTokens: r.input_tokens,
-    outputTokens: r.output_tokens,
-    createdAt: r.created_at,
-    decidedAt: r.decided_at,
+    id: num(r.id),
+    sourceFile: (r.source_file as string | null) ?? null,
+    title: r.title as string,
+    summary: r.summary as string,
+    takeaways: JSON.parse(r.takeaways_json as string),
+    quiz: JSON.parse(r.quiz_json as string),
+    topics: JSON.parse(r.topics_json as string),
+    claimFlags: JSON.parse(r.claim_flags_json as string),
+    status: r.status as string,
+    model: (r.model as string | null) ?? null,
+    inputTokens: r.input_tokens === null ? null : num(r.input_tokens),
+    outputTokens: r.output_tokens === null ? null : num(r.output_tokens),
+    createdAt: r.created_at as string,
+    decidedAt: (r.decided_at as string | null) ?? null,
   };
 }
 
-export function insertLesson(l: {
+export async function insertLesson(l: {
   sourceFile: string;
   title: string;
   summary: string;
@@ -458,15 +504,13 @@ export function insertLesson(l: {
   model?: string;
   inputTokens?: number;
   outputTokens?: number;
-}): number {
-  const res = getDb()
-    .prepare(
-      `INSERT INTO lessons
-        (source_file, title, summary, takeaways_json, quiz_json, topics_json,
-         claim_flags_json, model, input_tokens, output_tokens)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
+}): Promise<number> {
+  const res = await run(
+    `INSERT INTO lessons
+      (source_file, title, summary, takeaways_json, quiz_json, topics_json,
+       claim_flags_json, model, input_tokens, output_tokens)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
       l.sourceFile,
       l.title,
       l.summary,
@@ -476,55 +520,47 @@ export function insertLesson(l: {
       JSON.stringify(l.claimFlags),
       l.model ?? null,
       l.inputTokens ?? null,
-      l.outputTokens ?? null
-    );
-  return Number(res.lastInsertRowid);
+      l.outputTokens ?? null,
+    ]
+  );
+  return res.lastInsertRowid;
 }
 
-export function getLesson(id: number): LessonRow | null {
-  const row = getDb().prepare(`SELECT * FROM lessons WHERE id = ?`).get(id);
+export async function getLesson(id: number): Promise<LessonRow | null> {
+  const row = await one(`SELECT * FROM lessons WHERE id = ?`, [id]);
   return row ? rowToLesson(row) : null;
 }
 
-export function listLessons(status?: string): LessonRow[] {
+export async function listLessons(status?: string): Promise<LessonRow[]> {
   const rows = status
-    ? getDb().prepare(`SELECT * FROM lessons WHERE status = ? ORDER BY id DESC`).all(status)
-    : getDb().prepare(`SELECT * FROM lessons ORDER BY id DESC`).all();
+    ? await all(`SELECT * FROM lessons WHERE status = ? ORDER BY id DESC`, [status])
+    : await all(`SELECT * FROM lessons ORDER BY id DESC`);
   return rows.map(rowToLesson);
 }
 
-export function updateLessonFields(
+export async function updateLessonFields(
   id: number,
   f: { title: string; summary: string; takeaways: string[]; quiz: Quiz; topics: string[] }
-): void {
-  getDb()
-    .prepare(
-      `UPDATE lessons SET title = ?, summary = ?, takeaways_json = ?, quiz_json = ?, topics_json = ?
-       WHERE id = ?`
-    )
-    .run(
-      f.title,
-      f.summary,
-      JSON.stringify(f.takeaways),
-      JSON.stringify(f.quiz),
-      JSON.stringify(f.topics),
-      id
-    );
+): Promise<void> {
+  await run(
+    `UPDATE lessons SET title = ?, summary = ?, takeaways_json = ?, quiz_json = ?, topics_json = ? WHERE id = ?`,
+    [f.title, f.summary, JSON.stringify(f.takeaways), JSON.stringify(f.quiz), JSON.stringify(f.topics), id]
+  );
 }
 
-export function setLessonStatus(
+export async function setLessonStatus(
   id: number,
   status: 'published' | 'rejected' | 'draft'
-): LessonRow {
-  getDb()
-    .prepare(`UPDATE lessons SET status = ?, decided_at = datetime('now') WHERE id = ?`)
-    .run(status, id);
-  return getLesson(id)!;
+): Promise<LessonRow> {
+  await run(`UPDATE lessons SET status = ?, decided_at = datetime('now') WHERE id = ?`, [status, id]);
+  return (await getLesson(id))!;
 }
 
-export function listPublishedLessons(opts: { topic?: string; q?: string } = {}): LessonRow[] {
+export async function listPublishedLessons(
+  opts: { topic?: string; q?: string } = {}
+): Promise<LessonRow[]> {
   const clauses = [`status = 'published'`];
-  const params: string[] = [];
+  const params: InValue[] = [];
   if (opts.topic) {
     clauses.push(`topics_json LIKE ?`);
     params.push(`%"${opts.topic}"%`);
@@ -534,113 +570,120 @@ export function listPublishedLessons(opts: { topic?: string; q?: string } = {}):
     const like = `%${opts.q}%`;
     params.push(like, like, like);
   }
-  return getDb()
-    .prepare(`SELECT * FROM lessons WHERE ${clauses.join(' AND ')} ORDER BY id DESC`)
-    .all(...params)
-    .map(rowToLesson);
+  const rows = await all(
+    `SELECT * FROM lessons WHERE ${clauses.join(' AND ')} ORDER BY id DESC`,
+    params
+  );
+  return rows.map(rowToLesson);
 }
 
 /** Insert-or-delete the unique (practitioner, lesson) pair. Returns the new completed state.
  *  No-op returning false if the lesson is not published (or does not exist). */
-export function toggleCompletion(practitionerId: number, lessonId: number): boolean {
-  const lesson = getLesson(lessonId);
+export async function toggleCompletion(practitionerId: number, lessonId: number): Promise<boolean> {
+  const lesson = await getLesson(lessonId);
   if (!lesson || lesson.status !== 'published') return false;
-  const existing = getDb()
-    .prepare(`SELECT id FROM lesson_completions WHERE practitioner_id = ? AND lesson_id = ?`)
-    .get(practitionerId, lessonId);
+  const existing = await one(
+    `SELECT id FROM lesson_completions WHERE practitioner_id = ? AND lesson_id = ?`,
+    [practitionerId, lessonId]
+  );
   if (existing) {
-    getDb()
-      .prepare(`DELETE FROM lesson_completions WHERE practitioner_id = ? AND lesson_id = ?`)
-      .run(practitionerId, lessonId);
+    await run(`DELETE FROM lesson_completions WHERE practitioner_id = ? AND lesson_id = ?`, [
+      practitionerId,
+      lessonId,
+    ]);
     return false;
   }
-  getDb()
-    .prepare(`INSERT INTO lesson_completions (practitioner_id, lesson_id) VALUES (?, ?)`)
-    .run(practitionerId, lessonId);
+  await run(`INSERT INTO lesson_completions (practitioner_id, lesson_id) VALUES (?, ?)`, [
+    practitionerId,
+    lessonId,
+  ]);
   return true;
 }
 
-export function completedLessonIds(practitionerId: number): number[] {
-  return getDb()
-    .prepare(`SELECT lesson_id FROM lesson_completions WHERE practitioner_id = ? ORDER BY lesson_id`)
-    .all(practitionerId)
-    .map((r: any) => r.lesson_id);
+export async function completedLessonIds(practitionerId: number): Promise<number[]> {
+  const rows = await all(
+    `SELECT lesson_id FROM lesson_completions WHERE practitioner_id = ? ORDER BY lesson_id`,
+    [practitionerId]
+  );
+  return rows.map((r) => num(r.lesson_id));
 }
 
-export function countCompletions(practitionerId: number): number {
-  const row = getDb()
-    .prepare(`SELECT COUNT(*) AS n FROM lesson_completions WHERE practitioner_id = ?`)
-    .get(practitionerId) as { n: number };
-  return row.n;
+export async function countCompletions(practitionerId: number): Promise<number> {
+  const row = await one(
+    `SELECT COUNT(*) AS n FROM lesson_completions WHERE practitioner_id = ?`,
+    [practitionerId]
+  );
+  return num(row?.n);
 }
 
-export function recordLogin(practitionerId: number): void {
-  getDb().prepare(`INSERT INTO login_events (practitioner_id) VALUES (?)`).run(practitionerId);
+export async function recordLogin(practitionerId: number): Promise<void> {
+  await run(`INSERT INTO login_events (practitioner_id) VALUES (?)`, [practitionerId]);
 }
 
 /** Login counts in the last 30 days (0–30) and the prior 30 (30–60), plus most-recent time. */
-export function loginStats(practitionerId: number): {
+export async function loginStats(practitionerId: number): Promise<{
   last30: number;
   prior30: number;
   lastAt: string | null;
-} {
-  const row = getDb()
-    .prepare(
-      `SELECT
-         SUM(CASE WHEN created_at >= datetime('now','-30 days') THEN 1 ELSE 0 END) AS last30,
-         SUM(CASE WHEN created_at < datetime('now','-30 days')
-                   AND created_at >= datetime('now','-60 days') THEN 1 ELSE 0 END) AS prior30,
-         MAX(created_at) AS last_at
-       FROM login_events WHERE practitioner_id = ?`
-    )
-    .get(practitionerId) as { last30: number | null; prior30: number | null; last_at: string | null };
-  return { last30: row.last30 ?? 0, prior30: row.prior30 ?? 0, lastAt: row.last_at };
+}> {
+  const row = await one(
+    `SELECT
+       SUM(CASE WHEN created_at >= datetime('now','-30 days') THEN 1 ELSE 0 END) AS last30,
+       SUM(CASE WHEN created_at < datetime('now','-30 days')
+                 AND created_at >= datetime('now','-60 days') THEN 1 ELSE 0 END) AS prior30,
+       MAX(created_at) AS last_at
+     FROM login_events WHERE practitioner_id = ?`,
+    [practitionerId]
+  );
+  return {
+    last30: num(row?.last30),
+    prior30: num(row?.prior30),
+    lastAt: (row?.last_at as string | null) ?? null,
+  };
 }
 
-export function clickWindows(practitionerId: number): {
+export async function clickWindows(practitionerId: number): Promise<{
   last30: number;
   prior30: number;
   total: number;
   lastAt: string | null;
-} {
-  const row = getDb()
-    .prepare(
-      `SELECT
-         SUM(CASE WHEN created_at >= datetime('now','-30 days') THEN 1 ELSE 0 END) AS last30,
-         SUM(CASE WHEN created_at < datetime('now','-30 days')
-                   AND created_at >= datetime('now','-60 days') THEN 1 ELSE 0 END) AS prior30,
-         COUNT(*) AS total,
-         MAX(created_at) AS last_at
-       FROM clicks WHERE practitioner_id = ?`
-    )
-    .get(practitionerId) as {
-    last30: number | null;
-    prior30: number | null;
-    total: number;
-    last_at: string | null;
+}> {
+  const row = await one(
+    `SELECT
+       SUM(CASE WHEN created_at >= datetime('now','-30 days') THEN 1 ELSE 0 END) AS last30,
+       SUM(CASE WHEN created_at < datetime('now','-30 days')
+                 AND created_at >= datetime('now','-60 days') THEN 1 ELSE 0 END) AS prior30,
+       COUNT(*) AS total,
+       MAX(created_at) AS last_at
+     FROM clicks WHERE practitioner_id = ?`,
+    [practitionerId]
+  );
+  return {
+    last30: num(row?.last30),
+    prior30: num(row?.prior30),
+    total: num(row?.total),
+    lastAt: (row?.last_at as string | null) ?? null,
   };
-  return { last30: row.last30 ?? 0, prior30: row.prior30 ?? 0, total: row.total, lastAt: row.last_at };
 }
 
-export function aiQueryCount(practitionerId: number, days: number): number {
-  const row = getDb()
-    .prepare(
-      `SELECT COUNT(*) AS n FROM ai_queries
-       WHERE practitioner_id = ? AND created_at >= datetime('now', ?)`
-    )
-    .get(practitionerId, `-${days} days`) as { n: number };
-  return row.n;
+export async function aiQueryCount(practitionerId: number, days: number): Promise<number> {
+  const row = await one(
+    `SELECT COUNT(*) AS n FROM ai_queries
+     WHERE practitioner_id = ? AND created_at >= datetime('now', ?)`,
+    [practitionerId, `-${days} days`]
+  );
+  return num(row?.n);
 }
 
-export function listEvents(practitionerId: number): EventRow[] {
-  return getDb()
-    .prepare(`SELECT * FROM events WHERE practitioner_id = ? ORDER BY id DESC`)
-    .all(practitionerId)
-    .map((r: any) => ({
-      id: r.id,
-      practitionerId: r.practitioner_id,
-      type: r.type,
-      detail: r.detail,
-      createdAt: r.created_at,
-    }));
+export async function listEvents(practitionerId: number): Promise<EventRow[]> {
+  const rows = await all(`SELECT * FROM events WHERE practitioner_id = ? ORDER BY id DESC`, [
+    practitionerId,
+  ]);
+  return rows.map((r) => ({
+    id: num(r.id),
+    practitionerId: num(r.practitioner_id),
+    type: r.type as string,
+    detail: r.detail as string,
+    createdAt: r.created_at as string,
+  }));
 }

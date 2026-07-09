@@ -64,7 +64,7 @@ export async function buildReport(
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.report;
 
   const now = new Date();
-  const practitioners = listPractitioners();
+  const practitioners = await listPractitioners();
   const rows: ReportRow[] = [];
 
   for (const p of practitioners) {

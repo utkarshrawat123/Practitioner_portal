@@ -10,10 +10,10 @@ export async function GET(
 ): Promise<NextResponse> {
   const code = (params.code ?? '').toUpperCase();
   try {
-    const practitioner = findByCode(code);
+    const practitioner = await findByCode(code);
     if (practitioner) {
       try {
-        recordClick(practitioner.id, code);
+        await recordClick(practitioner.id, code);
       } catch {
         // losing a click is acceptable; losing the customer is not
       }

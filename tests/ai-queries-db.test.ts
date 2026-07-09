@@ -18,11 +18,11 @@ afterEach(async () => {
 describe('ai_queries', () => {
   it('records and lists queries with parsed JSON fields, newest first', async () => {
     const { insertApplication, recordAiQuery, listAiQueries } = await import('@/lib/db');
-    const p = insertApplication({
+    const p = await insertApplication({
       name: 'Jane Smith', email: 'jane@example.com', registerBody: 'BANT',
       registerNumber: '12345', qualificationStatus: 'qualified',
     });
-    recordAiQuery({
+    await recordAiQuery({
       practitionerId: p.id,
       profileInput: '35F insomnia',
       status: 'ok',
@@ -33,13 +33,13 @@ describe('ai_queries', () => {
       inputTokens: 100,
       outputTokens: 50,
     });
-    recordAiQuery({
+    await recordAiQuery({
       practitionerId: p.id,
       profileInput: 'broken one',
       status: 'error',
       safetyFlags: [],
     });
-    const rows = listAiQueries();
+    const rows = await listAiQueries();
     expect(rows).toHaveLength(2);
     expect(rows[0].status).toBe('error'); // newest first
     expect(rows[1].safetyFlags).toEqual([{ type: 'MEDICATION', detail: 'x' }]);

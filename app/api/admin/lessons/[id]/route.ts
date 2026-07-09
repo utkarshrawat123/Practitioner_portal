@@ -24,7 +24,7 @@ export async function POST(
 ): Promise<NextResponse> {
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
-  if (!getLesson(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!(await getLesson(id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   let body: any = {};
   try {
@@ -39,15 +39,15 @@ export async function POST(
       if (!parsed.success) {
         return NextResponse.json({ error: 'Invalid lesson fields' }, { status: 400 });
       }
-      updateLessonFields(id, parsed.data);
+      await updateLessonFields(id, parsed.data);
     } else if (body.action === 'approve') {
-      setLessonStatus(id, 'published');
+      await setLessonStatus(id, 'published');
     } else if (body.action === 'reject') {
-      setLessonStatus(id, 'rejected');
+      await setLessonStatus(id, 'rejected');
     } else {
       return NextResponse.json({ error: `Unknown action: ${body.action}` }, { status: 400 });
     }
-    return NextResponse.json({ lesson: getLesson(id) });
+    return NextResponse.json({ lesson: await getLesson(id) });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }

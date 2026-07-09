@@ -10,5 +10,5 @@ export async function GET(req: Request): Promise<NextResponse> {
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const status = new URL(req.url).searchParams.get('status');
   const filter = STATUSES.includes(status as Status) ? (status as Status) : undefined;
-  return NextResponse.json({ practitioners: listPractitioners(filter) });
+  return NextResponse.json({ practitioners: await listPractitioners(filter) });
 }

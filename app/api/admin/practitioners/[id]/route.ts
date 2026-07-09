@@ -11,7 +11,7 @@ export async function POST(
 ): Promise<NextResponse> {
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
-  if (!getPractitioner(id)) {
+  if (!(await getPractitioner(id))) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
   let action = '';
@@ -22,10 +22,10 @@ export async function POST(
   }
   try {
     if (action === 'approve') await approvePractitioner(id, 'admin');
-    else if (action === 'reject') rejectPractitioner(id, 'admin');
+    else if (action === 'reject') await rejectPractitioner(id, 'admin');
     else if (action === 'retry-sync') await retrySync(id);
     else return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
-    return NextResponse.json({ practitioner: getPractitioner(id), events: listEvents(id) });
+    return NextResponse.json({ practitioner: await getPractitioner(id), events: await listEvents(id) });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
@@ -37,7 +37,7 @@ export async function GET(
 ): Promise<NextResponse> {
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
-  const practitioner = getPractitioner(id);
+  const practitioner = await getPractitioner(id);
   if (!practitioner) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ practitioner, events: listEvents(id) });
+  return NextResponse.json({ practitioner, events: await listEvents(id) });
 }

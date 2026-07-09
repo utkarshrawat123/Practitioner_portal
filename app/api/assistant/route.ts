@@ -15,7 +15,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request): Promise<NextResponse> {
-  const practitioner = getSessionPractitioner(req);
+  const practitioner = await getSessionPractitioner(req);
   if (!practitioner || practitioner.status !== 'approved') {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
@@ -42,7 +42,7 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   try {
     const result = await generateProtocol(profile, kb, flags);
-    recordAiQuery({
+    await recordAiQuery({
       practitionerId: practitioner.id,
       profileInput: profile,
       status: result.output.status,
@@ -68,7 +68,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       handoutHtml,
     });
   } catch (err) {
-    recordAiQuery({
+    await recordAiQuery({
       practitionerId: practitioner.id,
       profileInput: profile,
       status: 'error',

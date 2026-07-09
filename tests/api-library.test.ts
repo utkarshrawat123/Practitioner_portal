@@ -19,7 +19,7 @@ afterEach(async () => {
 
 async function seedApproved() {
   const { insertApplication, markApproved } = await import('@/lib/db');
-  const p = insertApplication({
+  const p = await insertApplication({
     name: 'Jane Smith', email: 'jane@example.com', registerBody: 'BANT',
     registerNumber: '12345', qualificationStatus: 'qualified',
   });
@@ -31,13 +31,13 @@ async function seedApproved() {
 
 async function seedLesson(over: Record<string, unknown> = {}, publish = true) {
   const { insertLesson, setLessonStatus } = await import('@/lib/db');
-  const id = insertLesson({
+  const id = await insertLesson({
     sourceFile: 'talk.md', title: 'Sleep science', summary: 'magnesium and sleep',
     takeaways: ['a', 'b', 'c'],
     quiz: { question: 'q', options: ['x', 'y'], correctIndex: 0, explanation: 'e' },
     topics: ['sleep'], claimFlags: [], ...over,
   });
-  if (publish) setLessonStatus(id, 'published');
+  if (publish) await setLessonStatus(id, "published");
   return id;
 }
 

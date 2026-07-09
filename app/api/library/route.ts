@@ -5,7 +5,7 @@ import { completedLessonIds, listPublishedLessons } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request): Promise<NextResponse> {
-  const practitioner = getSessionPractitioner(req);
+  const practitioner = await getSessionPractitioner(req);
   if (!practitioner || practitioner.status !== 'approved') {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
@@ -13,7 +13,7 @@ export async function GET(req: Request): Promise<NextResponse> {
   const topic = url.searchParams.get('topic') ?? undefined;
   const q = url.searchParams.get('q') ?? undefined;
 
-  const lessons = listPublishedLessons({ topic, q }).map((l) => ({
+  const lessons = (await listPublishedLessons({ topic, q })).map((l) => ({
     id: l.id,
     title: l.title,
     summary: l.summary,
@@ -25,6 +25,6 @@ export async function GET(req: Request): Promise<NextResponse> {
 
   return NextResponse.json({
     lessons,
-    completedIds: completedLessonIds(practitioner.id),
+    completedIds: await completedLessonIds(practitioner.id),
   });
 }

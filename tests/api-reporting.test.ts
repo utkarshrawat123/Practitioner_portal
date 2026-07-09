@@ -21,7 +21,7 @@ afterEach(async () => {
 
 async function seedApproved() {
   const { insertApplication, markApproved } = await import('@/lib/db');
-  const p = insertApplication({
+  const p = await insertApplication({
     name: 'Jane Smith', email: 'jane@example.com', registerBody: 'BANT',
     registerNumber: '12345', qualificationStatus: 'qualified',
   });

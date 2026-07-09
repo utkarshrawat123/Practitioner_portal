@@ -8,15 +8,15 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string } }
 ): Promise<NextResponse> {
-  const practitioner = getSessionPractitioner(req);
+  const practitioner = await getSessionPractitioner(req);
   if (!practitioner || practitioner.status !== 'approved') {
     return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
   const id = Number(params.id);
-  const lesson = getLesson(id);
+  const lesson = await getLesson(id);
   if (!lesson || lesson.status !== 'published') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
-  const completed = toggleCompletion(practitioner.id, id);
+  const completed = await toggleCompletion(practitioner.id, id);
   return NextResponse.json({ completed });
 }
