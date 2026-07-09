@@ -44,7 +44,7 @@ describe('processApplication', () => {
     expect(p.pendingSync).toBe(false);
     expect(p.decidedBy).toBe('system');
     const { listEvents } = await import('@/lib/db');
-    expect(listEvents(p.id).length).toBeGreaterThanOrEqual(2);
+    expect((await listEvents(p.id)).length).toBeGreaterThanOrEqual(2);
   });
 
   it('flags a no-match with manual search url', async () => {

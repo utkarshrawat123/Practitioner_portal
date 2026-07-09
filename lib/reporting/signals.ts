@@ -96,10 +96,10 @@ export async function gatherSignals(
   }
   return {
     referral,
-    logins: loginStats(p.id),
-    clicks: clickWindows(p.id),
-    lessonsCompleted: countCompletions(p.id),
-    aiQueries30: aiQueryCount(p.id, 30),
+    logins: await loginStats(p.id),
+    clicks: await clickWindows(p.id),
+    lessonsCompleted: await countCompletions(p.id),
+    aiQueries30: await aiQueryCount(p.id, 30),
     dataWarning,
   };
 }

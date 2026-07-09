@@ -34,15 +34,15 @@ export interface ApplicationInput {
 }
 
 export async function processApplication(input: ApplicationInput): Promise<Practitioner> {
-  if (findByEmail(input.email)) throw new DuplicateEmailError(input.email);
+  if (await findByEmail(input.email)) throw new DuplicateEmailError(input.email);
 
   const adapter = getRegister(input.registerBody);
   if (!adapter) throw new Error(`Unknown register body: ${input.registerBody}`);
 
-  const record = insertApplication(input);
-  addEvent(record.id, 'application', `Application received for ${adapter.id} #${input.registerNumber}`);
+  const record = await insertApplication(input);
+  await addEvent(record.id, 'application', `Application received for ${adapter.id} #${input.registerNumber}`);
 
-  const isDuplicate = hasDuplicateRegistration(input.registerBody, input.registerNumber, record.id);
+  const isDuplicate = await hasDuplicateRegistration(input.registerBody, input.registerNumber, record.id);
 
   let confidence: Confidence | null = null;
   let lookupDetail = 'Lookup skipped.';
@@ -73,32 +73,32 @@ export async function processApplication(input: ApplicationInput): Promise<Pract
   if (decision.status === 'approved') {
     return finalizeApproval(record.id, verification, 'system');
   }
-  const flagged = flagPractitioner(record.id, verification);
-  addEvent(record.id, 'decision', `Flagged for review: ${decision.reasonCode} — ${lookupDetail}`);
+  const flagged = await flagPractitioner(record.id, verification);
+  await addEvent(record.id, 'decision', `Flagged for review: ${decision.reasonCode} — ${lookupDetail}`);
   return flagged;
 }
 
 export async function approvePractitioner(id: number, decidedBy: string): Promise<Practitioner> {
-  const existing = getPractitioner(id);
+  const existing = await getPractitioner(id);
   if (!existing) throw new Error(`No practitioner with id ${id}`);
   if (existing.status === 'approved' && existing.affiliateCode) return existing; // idempotent
   return finalizeApproval(id, existing.verification, decidedBy);
 }
 
-export function rejectPractitioner(id: number, decidedBy: string): Practitioner {
-  const rejected = markRejected(id, decidedBy);
-  addEvent(id, 'decision', `Rejected by ${decidedBy}`);
+export async function rejectPractitioner(id: number, decidedBy: string): Promise<Practitioner> {
+  const rejected = await markRejected(id, decidedBy);
+  await addEvent(id, 'decision', `Rejected by ${decidedBy}`);
   return rejected;
 }
 
 export async function retrySync(id: number): Promise<Practitioner> {
-  const p = getPractitioner(id);
+  const p = await getPractitioner(id);
   if (!p || p.status !== 'approved' || !p.affiliateCode || !p.affiliateLink) {
     throw new Error(`Practitioner ${id} is not an approved record awaiting sync`);
   }
   const ok = await runExternalSync(p.id, p.name, p.email, p.affiliateCode, p.affiliateLink);
-  setPendingSync(id, !ok);
-  return getPractitioner(id)!;
+  await setPendingSync(id, !ok);
+  return (await getPractitioner(id))!;
 }
 
 async function finalizeApproval(
@@ -106,18 +106,18 @@ async function finalizeApproval(
   verification: Verification | null,
   decidedBy: string
 ): Promise<Practitioner> {
-  const record = getPractitioner(id)!;
-  const code = generateCode(record.name, isCodeTaken);
+  const record = (await getPractitioner(id))!;
+  const code = await generateCode(record.name, isCodeTaken);
   const link = referralLink(code);
   const synced = await runExternalSync(id, record.name, record.email, code, link);
-  const approved = markApproved(id, {
+  const approved = await markApproved(id, {
     verification: verification ?? undefined,
     affiliateCode: code,
     affiliateLink: link,
     pendingSync: !synced,
     decidedBy,
   });
-  addEvent(id, 'decision', `Approved by ${decidedBy} — code ${code}${synced ? '' : ' (external sync pending)'}`);
+  await addEvent(id, 'decision', `Approved by ${decidedBy} — code ${code}${synced ? '' : ' (external sync pending)'}`);
   return approved;
 }
 
@@ -130,8 +130,8 @@ async function runExternalSync(
   link: string
 ): Promise<boolean> {
   const affiliate = await getAffiliateProvider().createAffiliate({ code, name, email });
-  addEvent(id, 'affiliate', affiliate.detail);
+  await addEvent(id, 'affiliate', affiliate.detail);
   const welcome = await getEmailProvider().sendWelcome({ name, email, code, link });
-  addEvent(id, 'email', welcome.detail);
+  await addEvent(id, 'email', welcome.detail);
   return affiliate.ok && welcome.ok;
 }

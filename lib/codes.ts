@@ -1,10 +1,10 @@
 const ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ23456789'; // no 0/O/1/I/L ambiguity
 const MAX_ATTEMPTS = 50;
 
-export function generateCode(
+export async function generateCode(
   fullName: string,
-  isTaken: (code: string) => boolean
-): string {
+  isTaken: (code: string) => boolean | Promise<boolean>
+): Promise<string> {
   const parts = fullName.trim().toUpperCase().split(/\s+/);
   const rawSurname = parts[parts.length - 1] ?? '';
   const surname = rawSurname.replace(/[^A-Z]/g, '').slice(0, 6) || 'PRACT';
@@ -15,7 +15,7 @@ export function generateCode(
       suffix += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
     }
     const code = `WN-${surname}-${suffix}`;
-    if (!isTaken(code)) return code;
+    if (!(await isTaken(code))) return code;
   }
   throw new Error('Could not generate a unique affiliate code');
 }

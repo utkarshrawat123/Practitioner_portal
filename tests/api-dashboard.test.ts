@@ -20,7 +20,7 @@ afterEach(async () => {
 
 async function seedApproved() {
   const { insertApplication, markApproved } = await import('@/lib/db');
-  const p = insertApplication({
+  const p = await insertApplication({
     name: 'Jane Smith', email: 'jane@example.com', registerBody: 'BANT',
     registerNumber: '12345', qualificationStatus: 'qualified',
   });
@@ -43,7 +43,7 @@ describe('GET /r/[code]', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toContain('/discount/WN-SMITH-AB2C');
     const { clickStats } = await import('@/lib/db');
-    expect(clickStats(p.id).clicksAllTime).toBe(1);
+    expect((await clickStats(p.id)).clicksAllTime).toBe(1);
   });
 
   it('redirects unknown codes to the homepage', async () => {
@@ -75,7 +75,7 @@ describe('auth endpoints', () => {
   it('verify sets a session cookie and redirects to /dashboard', async () => {
     const p = await seedApproved();
     const { createAuthToken } = await import('@/lib/db');
-    const token = createAuthToken(p.id);
+    const token = await createAuthToken(p.id);
     const { GET } = await import('@/app/api/auth/verify/route');
     const res = await GET(new Request(`http://x/api/auth/verify?token=${token}`));
     expect(res.status).toBe(302);

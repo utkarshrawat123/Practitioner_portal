@@ -23,7 +23,7 @@ afterEach(async () => {
 
 async function seedApproved() {
   const { insertApplication, markApproved } = await import('@/lib/db');
-  const p = insertApplication({
+  const p = await insertApplication({
     name: 'Jane Smith', email: 'jane@example.com', registerBody: 'BANT',
     registerNumber: '12345', qualificationStatus: 'qualified',
   });
@@ -98,7 +98,7 @@ describe('POST /api/assistant', () => {
     expect(body.handoutHtml).toContain('WN-SMITH-AB2C');
     expect(body.handoutHtml).toContain('Jane Smith');
     const { listAiQueries } = await import('@/lib/db');
-    const rows = listAiQueries();
+    const rows = await listAiQueries();
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('ok');
     expect(rows[0].inputTokens).toBe(500);

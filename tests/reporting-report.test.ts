@@ -19,7 +19,7 @@ afterEach(async () => {
 
 async function seed(name: string, email: string, code: string) {
   const { insertApplication, markApproved } = await import('@/lib/db');
-  const p = insertApplication({
+  const p = await insertApplication({
     name, email, registerBody: 'BANT', registerNumber: code, qualificationStatus: 'qualified',
   });
   return markApproved(p.id, {
@@ -44,13 +44,13 @@ describe('buildReport', () => {
     recordClick(a.id, 'WN-A-1');
     recordClick(a.id, 'WN-A-1');
     recordLogin(a.id);
-    const lessonId = insertLesson({
+    const lessonId = await insertLesson({
       sourceFile: 's', title: 'L', summary: 's', takeaways: ['a', 'b', 'c'],
       quiz: { question: 'q', options: ['x', 'y'], correctIndex: 0, explanation: 'e' },
       topics: ['sleep'], claimFlags: [],
     });
-    setLessonStatus(lessonId, 'published');
-    toggleCompletion(a.id, lessonId);
+    await setLessonStatus(lessonId, "published");
+    await toggleCompletion(a.id, lessonId);
 
     const { buildReport } = await import('@/lib/reporting/report');
     const { rows, summary } = await buildReport(providerFor({ 'WN-A-1': 5000 }));

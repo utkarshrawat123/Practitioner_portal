@@ -20,7 +20,7 @@ afterEach(async () => {
 
 async function seed(status: 'approved' | 'flagged') {
   const { insertApplication, markApproved, flagPractitioner } = await import('@/lib/db');
-  const p = insertApplication({
+  const p = await insertApplication({
     name: 'Jane Smith', email: 'jane@example.com', registerBody: 'BANT',
     registerNumber: '12345', qualificationStatus: 'qualified',
   });
@@ -61,8 +61,8 @@ describe('getSessionPractitioner', () => {
     const req = new Request('http://x/', {
       headers: { cookie: sessionCookieHeader(p.id).split(';')[0] },
     });
-    expect(getSessionPractitioner(req)?.email).toBe('jane@example.com');
-    expect(getSessionPractitioner(new Request('http://x/'))).toBeNull();
+    expect((await getSessionPractitioner(req))?.email).toBe('jane@example.com');
+    expect(await getSessionPractitioner(new Request('http://x/'))).toBeNull();
   });
 });
 
@@ -74,7 +74,7 @@ describe('requestLoginLink', () => {
     expect(devLink).toContain('/api/auth/verify?token=');
     const token = devLink!.split('token=')[1];
     const { consumeAuthToken } = await import('@/lib/db');
-    expect(consumeAuthToken(token)).toBe(p.id);
+    expect(await consumeAuthToken(token)).toBe(p.id);
   });
 
   it('returns null devLink for unknown or non-approved emails', async () => {

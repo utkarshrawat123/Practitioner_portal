@@ -44,7 +44,7 @@ export function clearSessionCookieHeader(): string {
   return `${COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`;
 }
 
-export function getSessionPractitioner(req: Request): Practitioner | null {
+export async function getSessionPractitioner(req: Request): Promise<Practitioner | null> {
   const cookie = req.headers.get('cookie') ?? '';
   const match = cookie.match(/(?:^|;\s*)wn_session=([^;]+)/);
   if (!match) return null;

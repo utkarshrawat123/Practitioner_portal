@@ -30,7 +30,7 @@ export interface GenerationDeps {
     model?: string;
     inputTokens?: number;
     outputTokens?: number;
-  }) => number;
+  }) => number | Promise<number>;
   log: (msg: string) => void;
 }
 
@@ -53,7 +53,7 @@ export async function runGeneration(dir: string, deps: GenerationDeps): Promise<
       continue;
     }
     for (const lesson of result.lessons) {
-      deps.insertLesson({
+      await deps.insertLesson({
         sourceFile: source.file,
         title: lesson.title,
         summary: lesson.summary,

@@ -6,5 +6,5 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request): Promise<NextResponse> {
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
-  return NextResponse.json({ queries: listAiQueries() });
+  return NextResponse.json({ queries: await listAiQueries() });
 }

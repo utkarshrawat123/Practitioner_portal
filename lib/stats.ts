@@ -100,8 +100,8 @@ export async function computeStats(
   const code = practitioner.affiliateCode ?? '';
   // Local-DB figures (clicks, lesson completions) are always fresh — only the
   // Shopify order pull is cached, so merge these in on every return path.
-  const clicks = clickStats(practitioner.id);
-  const lessonsCompleted = countCompletions(practitioner.id);
+  const clicks = await clickStats(practitioner.id);
+  const lessonsCompleted = await countCompletions(practitioner.id);
 
   const cached = cache.get(code);
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) {

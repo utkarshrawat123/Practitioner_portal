@@ -23,9 +23,9 @@ export function getMagicLinkSender(): MagicLinkSender {
 
 /** Always resolves; devLink is only populated when the sender is the mock. */
 export async function requestLoginLink(email: string): Promise<{ devLink: string | null }> {
-  const practitioner = findByEmail(email);
+  const practitioner = await findByEmail(email);
   if (!practitioner || practitioner.status !== 'approved') return { devLink: null };
-  const token = createAuthToken(practitioner.id);
+  const token = await createAuthToken(practitioner.id);
   const url = `${portalUrl()}/api/auth/verify?token=${token}`;
   const sender = getMagicLinkSender();
   await sender.send({ email: practitioner.email, url });
