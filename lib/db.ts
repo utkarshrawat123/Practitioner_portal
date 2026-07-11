@@ -39,6 +39,21 @@ export interface EventRow {
   createdAt: string;
 }
 
+export interface MediaRow {
+  id: number;
+  title: string;
+  type: 'video' | 'document' | 'slides' | 'image';
+  description: string | null;
+  contentKind: 'file' | 'link';
+  url: string;
+  pathname: string | null;
+  thumbnailUrl: string | null;
+  thumbnailPathname: string | null;
+  size: number | null;
+  published: boolean;
+  createdAt: string;
+}
+
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS practitioners (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -115,6 +130,20 @@ CREATE TABLE IF NOT EXISTS lesson_completions (
 CREATE TABLE IF NOT EXISTS login_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS media (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL,
+  description TEXT,
+  content_kind TEXT NOT NULL,
+  url TEXT NOT NULL,
+  pathname TEXT,
+  thumbnail_url TEXT,
+  thumbnail_pathname TEXT,
+  size INTEGER,
+  published INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `;
@@ -614,6 +643,69 @@ export async function countCompletions(practitionerId: number): Promise<number> 
     [practitionerId]
   );
   return num(row?.n);
+}
+
+function rowToMedia(r: Row): MediaRow {
+  return {
+    id: num(r.id),
+    title: r.title as string,
+    type: r.type as MediaRow['type'],
+    description: (r.description as string | null) ?? null,
+    contentKind: r.content_kind as 'file' | 'link',
+    url: r.url as string,
+    pathname: (r.pathname as string | null) ?? null,
+    thumbnailUrl: (r.thumbnail_url as string | null) ?? null,
+    thumbnailPathname: (r.thumbnail_pathname as string | null) ?? null,
+    size: r.size === null ? null : num(r.size),
+    published: num(r.published) === 1,
+    createdAt: r.created_at as string,
+  };
+}
+
+export async function createMedia(m: {
+  title: string;
+  type: string;
+  description: string | null;
+  contentKind: 'file' | 'link';
+  url: string;
+  pathname: string | null;
+  thumbnailUrl: string | null;
+  thumbnailPathname: string | null;
+  size: number | null;
+}): Promise<number> {
+  const res = await run(
+    `INSERT INTO media
+      (title, type, description, content_kind, url, pathname, thumbnail_url, thumbnail_pathname, size)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [m.title, m.type, m.description, m.contentKind, m.url, m.pathname, m.thumbnailUrl, m.thumbnailPathname, m.size]
+  );
+  return res.lastInsertRowid;
+}
+
+export async function getMedia(id: number): Promise<MediaRow | null> {
+  const row = await one(`SELECT * FROM media WHERE id = ?`, [id]);
+  return row ? rowToMedia(row) : null;
+}
+
+export async function listMedia(): Promise<MediaRow[]> {
+  const rows = await all(`SELECT * FROM media ORDER BY id DESC`);
+  return rows.map(rowToMedia);
+}
+
+export async function listPublishedMedia(type?: string): Promise<MediaRow[]> {
+  const rows = type
+    ? await all(`SELECT * FROM media WHERE published = 1 AND type = ? ORDER BY id DESC`, [type])
+    : await all(`SELECT * FROM media WHERE published = 1 ORDER BY id DESC`);
+  return rows.map(rowToMedia);
+}
+
+export async function setMediaPublished(id: number, published: boolean): Promise<MediaRow> {
+  await run(`UPDATE media SET published = ? WHERE id = ?`, [published ? 1 : 0, id]);
+  return (await getMedia(id))!;
+}
+
+export async function deleteMedia(id: number): Promise<void> {
+  await run(`DELETE FROM media WHERE id = ?`, [id]);
 }
 
 export async function recordLogin(practitionerId: number): Promise<void> {

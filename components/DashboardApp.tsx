@@ -235,12 +235,20 @@ export default function DashboardApp() {
           </p>
           <p className="mt-1 text-xs text-ink2/60">Continuing professional development</p>
         </div>
-        <a
-          href="/library"
-          className="bg-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta"
-        >
-          Open the learning library
-        </a>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="/library"
+            className="bg-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta"
+          >
+            Open the learning library
+          </a>
+          <a
+            href="/resources"
+            className="border border-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-forest hover:border-terracotta hover:text-terracotta"
+          >
+            Browse resources
+          </a>
+        </div>
       </div>
 
       {/* Tier + profile */}
