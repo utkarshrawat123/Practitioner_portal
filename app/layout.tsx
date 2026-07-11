@@ -16,9 +16,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="/apply" className="font-heading text-2xl tracking-wide text-ink">
               Wild Nutrition<sup className="text-xs align-super">®</sup>
             </a>
-            <span className="text-xs uppercase tracking-[0.2em] text-ink2">
-              Practitioner Community
-            </span>
+            <nav className="flex items-center gap-6 text-xs uppercase tracking-[0.2em]">
+              <a href="/apply" className="text-ink2 transition-colors hover:text-terracotta">
+                Apply
+              </a>
+              <a href="/dashboard" className="text-ink2 transition-colors hover:text-terracotta">
+                Sign in
+              </a>
+            </nav>
           </div>
         </header>
         <main>{children}</main>
@@ -26,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mx-auto max-w-5xl px-6 py-10 text-sm">
             <p className="font-heading text-lg">Wild Nutrition® Ltd</p>
             <p className="mt-2 opacity-80">
-              Questions? Contact our practitioner team at care@wildnutrition.com
+              Questions? Contact us at utkarshrawatofficial@gmail.com
             </p>
           </div>
         </footer>

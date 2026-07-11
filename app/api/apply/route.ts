@@ -42,7 +42,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   } catch (err) {
     if (err instanceof DuplicateEmailError) {
       return NextResponse.json(
-        { error: 'An application already exists for this email address. Contact care@wildnutrition.com if you need help.' },
+        { error: 'An application already exists for this email address. Contact utkarshrawatofficial@gmail.com if you need help.' },
         { status: 409 }
       );
     }

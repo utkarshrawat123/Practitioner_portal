@@ -1,5 +1,5 @@
 const USER_AGENT =
-  'WildNutritionPractitionerPortal/1.0 (+care@wildnutrition.com; membership verification)';
+  'WildNutritionPractitionerPortal/1.0 (+utkarshrawatofficial@gmail.com; membership verification)';
 const MIN_INTERVAL_MS = 1000;
 const TIMEOUT_MS = 8000;
 

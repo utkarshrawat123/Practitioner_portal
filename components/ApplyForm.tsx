@@ -65,6 +65,15 @@ export default function ApplyForm() {
           <p className={`${labelClass} mt-4`}>Your referral link</p>
           <p className="break-all text-sm">{result.link}</p>
         </div>
+        <a
+          href="/dashboard"
+          className="mt-6 inline-block bg-ink px-8 py-4 text-xs uppercase tracking-[0.2em] text-cream transition-colors hover:bg-terracotta"
+        >
+          Go to your dashboard →
+        </a>
+        <p className="mt-3 text-xs text-ink2/70">
+          Sign in any time with this email — we&apos;ll send you a secure one-time login link.
+        </p>
       </div>
     );
   }
