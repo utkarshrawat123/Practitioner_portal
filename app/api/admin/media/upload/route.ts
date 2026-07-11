@@ -8,11 +8,18 @@ export const dynamic = 'force-dynamic';
 // bypassing the ~4.5 MB serverless request-body limit.
 export async function POST(req: Request): Promise<NextResponse> {
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
-  const body = (await req.json()) as HandleUploadBody;
+  let body: HandleUploadBody;
+  try {
+    body = (await req.json()) as HandleUploadBody;
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
   try {
     const json = await handleUpload({
       body,
       request: req,
+      // Admin-only endpoint: no pathname allow-listing here, so arbitrary
+      // pathnames are an accepted risk (not exposed to unauthenticated users).
       onBeforeGenerateToken: async () => ({
         allowedContentTypes: [
           'image/*', 'application/pdf', 'video/*',
@@ -27,6 +34,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     });
     return NextResponse.json(json);
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    console.error('media upload token error', err);
+    return NextResponse.json({ error: 'Upload authorisation failed' }, { status: 400 });
   }
 }
