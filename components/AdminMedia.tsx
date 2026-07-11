@@ -53,11 +53,28 @@ export default function AdminMedia() {
   }
 
   // Image files are their own thumbnail; other file types need an uploaded thumbnail.
-  function onPickFile(f: File | null) {
+  function onPickFile(f: File | null, forType: MediaRow['type'] = type) {
     setFile(f);
+    setThumbFile(null);
     setThumbPreview(null);
-    setThumbNeeded(!!f && type !== 'image');
-    if (f && type === 'image') setThumbPreview(URL.createObjectURL(f));
+    setThumbNeeded(!!f && forType !== 'image');
+    if (f && forType === 'image') setThumbPreview(URL.createObjectURL(f));
+  }
+
+  function applyType(nextType: MediaRow['type']) {
+    setType(nextType);
+    if (source === 'file') onPickFile(file, nextType);
+  }
+
+  function changeSource(next: 'file' | 'link') {
+    setSource(next);
+    setFile(null);
+    setThumbFile(null);
+    setThumbPreview(null);
+    setThumbNeeded(false);
+    setLinkUrl('');
+    if (fileRef.current) fileRef.current.value = '';
+    if (thumbRef.current) thumbRef.current.value = '';
   }
 
   function reset() {
@@ -134,14 +151,14 @@ export default function AdminMedia() {
           <div><label className={label}>Title</label><input className={input} value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
           <div>
             <label className={label}>Type</label>
-            <select className={input} value={type} onChange={(e) => { setType(e.target.value as MediaRow['type']); onPickFile(file); }}>
+            <select className={input} value={type} onChange={(e) => applyType(e.target.value as MediaRow['type'])}>
               {TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
           </div>
           <div><label className={label}>Description</label><textarea className={input} rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div className="flex gap-4 text-sm">
-            <label className="flex items-center gap-2"><input type="radio" checked={source === 'file'} onChange={() => setSource('file')} className="accent-terracotta" /> Upload file</label>
-            <label className="flex items-center gap-2"><input type="radio" checked={source === 'link'} onChange={() => setSource('link')} className="accent-terracotta" /> Paste link</label>
+            <label className="flex items-center gap-2"><input type="radio" checked={source === 'file'} onChange={() => changeSource('file')} className="accent-terracotta" /> Upload file</label>
+            <label className="flex items-center gap-2"><input type="radio" checked={source === 'link'} onChange={() => changeSource('link')} className="accent-terracotta" /> Paste link</label>
           </div>
           {source === 'file' ? (
             <div><label className={label}>File</label><input ref={fileRef} type="file" className={input} onChange={(e) => onPickFile(e.target.files?.[0] ?? null)} /></div>
