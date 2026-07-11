@@ -141,7 +141,7 @@ export default function AdminDashboard() {
       ) : tab === 'media' ? (
         <AdminMedia />
       ) : (
-      <div className="mt-6 grid gap-8 lg:grid-cols-[1.3fr_1fr]">
+      <div className="mt-6 grid gap-8 xl:grid-cols-[2fr_1fr]">
         <table className="w-full border-collapse bg-white text-sm">
           <thead>
             <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
