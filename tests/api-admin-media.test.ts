@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { del } from '@vercel/blob';
 
 // Blob del() is mocked so DELETE never hits the network.
 vi.mock('@vercel/blob', () => ({ del: vi.fn(async () => {}) }));
@@ -79,11 +80,22 @@ describe('/api/admin/media', () => {
       { params: { id: '1' } }
     );
     expect((await patch.json()).media.published).toBe(false);
-    const del = await mod.DELETE(
+    const deleteRes = await mod.DELETE(
       new Request('http://x/api/admin/media/1', { method: 'DELETE', headers: { cookie } }),
       { params: { id: '1' } }
     );
-    expect(del.status).toBe(200);
+    expect(deleteRes.status).toBe(200);
+    expect(del).toHaveBeenCalledWith(['https://blob/x.pdf', 'https://blob/t.png']);
     expect(await (await import('@/lib/db')).getMedia(1)).toBeNull();
+  });
+
+  it('returns 404 for a non-numeric id without throwing', async () => {
+    const cookie = await adminCookie();
+    const mod = await import('@/app/api/admin/media/[id]/route');
+    const res = await mod.DELETE(
+      new Request('http://x/api/admin/media/abc', { method: 'DELETE', headers: { cookie } }),
+      { params: { id: 'abc' } }
+    );
+    expect(res.status).toBe(404);
   });
 });
