@@ -154,14 +154,21 @@ let schemaReady: Promise<unknown> | null = null;
 /**
  * Resolve the database URL. In production, TURSO_DATABASE_URL points at a hosted
  * libSQL/Turso database (durable, shared across all serverless instances). Locally
- * and in tests we use a libSQL file: URL. On Vercel without Turso configured we fall
- * back to /tmp (ephemeral per-instance) so the app still boots.
+ * and in tests we use a libSQL file: URL.
+ *
+ * We deliberately do NOT fall back to /tmp on serverless: that storage is
+ * per-instance and ephemeral, which silently splits reads/writes across instances
+ * (some see Turso, some a throwaway file) and shows stale/empty data. If we're on
+ * a serverless platform without Turso configured, fail loudly instead.
  */
 function dbUrl(): string {
   if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
   if (process.env.DB_PATH) return `file:${process.env.DB_PATH}`;
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    return 'file:/tmp/practitioners.db';
+    throw new Error(
+      'TURSO_DATABASE_URL is not set. Refusing to use ephemeral /tmp storage in a ' +
+        'serverless environment — configure Turso so data is durable and consistent.'
+    );
   }
   return `file:${path.join(process.cwd(), 'data', 'practitioners.db')}`;
 }
