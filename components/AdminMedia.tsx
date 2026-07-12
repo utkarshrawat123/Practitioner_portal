@@ -91,6 +91,9 @@ export default function AdminMedia() {
     if (source === 'link' && !linkUrl.trim()) return setError('Paste a link.');
     if (thumbNeeded && !thumbFile) return setError('A thumbnail is required — upload one.');
     setBusy(true);
+    // Blob URLs we upload before the metadata POST. If anything after an upload
+    // fails, these are orphaned (no media row references them) and get cleaned up.
+    const uploaded: string[] = [];
     try {
       // 1. Resolve the main URL (Blob upload for files, the raw URL for links).
       let url = linkUrl.trim();
@@ -102,6 +105,7 @@ export default function AdminMedia() {
           access: 'public', handleUploadUrl: '/api/admin/media/upload',
         });
         url = blob.url; pathname = blob.pathname; size = file.size;
+        uploaded.push(blob.url);
       }
       // 2. Resolve the thumbnail URL.
       let thumbnailUrl: string | null = null;
@@ -113,6 +117,7 @@ export default function AdminMedia() {
           access: 'public', handleUploadUrl: '/api/admin/media/upload',
         });
         thumbnailUrl = t.url; thumbnailPathname = t.pathname;
+        uploaded.push(t.url);
       } else if (thumbPreview) {
         thumbnailUrl = thumbPreview; // auto-derived remote thumbnail
       }
@@ -125,6 +130,16 @@ export default function AdminMedia() {
       reset();
       await loadRows();
     } catch (err) {
+      // Compensating cleanup: delete any blobs uploaded before the failure so
+      // they don't leak as unreferenced, billable objects. Best-effort.
+      if (uploaded.length) {
+        try {
+          await fetch('/api/admin/media/cleanup', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls: uploaded }),
+          });
+        } catch { /* swallow — the original error below is what matters */ }
+      }
       setError((err as Error).message);
     } finally {
       setBusy(false);
