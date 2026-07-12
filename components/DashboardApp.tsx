@@ -201,30 +201,27 @@ export default function DashboardApp() {
       )}
 
       {/* Stats */}
-      {empty ? (
-        <div className={`${card} mt-6 text-center`}>
-          <p className="font-heading text-2xl text-ink">Share your link to start earning</p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-ink2/80">
-            No referrals yet. Share your code with clients — every order placed with it earns
-            you commission, and your numbers will appear here automatically.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {stats ? (
-            <>
-              <StatCard title="Clicks this month" month={String(stats.clicksThisMonth)} allTime={`${stats.clicksAllTime}`} />
-              <StatCard title="Orders this month" month={String(stats.ordersThisMonth)} allTime={`${stats.ordersAllTime}`} />
-              <StatCard title="Conversion rate" month={`${stats.conversionRate}%`} allTime={null} />
-              <StatCard title="Commission this month" month={gbp(stats.commissionThisMonth)} allTime={gbp(stats.commissionAllTime)} />
-            </>
-          ) : (
-            [0, 1, 2, 3].map((i) => (
-              <div key={i} className={card}><Skeleton /></div>
-            ))
-          )}
+      {empty && (
+        <div className="mt-6 border-l-2 border-terracotta bg-cream px-4 py-3 text-sm text-ink2/80">
+          <span className="font-semibold text-ink">Share your link to start earning.</span>{' '}
+          No referrals yet — share your code with clients, and the figures below update
+          automatically as orders come in.
         </div>
       )}
+      <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {stats ? (
+          <>
+            <StatCard title="Clicks this month" month={String(stats.clicksThisMonth)} allTime={`${stats.clicksAllTime}`} />
+            <StatCard title="Orders this month" month={String(stats.ordersThisMonth)} allTime={`${stats.ordersAllTime}`} />
+            <StatCard title="Conversion rate" month={`${stats.conversionRate}%`} allTime={null} />
+            <StatCard title="Commission this month" month={gbp(stats.commissionThisMonth)} allTime={gbp(stats.commissionAllTime)} />
+          </>
+        ) : (
+          [0, 1, 2, 3].map((i) => (
+            <div key={i} className={card}><Skeleton /></div>
+          ))
+        )}
+      </div>
 
       {/* Learning / CPD */}
       <div className={`${card} mt-6 flex flex-wrap items-center justify-between gap-4`}>
