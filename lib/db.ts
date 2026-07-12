@@ -183,6 +183,12 @@ function rawClient(): Client {
       url,
       authToken: process.env.TURSO_AUTH_TOKEN,
       intMode: 'number',
+      // libSQL talks to Turso over fetch, and Next.js patches global fetch to
+      // cache responses by default — which caches query RESULTS and serves stale
+      // data (e.g. the admin list showing long-deleted rows). Force no-store so
+      // every query hits the live database.
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(input, { ...init, cache: 'no-store' }),
     });
   }
   return client;
