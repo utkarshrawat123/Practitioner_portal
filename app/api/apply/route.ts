@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { DuplicateEmailError, processApplication } from '@/lib/pipeline';
+import { sessionCookieHeader } from '@/lib/practitionerAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,11 +32,15 @@ export async function POST(req: Request): Promise<NextResponse> {
   try {
     const practitioner = await processApplication(parsed.data);
     if (practitioner.status === 'approved') {
-      return NextResponse.json({
+      // Log the newly approved practitioner straight in, so "Go to your dashboard"
+      // shows THEM — not whatever stale session the browser might already hold.
+      const res = NextResponse.json({
         status: 'approved',
         code: practitioner.affiliateCode,
         link: practitioner.affiliateLink,
       });
+      res.headers.set('Set-Cookie', sessionCookieHeader(practitioner.id));
+      return res;
     }
     // Flagged: never leak verification internals to the applicant.
     return NextResponse.json({ status: 'flagged' });

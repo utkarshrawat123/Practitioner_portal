@@ -44,6 +44,24 @@ describe('POST /api/apply', () => {
     expect(body.link).toContain(body.code);
   });
 
+  it('logs the newly approved practitioner in via a session cookie', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<div>Jane Smith</div>', { status: 200 })));
+    const { POST } = await import('@/app/api/apply/route');
+    const res = await POST(post(valid));
+    const setCookie = res.headers.get('set-cookie');
+    expect(setCookie).toMatch(/wn_session=/);
+    expect(setCookie).toMatch(/HttpOnly/);
+    // The cookie must resolve to the approved practitioner that just applied.
+    const value = setCookie!.match(/wn_session=([^;]+)/)![1];
+    const { verifySessionValue } = await import('@/lib/practitionerAuth');
+    const { getPractitioner } = await import('@/lib/db');
+    const id = verifySessionValue(value);
+    expect(id).not.toBeNull();
+    const p = await getPractitioner(id!);
+    expect(p!.email).toBe('jane@example.com');
+    expect(p!.status).toBe('approved');
+  });
+
   it('returns flagged without exposing internal reasons', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('<div>no match here</div>', { status: 200 })));
     const { POST } = await import('@/app/api/apply/route');
@@ -52,6 +70,8 @@ describe('POST /api/apply', () => {
     expect(body.status).toBe('flagged');
     expect(body.reasonCode).toBeUndefined();
     expect(body.code).toBeUndefined();
+    // Flagged applicants are not approved, so no session is issued.
+    expect(res.headers.get('set-cookie')).toBeNull();
   });
 
   it('400s on invalid payload with field errors', async () => {
