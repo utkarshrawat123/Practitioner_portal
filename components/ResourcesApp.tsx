@@ -41,7 +41,7 @@ export default function ResourcesApp() {
   }
 
   return (
-    <div className="w-full px-8 py-12 lg:px-12">
+    <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="font-heading text-3xl text-ink md:text-4xl">Resources</h1>
         <a href="/dashboard" className="text-xs uppercase tracking-[0.15em] text-terracotta underline">Back to dashboard</a>
