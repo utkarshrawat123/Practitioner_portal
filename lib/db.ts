@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { runMigrations } from '@/lib/migrations';
+import { hasAccess, type Audience } from '@/lib/access';
 
 export type QualificationStatus = 'qualified' | 'student';
 export type Status = 'pending' | 'approved' | 'flagged' | 'rejected';
@@ -54,6 +55,28 @@ export interface MediaRow {
   size: number | null;
   published: boolean;
   createdAt: string;
+}
+
+export interface HomepageWidget {
+  id: number;
+  title: string;
+  body: string | null;
+  linkUrl: string | null;
+  imageUrl: string | null;
+  audience: Audience;
+  position: number;
+  published: boolean;
+  createdAt: string;
+}
+
+export interface HomepageWidgetInput {
+  title: string;
+  body?: string | null;
+  linkUrl?: string | null;
+  imageUrl?: string | null;
+  audience?: Audience;
+  position?: number;
+  published?: boolean;
 }
 
 export const SCHEMA = `
@@ -726,6 +749,78 @@ export async function setMediaPublished(id: number, published: boolean): Promise
 
 export async function deleteMedia(id: number): Promise<void> {
   await run(`DELETE FROM media WHERE id = ?`, [id]);
+}
+
+// ---- Homepage "What's New" widgets (Part 2) ----
+
+function rowToWidget(row: Row): HomepageWidget {
+  return {
+    id: num(row.id),
+    title: row.title as string,
+    body: (row.body as string | null) ?? null,
+    linkUrl: (row.link_url as string | null) ?? null,
+    imageUrl: (row.image_url as string | null) ?? null,
+    audience: ((row.audience as string | null) ?? 'all') as Audience,
+    position: num(row.position),
+    published: num(row.published) === 1,
+    createdAt: row.created_at as string,
+  };
+}
+
+export async function createHomepageWidget(w: HomepageWidgetInput): Promise<HomepageWidget> {
+  const res = await run(
+    `INSERT INTO homepage_widgets (title, body, link_url, image_url, audience, position, published)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      w.title, w.body ?? null, w.linkUrl ?? null, w.imageUrl ?? null,
+      w.audience ?? 'all', w.position ?? 0, w.published === false ? 0 : 1,
+    ]
+  );
+  return (await getHomepageWidget(res.lastInsertRowid))!;
+}
+
+export async function getHomepageWidget(id: number): Promise<HomepageWidget | null> {
+  const row = await one(`SELECT * FROM homepage_widgets WHERE id = ?`, [id]);
+  return row ? rowToWidget(row) : null;
+}
+
+export async function listHomepageWidgets(): Promise<HomepageWidget[]> {
+  const rows = await all(`SELECT * FROM homepage_widgets ORDER BY position ASC, id ASC`);
+  return rows.map(rowToWidget);
+}
+
+export async function listPublishedWidgetsFor(
+  qualificationStatus: QualificationStatus | null
+): Promise<HomepageWidget[]> {
+  const rows = await all(
+    `SELECT * FROM homepage_widgets WHERE published = 1 ORDER BY position ASC, id ASC`
+  );
+  const practitioner = qualificationStatus ? { qualificationStatus } : null;
+  return rows.map(rowToWidget).filter((w) => hasAccess(practitioner, w));
+}
+
+export async function updateHomepageWidget(
+  id: number,
+  patch: Partial<HomepageWidgetInput>
+): Promise<HomepageWidget | null> {
+  const sets: string[] = [];
+  const args: InValue[] = [];
+  if (patch.title !== undefined) { sets.push('title = ?'); args.push(patch.title); }
+  if (patch.body !== undefined) { sets.push('body = ?'); args.push(patch.body ?? null); }
+  if (patch.linkUrl !== undefined) { sets.push('link_url = ?'); args.push(patch.linkUrl ?? null); }
+  if (patch.imageUrl !== undefined) { sets.push('image_url = ?'); args.push(patch.imageUrl ?? null); }
+  if (patch.audience !== undefined) { sets.push('audience = ?'); args.push(patch.audience); }
+  if (patch.position !== undefined) { sets.push('position = ?'); args.push(patch.position); }
+  if (patch.published !== undefined) { sets.push('published = ?'); args.push(patch.published ? 1 : 0); }
+  if (sets.length > 0) {
+    args.push(id);
+    await run(`UPDATE homepage_widgets SET ${sets.join(', ')} WHERE id = ?`, args);
+  }
+  return getHomepageWidget(id);
+}
+
+export async function deleteHomepageWidget(id: number): Promise<void> {
+  await run(`DELETE FROM homepage_widgets WHERE id = ?`, [id]);
 }
 
 export async function recordLogin(practitionerId: number): Promise<void> {
