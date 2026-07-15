@@ -160,6 +160,16 @@ CREATE TABLE IF NOT EXISTS homepage_widgets (
 );
 `,
   },
+  {
+    // Part 2: track whether a practitioner has seen the one-time Welcome experience.
+    // Backfill existing rows to 1 so current accounts are not shown the takeover;
+    // only sign-ups created after this migration default to 0 and see it once.
+    id: '008_has_seen_welcome',
+    sql: `
+ALTER TABLE practitioners ADD COLUMN has_seen_welcome INTEGER NOT NULL DEFAULT 0;
+UPDATE practitioners SET has_seen_welcome = 1;
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */

@@ -54,7 +54,11 @@ describe('migrations', () => {
   it('records every migration and is idempotent (re-running adds nothing)', async () => {
     const { createClient } = await import('@libsql/client');
     const { runMigrations, MIGRATIONS } = await import('@/lib/migrations');
+    const { SCHEMA } = await import('@/lib/db');
     const c = createClient({ url: `file:${process.env.DB_PATH}` });
+    // Mirror production: base schema first (so ALTER-based migrations have their
+    // target tables), then migrations.
+    await c.executeMultiple(SCHEMA);
     await runMigrations(c);
     const after1 = (await c.execute('SELECT id FROM schema_migrations')).rows.map((r) => r.id as string);
     expect(after1.sort()).toEqual(MIGRATIONS.map((m) => m.id).sort());
@@ -63,5 +67,19 @@ describe('migrations', () => {
     const after2 = (await c.execute('SELECT id FROM schema_migrations')).rows.map((r) => r.id as string);
     expect(after2.sort()).toEqual(after1.sort());
     c.close();
+  });
+
+  it('008 adds has_seen_welcome and new rows default to 0', async () => {
+    const { execForTests, insertApplication } = await import('@/lib/db');
+    // Insert AFTER migrations have run (they run on first getClient()), so this
+    // row is created post-migration and defaults to 0.
+    const p = await insertApplication({
+      name: 'Old Row', email: 'old@example.com', registerBody: 'BANT',
+      registerNumber: '999', qualificationStatus: 'qualified',
+    });
+    const cols = await execForTests('PRAGMA table_info(practitioners)');
+    expect(cols.rows.map((r) => r.name as string)).toContain('has_seen_welcome');
+    const row = await execForTests('SELECT has_seen_welcome FROM practitioners WHERE id = ?', [p.id]);
+    expect(Number(row.rows[0].has_seen_welcome)).toBe(0);
   });
 });

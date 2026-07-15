@@ -30,6 +30,7 @@ export interface Practitioner {
   createdAt: string;
   decidedAt: string | null;
   decidedBy: string | null;
+  hasSeenWelcome: boolean;
 }
 
 export interface EventRow {
@@ -55,7 +56,7 @@ export interface MediaRow {
   createdAt: string;
 }
 
-const SCHEMA = `
+export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS practitioners (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -269,6 +270,7 @@ function rowToPractitioner(row: Row): Practitioner {
     createdAt: row.created_at as string,
     decidedAt: (row.decided_at as string | null) ?? null,
     decidedBy: (row.decided_by as string | null) ?? null,
+    hasSeenWelcome: num(row.has_seen_welcome) === 1,
   };
 }
 
@@ -347,6 +349,10 @@ export async function markApproved(
     ]
   );
   return (await getPractitioner(id))!;
+}
+
+export async function markSeenWelcome(id: number): Promise<void> {
+  await run(`UPDATE practitioners SET has_seen_welcome = 1 WHERE id = ?`, [id]);
 }
 
 export async function markRejected(id: number, decidedBy: string): Promise<Practitioner> {
