@@ -13,7 +13,7 @@ const CARD = '#1E2C4C';
 
 function Grain() {
   return (
-    <svg aria-hidden className="pointer-events-none fixed inset-0 h-full w-full"
+    <svg aria-hidden className="pointer-events-none absolute inset-0 h-full w-full"
       style={{ mixBlendMode: 'overlay', opacity: 0.12 }}>
       <filter id="wn-grain">
         <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={3} stitchTiles="stitch" />
@@ -89,7 +89,7 @@ function StartButton() {
 
 export default function WelcomeExperience({ firstName }: { firstName: string | null }) {
   return (
-    <div style={{ backgroundColor: NAVY, color: CREAM, fontFamily: 'var(--font-inter)' }}>
+    <div className="relative isolate" style={{ backgroundColor: NAVY, color: CREAM, fontFamily: 'var(--font-inter)' }}>
       <Grain />
       {/* Scene 1 — Hero */}
       <section className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center"
