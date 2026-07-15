@@ -14,6 +14,27 @@ interface Stats {
   commissionThisMonth: number; commissionAllTime: number;
   conversionRate: number; lessonsCompleted: number; stale: boolean;
 }
+interface Widget {
+  id: number; title: string; body: string | null;
+  linkUrl: string | null; imageUrl: string | null;
+}
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+const QUICK_LINKS: { label: string; href: string; ready: boolean }[] = [
+  { label: 'Ask Lorna', href: '/assistant', ready: true },
+  { label: 'Book Technical Consultation', href: '/coming-soon', ready: false },
+  { label: 'Clinical Toolkit', href: '/toolkit', ready: false },
+  { label: 'Community', href: '/community', ready: false },
+  { label: 'Events', href: '/events', ready: false },
+  { label: 'My Downloads', href: '/coming-soon', ready: false },
+  { label: 'My CPD', href: '/coming-soon', ready: false },
+];
 
 const card = 'border border-stone bg-white p-6';
 const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
@@ -56,6 +77,7 @@ export default function DashboardApp() {
   const [me, setMe] = useState<Me | null>(null);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [widgets, setWidgets] = useState<Widget[]>([]);
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [devLink, setDevLink] = useState<string | null>(null);
@@ -73,6 +95,7 @@ export default function DashboardApp() {
       setMe(await res.json());
       setAuthed(true);
       loadStats();
+      fetch('/api/me/widgets').then(async (r) => { if (r.ok) setWidgets((await r.json()).widgets); });
     })();
   }, [loadStats]);
 
@@ -94,14 +117,6 @@ export default function DashboardApp() {
       setSent(true);
       setDevLink(body.devLink ?? null);
     }
-  }
-
-  async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    setAuthed(false);
-    setMe(null);
-    setStats(null);
-    setSent(false);
   }
 
   // ---- Login screen ----
@@ -160,111 +175,119 @@ export default function DashboardApp() {
   const p = me.practitioner;
   const empty = stats && !stats.stale && stats.clicksAllTime === 0 && stats.ordersAllTime === 0;
 
-  // ---- Dashboard ----
+  // ---- Homepage ----
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+      {/* Greeting */}
+      <p className={label}>Practitioner Hub</p>
+      <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">
+        {greeting()}, {p.name.split(' ')[0]}
+      </h1>
+
+      {/* Continue Learning */}
+      <div className={`${card} mt-8 flex flex-wrap items-center justify-between gap-4`}>
         <div>
-          <p className={label}>Practitioner dashboard</p>
-          <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">Welcome back, {p.name.split(' ')[0]}</h1>
-        </div>
-        <div className="flex items-baseline gap-5">
-          <a href="/assistant" className="text-xs uppercase tracking-[0.15em] text-terracotta underline">
-            Protocol Assistant
-          </a>
-          <button onClick={logout} className="text-xs uppercase tracking-[0.15em] text-ink2/70 underline hover:text-terracotta">
-            Log out
-          </button>
-        </div>
-      </div>
-
-      {/* Referral assets */}
-      <div className={`${card} mt-8`}>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div>
-            <p className={label}>Your referral code</p>
-            <p className="mt-2 font-heading text-3xl text-terracotta">{me.code}</p>
-            <div className="mt-3"><CopyButton value={me.code ?? ''}>Copy code</CopyButton></div>
-          </div>
-          <div>
-            <p className={label}>Your referral link</p>
-            <p className="mt-2 break-all text-sm text-ink2/90">{me.link}</p>
-            <div className="mt-3"><CopyButton value={me.link ?? ''}>Copy link</CopyButton></div>
-          </div>
-        </div>
-      </div>
-
-      {stats?.stale && (
-        <p className="mt-4 border-l-2 border-terracotta bg-cream px-4 py-2 text-xs text-ink2/80">
-          Live stats are temporarily unavailable — showing the most recent figures.
-        </p>
-      )}
-
-      {/* Stats */}
-      {empty && (
-        <div className="mt-6 border-l-2 border-terracotta bg-cream px-4 py-3 text-sm text-ink2/80">
-          <span className="font-semibold text-ink">Share your link to start earning.</span>{' '}
-          No referrals yet — share your code with clients, and the figures below update
-          automatically as orders come in.
-        </div>
-      )}
-      <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {stats ? (
-          <>
-            <StatCard title="Clicks this month" month={String(stats.clicksThisMonth)} allTime={`${stats.clicksAllTime}`} />
-            <StatCard title="Orders this month" month={String(stats.ordersThisMonth)} allTime={`${stats.ordersAllTime}`} />
-            <StatCard title="Conversion rate" month={`${stats.conversionRate}%`} allTime={null} />
-            <StatCard title="Commission this month" month={gbp(stats.commissionThisMonth)} allTime={gbp(stats.commissionAllTime)} />
-          </>
-        ) : (
-          [0, 1, 2, 3].map((i) => (
-            <div key={i} className={card}><Skeleton /></div>
-          ))
-        )}
-      </div>
-
-      {/* Learning / CPD */}
-      <div className={`${card} mt-6 flex flex-wrap items-center justify-between gap-4`}>
-        <div>
-          <p className={label}>Lessons completed</p>
+          <p className={label}>Continue learning</p>
           <p className="mt-2 font-heading text-3xl text-ink">
-            {stats ? stats.lessonsCompleted : '—'}
+            {stats ? stats.lessonsCompleted : '—'} <span className="text-base text-ink2/60">lessons completed</span>
           </p>
-          <p className="mt-1 text-xs text-ink2/60">Continuing professional development</p>
+          <p className="mt-1 text-xs text-ink2/60">Pathway progress arrives with Learning Pathways.</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="/library"
-            className="bg-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta"
-          >
-            Open the learning library
-          </a>
-          <a
-            href="/resources"
-            className="border border-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-forest hover:border-terracotta hover:text-terracotta"
-          >
-            Browse resources
-          </a>
-        </div>
+        <a href="/library" className="bg-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">
+          Open the learning library
+        </a>
       </div>
 
-      {/* Tier + profile */}
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <div className={card}>
+      {/* What's New */}
+      {widgets.length > 0 && (
+        <section className="mt-8">
+          <p className={label}>What&apos;s new</p>
+          <div className="mt-3 flex gap-4 overflow-x-auto pb-2">
+            {widgets.map((w) => {
+              const inner = (
+                <>
+                  {w.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={w.imageUrl} alt="" className="mb-3 h-32 w-full rounded-sm object-cover" />
+                  )}
+                  <p className="font-heading text-lg text-ink">{w.title}</p>
+                  {w.body && <p className="mt-1 text-sm text-ink2/70">{w.body}</p>}
+                </>
+              );
+              return w.linkUrl ? (
+                <a key={w.id} href={w.linkUrl} className={`${card} block w-64 shrink-0 transition-colors hover:border-terracotta`}>{inner}</a>
+              ) : (
+                <div key={w.id} className={`${card} w-64 shrink-0`}>{inner}</div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Quick Links */}
+      <section className="mt-8">
+        <p className={label}>Quick links</p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {QUICK_LINKS.map((q) => (
+            <a key={q.label} href={q.href}
+              className={`${card} flex items-center justify-between transition-colors hover:border-terracotta`}>
+              <span className="font-heading text-lg text-ink">{q.label}</span>
+              {!q.ready && <span className="text-[10px] uppercase tracking-[0.15em] text-ink2/50">Coming soon</span>}
+            </a>
+          ))}
+        </div>
+      </section>
+
+      {/* Your referrals (compact) */}
+      <section className="mt-8">
+        <p className={label}>Your referrals</p>
+        <div className={`${card} mt-3`}>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <p className={label}>Referral code</p>
+              <p className="mt-2 font-heading text-3xl text-terracotta">{me.code}</p>
+              <div className="mt-3"><CopyButton value={me.code ?? ''}>Copy code</CopyButton></div>
+            </div>
+            <div>
+              <p className={label}>Referral link</p>
+              <p className="mt-2 break-all text-sm text-ink2/90">{me.link}</p>
+              <div className="mt-3"><CopyButton value={me.link ?? ''}>Copy link</CopyButton></div>
+            </div>
+          </div>
+          {stats?.stale && (
+            <p className="mt-4 border-l-2 border-terracotta bg-cream px-4 py-2 text-xs text-ink2/80">
+              Live stats are temporarily unavailable — showing the most recent figures.
+            </p>
+          )}
+          {empty && (
+            <div className="mt-4 border-l-2 border-terracotta bg-cream px-4 py-3 text-sm text-ink2/80">
+              <span className="font-semibold text-ink">Share your link to start earning.</span>{' '}
+              No referrals yet — share your code with clients, and the figures below update
+              automatically as orders come in.
+            </div>
+          )}
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {stats ? (
+              <>
+                <StatCard title="Clicks this month" month={String(stats.clicksThisMonth)} allTime={`${stats.clicksAllTime}`} />
+                <StatCard title="Orders this month" month={String(stats.ordersThisMonth)} allTime={`${stats.ordersAllTime}`} />
+                <StatCard title="Conversion rate" month={`${stats.conversionRate}%`} allTime={null} />
+                <StatCard title="Commission this month" month={gbp(stats.commissionThisMonth)} allTime={gbp(stats.commissionAllTime)} />
+              </>
+            ) : (
+              [0, 1, 2, 3].map((i) => <div key={i} className={card}><Skeleton /></div>)
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Tier (slim) */}
+      <div className={`${card} mt-8 flex items-center justify-between`}>
+        <div>
           <p className={label}>Your tier</p>
-          <p className="mt-2 font-heading text-3xl capitalize text-forest">{p.tier}</p>
-          <p className="mt-2 text-xs text-ink2/60">Tiering criteria coming soon.</p>
+          <p className="mt-1 font-heading text-2xl capitalize text-forest">{p.tier}</p>
         </div>
-        <div className={card}>
-          <p className={label}>Profile</p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div><dt className="inline font-semibold">Name: </dt><dd className="inline">{p.name}</dd></div>
-            <div><dt className="inline font-semibold">Email: </dt><dd className="inline">{p.email}</dd></div>
-            <div><dt className="inline font-semibold">Register: </dt><dd className="inline">{p.registerBody} #{p.registerNumber}</dd></div>
-            <div><dt className="inline font-semibold">Status: </dt><dd className="inline capitalize">{p.qualificationStatus}</dd></div>
-            <div><dt className="inline font-semibold">Member since: </dt><dd className="inline">{p.createdAt.slice(0, 10)}</dd></div>
-          </dl>
-        </div>
+        <p className="max-w-xs text-right text-xs text-ink2/60">Tiering automation arrives in a later release.</p>
       </div>
     </div>
   );
