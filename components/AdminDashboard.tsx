@@ -5,6 +5,7 @@ import AdminAiQueries from '@/components/AdminAiQueries';
 import AdminLessons from '@/components/AdminLessons';
 import AdminReporting from '@/components/AdminReporting';
 import AdminMedia from '@/components/AdminMedia';
+import AdminWidgets from '@/components/AdminWidgets';
 
 interface Verification {
   reasonCode: string;
@@ -31,6 +32,7 @@ const TABS = [
   { id: 'lessons', label: 'Lessons' },
   { id: 'reporting', label: 'Reporting' },
   { id: 'media', label: 'Media' },
+  { id: 'homepage', label: 'Homepage' },
 ];
 
 const REASON_LABELS: Record<string, string> = {
@@ -53,7 +55,7 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (currentTab: string) => {
-    if (currentTab === 'ai' || currentTab === 'lessons' || currentTab === 'reporting' || currentTab === 'media') {
+    if (currentTab === 'ai' || currentTab === 'lessons' || currentTab === 'reporting' || currentTab === 'media' || currentTab === 'homepage') {
       // These tabs load their own data; just confirm the session is valid.
       const res = await fetch('/api/admin/practitioners');
       setAuthed(res.status !== 401);
@@ -140,6 +142,8 @@ export default function AdminDashboard() {
         <AdminReporting />
       ) : tab === 'media' ? (
         <AdminMedia />
+      ) : tab === 'homepage' ? (
+        <AdminWidgets />
       ) : (
       <div className={`mt-6 grid gap-8 ${selected ? 'xl:grid-cols-[2fr_1fr]' : 'grid-cols-1'}`}>
         <table className="w-full border-collapse bg-white text-sm">
