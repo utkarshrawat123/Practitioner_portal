@@ -1,4 +1,4 @@
-import { clickStats, countCompletions, type Practitioner } from '@/lib/db';
+import { clickStats, countCompletions, orderStatsByCode, type Practitioner } from '@/lib/db';
 
 export interface OrderStats {
   ordersThisMonth: number;
@@ -77,9 +77,24 @@ const shopifyStats: StatsProvider = {
   },
 };
 
+/** Reads order figures from the local `orders` table (populated by the Shopify webhook). */
+const localStats: StatsProvider = {
+  name: 'local',
+  async getOrderStats(code: string): Promise<OrderStats> {
+    if (!code) return { ...ZERO_ORDERS };
+    return orderStatsByCode(code);
+  },
+};
+
 export function getStatsProvider(): StatsProvider {
-  if (process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_ADMIN_TOKEN) return shopifyStats;
-  return mockStats;
+  // Orders arrive via the Shopify webhook and are stored locally; the dashboard
+  // reads that local table (fast, no per-load API calls). Set STATS_SOURCE=shopify-live
+  // to instead query the Shopify Admin API directly (e.g. for reconciliation).
+  if (process.env.STATS_SOURCE === 'shopify-live' && process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_ADMIN_TOKEN) {
+    return shopifyStats;
+  }
+  if (process.env.STATS_SOURCE === 'mock') return mockStats;
+  return localStats;
 }
 
 const CACHE_TTL_MS = 60_000;

@@ -63,10 +63,10 @@ describe('computeStats', () => {
     expect(s.conversionRate).toBe(0); // no clicks — no division by zero
   });
 
-  it('mock provider yields all-zero stats, not stale', async () => {
+  it('defaults to the local orders provider, yielding zeros when there are no orders', async () => {
     const p = await seedApproved();
     const { computeStats, getStatsProvider } = await import('@/lib/stats');
-    expect(getStatsProvider().name).toBe('mock');
+    expect(getStatsProvider().name).toBe('local');
     const s = await computeStats(p);
     expect(s.ordersAllTime).toBe(0);
     expect(s.commissionAllTime).toBe(0);

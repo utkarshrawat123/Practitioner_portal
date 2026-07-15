@@ -2,6 +2,7 @@ import { createClient, type Client, type InValue, type Row } from '@libsql/clien
 import { randomBytes } from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { runMigrations } from '@/lib/migrations';
 
 export type QualificationStatus = 'qualified' | 'student';
 export type Status = 'pending' | 'approved' | 'flagged' | 'rejected';
@@ -194,11 +195,11 @@ function rawClient(): Client {
   return client;
 }
 
-/** Returns a ready client, ensuring the schema exists exactly once per process. */
+/** Returns a ready client, ensuring the schema + migrations run exactly once per process. */
 async function getClient(): Promise<Client> {
   const c = rawClient();
   if (!schemaReady) {
-    schemaReady = c.executeMultiple(SCHEMA);
+    schemaReady = c.executeMultiple(SCHEMA).then(() => runMigrations(c));
   }
   await schemaReady;
   return c;
@@ -791,4 +792,79 @@ export async function listEvents(practitionerId: number): Promise<EventRow[]> {
     detail: r.detail as string,
     createdAt: r.created_at as string,
   }));
+}
+
+// ---- Orders (Shopify webhook → local table) ----
+
+export interface OrderInput {
+  orderId: string;
+  practitionerId: number | null;
+  code: string;
+  total: number;
+  currency: string;
+  financialStatus: string | null;
+  createdAt: string; // ISO timestamp from Shopify
+}
+
+/** Idempotent upsert keyed on the Shopify order id — safe to replay webhooks. */
+export async function recordOrder(o: OrderInput): Promise<void> {
+  await run(
+    `INSERT INTO orders (order_id, practitioner_id, code, total, currency, financial_status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(order_id) DO UPDATE SET
+       practitioner_id = excluded.practitioner_id,
+       code = excluded.code,
+       total = excluded.total,
+       currency = excluded.currency,
+       financial_status = excluded.financial_status,
+       created_at = excluded.created_at`,
+    [o.orderId, o.practitionerId, o.code, o.total, o.currency, o.financialStatus, o.createdAt]
+  );
+}
+
+/** Dashboard order figures for one referral code, from the local orders table. */
+export async function orderStatsByCode(code: string): Promise<{
+  ordersThisMonth: number;
+  ordersAllTime: number;
+  revenueThisMonth: number;
+  revenueAllTime: number;
+}> {
+  const monthPrefix = new Date().toISOString().slice(0, 7);
+  const row = await one(
+    `SELECT
+       COUNT(*) AS all_orders,
+       COALESCE(SUM(total), 0) AS all_rev,
+       COALESCE(SUM(CASE WHEN substr(created_at, 1, 7) = ? THEN 1 ELSE 0 END), 0) AS mo_orders,
+       COALESCE(SUM(CASE WHEN substr(created_at, 1, 7) = ? THEN total ELSE 0 END), 0) AS mo_rev
+     FROM orders WHERE code = ?`,
+    [monthPrefix, monthPrefix, code]
+  );
+  return {
+    ordersAllTime: num(row?.all_orders),
+    revenueAllTime: num(row?.all_rev),
+    ordersThisMonth: num(row?.mo_orders),
+    revenueThisMonth: num(row?.mo_rev),
+  };
+}
+
+/** Reporting referral figures for one code: 12-month revenue/orders + last-ever order. */
+export async function referralDataByCode(code: string): Promise<{
+  revenue12mo: number;
+  orders12mo: number;
+  lastReferralAt: string | null;
+}> {
+  const cutoff = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+  const row = await one(
+    `SELECT
+       COALESCE(SUM(CASE WHEN created_at >= ? THEN total ELSE 0 END), 0) AS rev12,
+       COALESCE(SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END), 0) AS n12,
+       MAX(created_at) AS last_at
+     FROM orders WHERE code = ?`,
+    [cutoff, cutoff, code]
+  );
+  return {
+    revenue12mo: num(row?.rev12),
+    orders12mo: num(row?.n12),
+    lastReferralAt: (row?.last_at as string | null) ?? null,
+  };
 }

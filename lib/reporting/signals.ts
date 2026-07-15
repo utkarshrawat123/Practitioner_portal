@@ -3,6 +3,7 @@ import {
   clickWindows,
   countCompletions,
   loginStats,
+  referralDataByCode,
   type Practitioner,
 } from '@/lib/db';
 
@@ -67,9 +68,23 @@ const shopifyProvider: ReferralDataProvider = {
   },
 };
 
+/** Reads 12-month referral figures from the local `orders` table (Shopify webhook). */
+const localProvider: ReferralDataProvider = {
+  name: 'local',
+  async getReferralData(code: string): Promise<ReferralData> {
+    if (!code) return { ...ZERO };
+    return referralDataByCode(code);
+  },
+};
+
 export function getReferralDataProvider(): ReferralDataProvider {
-  if (process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_ADMIN_TOKEN) return shopifyProvider;
-  return mockProvider;
+  // Default to the local orders table (populated by the webhook). STATS_SOURCE=shopify-live
+  // switches to the Admin API directly; =mock forces zeros.
+  if (process.env.STATS_SOURCE === 'shopify-live' && process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_ADMIN_TOKEN) {
+    return shopifyProvider;
+  }
+  if (process.env.STATS_SOURCE === 'mock') return mockProvider;
+  return localProvider;
 }
 
 export interface PractitionerSignals {
