@@ -11,6 +11,44 @@ This file is the authoritative state. See also `CLAUDE.md` (agent guide) and
 
 ---
 
+## PART 2 — Homepage, Welcome onboarding & nav (2026-07-15, branch `part-2-homepage`, NOT yet merged/deployed)
+
+Built on branch `part-2-homepage` (off `main` @ `f35dc2f`). **197 tests pass, `npm run build` clean.**
+Spec: `docs/superpowers/specs/2026-07-15-part-2-homepage-onboarding-design.md`;
+plan: `docs/superpowers/plans/2026-07-15-part-2-homepage-onboarding.md`.
+
+**What shipped (all TDD/verified):**
+- **Migration `008_has_seen_welcome`** — adds `practitioners.has_seen_welcome` and **backfills existing
+  rows to 1** (so the 4 live accounts are NOT shown the takeover; only new sign-ups see it). `markSeenWelcome`.
+- **Cinematic Welcome** at `/onboarding/welcome` (`components/WelcomeExperience.tsx`, framer-motion +
+  lucide-react + Fraunces/Inter via `next/font/google`). 2 scenes, deep-navy palette, SVG grain, word
+  pull-ups + char-by-char scroll reveal, "Start Exploring" CTA → POST `/api/me/seen-welcome` → `/dashboard`.
+  Gated: `app/dashboard/page.tsx` is now a server shell that redirects first-timers to the Welcome.
+- **Context-aware header** (`components/SiteHeader.tsx`, server) — practitioner nav (Home/Learning/Clinical
+  Toolkit/Community/Events + Log out) when signed in, Apply/Sign in otherwise. `lib/serverSession.ts`
+  `getServerSessionPractitioner()`. `components/ChromeGate.tsx` hides header/footer on `/onboarding/*`.
+- **Redesigned homepage** (`components/DashboardApp.tsx`) — time-based greeting, Continue Learning (lessons
+  stub → Part 3 swaps to pathway progress), **What's New** feed from `GET /api/me/widgets` (audience-filtered
+  via `hasAccess`), Quick Links grid (Ask Lorna→`/assistant`; unbuilt→coming-soon), compact **Your referrals**
+  card (code/link/stats retained), slim tier line.
+- **Admin "Homepage" tab** (`components/AdminWidgets.tsx`, 9th tab) — create/edit/reorder/hide/delete What's
+  New cards. APIs `app/api/admin/widgets{,/[id]}`. DB helpers `createHomepageWidget/listHomepageWidgets/
+  listPublishedWidgetsFor/updateHomepageWidget/deleteHomepageWidget` in `lib/db.ts` (widget image = URL field
+  MVP; Blob-upload UI deferred). `homepage_widgets` table is from Part 1.
+- **Coming-soon stubs** `/learning /toolkit /community /events /coming-soon` (`components/ComingSoon.tsx`);
+  Parts 3–5 replace the bodies.
+- **Deps added:** `framer-motion@^11`, `lucide-react@^0.400.0`.
+
+**Browser-verified** against an isolated LOCAL file DB (never touched prod Turso): public header, first-login
+Welcome gate, Welcome scenes + CTA flag persistence, homepage + audience-filtered What's New (student-only
+widget correctly hidden from a qualified practitioner), coming-soon route, admin Homepage tab, and mobile 375px.
+
+**TO DEPLOY (user decision — not auto-merged):** merge `part-2-homepage` → `main`, then `npx vercel --prod --yes`.
+Migration 008 runs on first connection to prod Turso (adds the column + backfills the 4 live rows to `has_seen_welcome=1`).
+No new env vars required. **Order matters** (per plan's branching rule): don't start Part 3 until this merges.
+
+---
+
 ## 1. Part 1 acceptance checklist — item by item
 
 | # | Acceptance item | Status | Where |
