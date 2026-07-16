@@ -823,6 +823,175 @@ export async function deleteHomepageWidget(id: number): Promise<void> {
   await run(`DELETE FROM homepage_widgets WHERE id = ?`, [id]);
 }
 
+// ---- Learning pathways, modules, progress & certificates (Part 3) ----
+
+export interface Pathway {
+  id: number; title: string; description: string | null; category: string | null;
+  cpdHours: number; audience: Audience; published: boolean; createdAt: string;
+}
+export interface PathwayInput {
+  title: string; description?: string | null; category?: string | null;
+  cpdHours?: number; audience?: Audience; published?: boolean;
+}
+export interface PathwayModule {
+  id: number; pathwayId: number; title: string;
+  contentKind: 'lesson' | 'media'; contentId: number; position: number; required: boolean;
+}
+export interface ModuleInput {
+  title: string; contentKind: 'lesson' | 'media'; contentId: number;
+  position?: number; required?: boolean;
+}
+export interface Certificate {
+  id: number; practitionerId: number; pathwayId: number; issuedAt: string; pdfUrl: string | null;
+}
+export interface PathwayProgress {
+  pathwayId: number; total: number; required: number; completedRequired: number;
+  percent: number; complete: boolean; completedModuleIds: number[];
+}
+
+function rowToPathway(r: Row): Pathway {
+  return {
+    id: num(r.id), title: r.title as string,
+    description: (r.description as string | null) ?? null,
+    category: (r.category as string | null) ?? null,
+    cpdHours: r.cpd_hours == null ? 0 : Number(r.cpd_hours),
+    audience: ((r.audience as string | null) ?? 'all') as Audience,
+    published: num(r.published) === 1,
+    createdAt: r.created_at as string,
+  };
+}
+function rowToModule(r: Row): PathwayModule {
+  return {
+    id: num(r.id), pathwayId: num(r.pathway_id), title: r.title as string,
+    contentKind: r.content_kind as 'lesson' | 'media', contentId: num(r.content_id),
+    position: num(r.position), required: num(r.required) === 1,
+  };
+}
+
+export async function createPathway(p: PathwayInput): Promise<Pathway> {
+  const res = await run(
+    `INSERT INTO pathways (title, description, category, cpd_hours, audience, published)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [p.title, p.description ?? null, p.category ?? null, p.cpdHours ?? 0, p.audience ?? 'all', p.published ? 1 : 0]
+  );
+  return (await getPathway(res.lastInsertRowid))!;
+}
+export async function getPathway(id: number): Promise<Pathway | null> {
+  const r = await one(`SELECT * FROM pathways WHERE id = ?`, [id]);
+  return r ? rowToPathway(r) : null;
+}
+export async function listPathways(): Promise<Pathway[]> {
+  return (await all(`SELECT * FROM pathways ORDER BY category, id`)).map(rowToPathway);
+}
+export async function listPublishedPathways(): Promise<Pathway[]> {
+  return (await all(`SELECT * FROM pathways WHERE published = 1 ORDER BY category, id`)).map(rowToPathway);
+}
+export async function updatePathway(id: number, patch: Partial<PathwayInput>): Promise<Pathway | null> {
+  const sets: string[] = []; const args: InValue[] = [];
+  if (patch.title !== undefined) { sets.push('title = ?'); args.push(patch.title); }
+  if (patch.description !== undefined) { sets.push('description = ?'); args.push(patch.description ?? null); }
+  if (patch.category !== undefined) { sets.push('category = ?'); args.push(patch.category ?? null); }
+  if (patch.cpdHours !== undefined) { sets.push('cpd_hours = ?'); args.push(patch.cpdHours); }
+  if (patch.audience !== undefined) { sets.push('audience = ?'); args.push(patch.audience); }
+  if (patch.published !== undefined) { sets.push('published = ?'); args.push(patch.published ? 1 : 0); }
+  if (sets.length) { args.push(id); await run(`UPDATE pathways SET ${sets.join(', ')} WHERE id = ?`, args); }
+  return getPathway(id);
+}
+export async function deletePathway(id: number): Promise<void> {
+  await run(`DELETE FROM module_completions WHERE module_id IN (SELECT id FROM pathway_modules WHERE pathway_id = ?)`, [id]);
+  await run(`DELETE FROM certificates WHERE pathway_id = ?`, [id]);
+  await run(`DELETE FROM pathway_modules WHERE pathway_id = ?`, [id]);
+  await run(`DELETE FROM pathways WHERE id = ?`, [id]);
+}
+
+export async function addPathwayModule(pathwayId: number, m: ModuleInput): Promise<PathwayModule> {
+  const res = await run(
+    `INSERT INTO pathway_modules (pathway_id, title, content_kind, content_id, position, required)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [pathwayId, m.title, m.contentKind, m.contentId, m.position ?? 0, m.required === false ? 0 : 1]
+  );
+  return (await getPathwayModule(res.lastInsertRowid))!;
+}
+export async function getPathwayModule(id: number): Promise<PathwayModule | null> {
+  const r = await one(`SELECT * FROM pathway_modules WHERE id = ?`, [id]);
+  return r ? rowToModule(r) : null;
+}
+export async function listPathwayModules(pathwayId: number): Promise<PathwayModule[]> {
+  return (await all(`SELECT * FROM pathway_modules WHERE pathway_id = ? ORDER BY position, id`, [pathwayId])).map(rowToModule);
+}
+export async function updatePathwayModule(id: number, patch: Partial<ModuleInput>): Promise<PathwayModule | null> {
+  const sets: string[] = []; const args: InValue[] = [];
+  if (patch.title !== undefined) { sets.push('title = ?'); args.push(patch.title); }
+  if (patch.contentKind !== undefined) { sets.push('content_kind = ?'); args.push(patch.contentKind); }
+  if (patch.contentId !== undefined) { sets.push('content_id = ?'); args.push(patch.contentId); }
+  if (patch.position !== undefined) { sets.push('position = ?'); args.push(patch.position); }
+  if (patch.required !== undefined) { sets.push('required = ?'); args.push(patch.required ? 1 : 0); }
+  if (sets.length) { args.push(id); await run(`UPDATE pathway_modules SET ${sets.join(', ')} WHERE id = ?`, args); }
+  return getPathwayModule(id);
+}
+export async function deletePathwayModule(id: number): Promise<void> {
+  await run(`DELETE FROM module_completions WHERE module_id = ?`, [id]);
+  await run(`DELETE FROM pathway_modules WHERE id = ?`, [id]);
+}
+
+export async function markModuleComplete(practitionerId: number, moduleId: number): Promise<void> {
+  await run(
+    `INSERT INTO module_completions (practitioner_id, module_id) VALUES (?, ?)
+     ON CONFLICT(practitioner_id, module_id) DO NOTHING`,
+    [practitionerId, moduleId]
+  );
+}
+export async function moduleCompletionIds(practitionerId: number): Promise<number[]> {
+  return (await all(`SELECT module_id FROM module_completions WHERE practitioner_id = ?`, [practitionerId])).map((r) => num(r.module_id));
+}
+
+export async function pathwayProgress(practitionerId: number, pathwayId: number): Promise<PathwayProgress> {
+  const modules = await listPathwayModules(pathwayId);
+  const explicit = new Set(await moduleCompletionIds(practitionerId));
+  const completedLessons = new Set(await completedLessonIds(practitionerId));
+  const completedModuleIds: number[] = [];
+  for (const m of modules) {
+    const done = explicit.has(m.id) || (m.contentKind === 'lesson' && completedLessons.has(m.contentId));
+    if (done) completedModuleIds.push(m.id);
+  }
+  const requiredMods = modules.filter((m) => m.required);
+  const completedRequired = requiredMods.filter((m) => completedModuleIds.includes(m.id)).length;
+  const required = requiredMods.length;
+  const percent = required === 0 ? 0 : Math.round((completedRequired / required) * 100);
+  return {
+    pathwayId, total: modules.length, required, completedRequired, percent,
+    complete: required > 0 && completedRequired === required, completedModuleIds,
+  };
+}
+export async function allPathwayProgress(practitionerId: number): Promise<Record<number, PathwayProgress>> {
+  const pathways = await listPublishedPathways();
+  const out: Record<number, PathwayProgress> = {};
+  for (const p of pathways) out[p.id] = await pathwayProgress(practitionerId, p.id);
+  return out;
+}
+
+function rowToCertificate(r: Row): Certificate {
+  return {
+    id: num(r.id), practitionerId: num(r.practitioner_id), pathwayId: num(r.pathway_id),
+    issuedAt: r.issued_at as string, pdfUrl: (r.pdf_url as string | null) ?? null,
+  };
+}
+export async function getCertificate(practitionerId: number, pathwayId: number): Promise<Certificate | null> {
+  const r = await one(`SELECT * FROM certificates WHERE practitioner_id = ? AND pathway_id = ?`, [practitionerId, pathwayId]);
+  return r ? rowToCertificate(r) : null;
+}
+export async function listCertificates(practitionerId: number): Promise<Certificate[]> {
+  return (await all(`SELECT * FROM certificates WHERE practitioner_id = ? ORDER BY issued_at DESC`, [practitionerId])).map(rowToCertificate);
+}
+export async function issueCertificate(practitionerId: number, pathwayId: number, pdfUrl: string): Promise<Certificate> {
+  await run(
+    `INSERT INTO certificates (practitioner_id, pathway_id, pdf_url) VALUES (?, ?, ?)
+     ON CONFLICT(practitioner_id, pathway_id) DO NOTHING`,
+    [practitionerId, pathwayId, pdfUrl]
+  );
+  return (await getCertificate(practitionerId, pathwayId))!;
+}
+
 export async function recordLogin(practitionerId: number): Promise<void> {
   await run(`INSERT INTO login_events (practitioner_id) VALUES (?)`, [practitionerId]);
 }

@@ -170,6 +170,24 @@ ALTER TABLE practitioners ADD COLUMN has_seen_welcome INTEGER NOT NULL DEFAULT 0
 UPDATE practitioners SET has_seen_welcome = 1;
 `,
   },
+  {
+    // Part 3: pathway category + CPD hours, and per-practitioner module completion.
+    // module_completions is the explicit completion record; lesson modules also count
+    // as complete when their lesson is in lesson_completions (unioned in code).
+    id: '009_pathways_cpd',
+    sql: `
+ALTER TABLE pathways ADD COLUMN category TEXT;
+ALTER TABLE pathways ADD COLUMN cpd_hours REAL NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS module_completions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  module_id INTEGER NOT NULL REFERENCES pathway_modules(id),
+  completed_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(practitioner_id, module_id)
+);
+CREATE INDEX IF NOT EXISTS idx_module_completions_practitioner ON module_completions(practitioner_id);
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */

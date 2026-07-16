@@ -69,6 +69,15 @@ describe('migrations', () => {
     c.close();
   });
 
+  it('009 adds pathway category + cpd_hours and module_completions table', async () => {
+    const { execForTests } = await import('@/lib/db');
+    const cols = (await execForTests('PRAGMA table_info(pathways)')).rows.map((r) => r.name as string);
+    expect(cols).toContain('category');
+    expect(cols).toContain('cpd_hours');
+    const tables = (await execForTests("SELECT name FROM sqlite_master WHERE type='table'")).rows.map((r) => r.name as string);
+    expect(tables).toContain('module_completions');
+  });
+
   it('008 adds has_seen_welcome and new rows default to 0', async () => {
     const { execForTests, insertApplication } = await import('@/lib/db');
     // Insert AFTER migrations have run (they run on first getClient()), so this
