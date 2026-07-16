@@ -225,6 +225,30 @@ CREATE TABLE IF NOT EXISTS community_upvotes (
 );
 `,
   },
+  {
+    // Part 6: automation dedupe log (one lifecycle email per practitioner+job+period)
+    // and a run log so the admin can see each scheduled job's last status.
+    id: '011_automation',
+    sql: `
+CREATE TABLE IF NOT EXISTS email_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  job TEXT NOT NULL,
+  period TEXT NOT NULL,
+  detail TEXT,
+  sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(practitioner_id, job, period)
+);
+CREATE TABLE IF NOT EXISTS automation_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  job TEXT NOT NULL,
+  status TEXT NOT NULL,
+  detail TEXT,
+  ran_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_automation_runs_job ON automation_runs(job, ran_at);
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */

@@ -1132,6 +1132,72 @@ export async function upvotedPostIds(practitionerId: number): Promise<number[]> 
   return (await all(`SELECT post_id FROM community_upvotes WHERE practitioner_id = ?`, [practitionerId])).map((r) => num(r.post_id));
 }
 
+// ---- Part 6: tiering, leaderboard, engagement inputs, automation logs ----
+
+export async function recordTier(practitionerId: number, tier: string): Promise<void> {
+  await run(`INSERT INTO tier_history (practitioner_id, tier) VALUES (?, ?)`, [practitionerId, tier]);
+}
+export async function latestTier(practitionerId: number): Promise<string | null> {
+  const r = await one(`SELECT tier FROM tier_history WHERE practitioner_id = ? ORDER BY computed_at DESC, id DESC LIMIT 1`, [practitionerId]);
+  return (r?.tier as string | null) ?? null;
+}
+export async function listTierHistory(practitionerId: number): Promise<{ tier: string; computedAt: string }[]> {
+  return (await all(`SELECT tier, computed_at FROM tier_history WHERE practitioner_id = ? ORDER BY computed_at DESC`, [practitionerId]))
+    .map((r) => ({ tier: r.tier as string, computedAt: r.computed_at as string }));
+}
+
+export interface LeaderboardOptin { practitionerId: number; optedIn: boolean; displayName: string | null }
+export async function setLeaderboardOptin(practitionerId: number, optedIn: boolean, displayName: string | null): Promise<void> {
+  await run(
+    `INSERT INTO leaderboard_optins (practitioner_id, opted_in, display_name, updated_at) VALUES (?, ?, ?, datetime('now'))
+     ON CONFLICT(practitioner_id) DO UPDATE SET opted_in = excluded.opted_in, display_name = excluded.display_name, updated_at = datetime('now')`,
+    [practitionerId, optedIn ? 1 : 0, displayName]
+  );
+}
+export async function getLeaderboardOptin(practitionerId: number): Promise<LeaderboardOptin | null> {
+  const r = await one(`SELECT * FROM leaderboard_optins WHERE practitioner_id = ?`, [practitionerId]);
+  return r ? { practitionerId: num(r.practitioner_id), optedIn: num(r.opted_in) === 1, displayName: (r.display_name as string | null) ?? null } : null;
+}
+export async function listLeaderboardOptins(): Promise<LeaderboardOptin[]> {
+  return (await all(`SELECT * FROM leaderboard_optins WHERE opted_in = 1`))
+    .map((r) => ({ practitionerId: num(r.practitioner_id), optedIn: true, displayName: (r.display_name as string | null) ?? null }));
+}
+
+export async function hasEmailBeenSent(practitionerId: number, job: string, period: string): Promise<boolean> {
+  return !!(await one(`SELECT 1 AS x FROM email_log WHERE practitioner_id = ? AND job = ? AND period = ?`, [practitionerId, job, period]));
+}
+export async function logEmailSent(practitionerId: number, job: string, period: string, detail: string): Promise<void> {
+  await run(`INSERT INTO email_log (practitioner_id, job, period, detail) VALUES (?, ?, ?, ?) ON CONFLICT(practitioner_id, job, period) DO NOTHING`, [practitionerId, job, period, detail]);
+}
+export async function recentEmailLog(limit = 50): Promise<{ practitionerId: number; job: string; period: string; detail: string | null; sentAt: string }[]> {
+  return (await all(`SELECT * FROM email_log ORDER BY sent_at DESC LIMIT ?`, [limit]))
+    .map((r) => ({ practitionerId: num(r.practitioner_id), job: r.job as string, period: r.period as string, detail: (r.detail as string | null) ?? null, sentAt: r.sent_at as string }));
+}
+
+export async function recordAutomationRun(job: string, status: string, detail: string): Promise<void> {
+  await run(`INSERT INTO automation_runs (job, status, detail) VALUES (?, ?, ?)`, [job, status, detail]);
+}
+export async function latestAutomationRuns(): Promise<{ job: string; status: string; detail: string | null; ranAt: string }[]> {
+  const rows = await all(
+    `SELECT job, status, detail, ran_at FROM automation_runs r
+     WHERE id = (SELECT MAX(id) FROM automation_runs r2 WHERE r2.job = r.job) ORDER BY job`
+  );
+  return rows.map((r) => ({ job: r.job as string, status: r.status as string, detail: (r.detail as string | null) ?? null, ranAt: r.ran_at as string }));
+}
+
+export async function aiQueryCount30(practitionerId: number): Promise<number> {
+  const r = await one(`SELECT COUNT(*) AS n FROM ai_queries WHERE practitioner_id = ? AND created_at >= datetime('now','-30 days')`, [practitionerId]);
+  return num(r?.n);
+}
+export async function eventsAttendedCount(practitionerId: number): Promise<number> {
+  const r = await one(`SELECT COUNT(*) AS n FROM hub_event_registrations WHERE practitioner_id = ?`, [practitionerId]);
+  return num(r?.n);
+}
+export async function communityActivityCount(practitionerId: number): Promise<number> {
+  const r = await one(`SELECT (SELECT COUNT(*) FROM community_posts WHERE practitioner_id = ?) + (SELECT COUNT(*) FROM community_replies WHERE practitioner_id = ?) AS n`, [practitionerId, practitionerId]);
+  return num(r?.n);
+}
+
 export async function recordLogin(practitionerId: number): Promise<void> {
   await run(`INSERT INTO login_events (practitioner_id) VALUES (?)`, [practitionerId]);
 }

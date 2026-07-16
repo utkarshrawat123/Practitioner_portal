@@ -69,6 +69,13 @@ describe('migrations', () => {
     c.close();
   });
 
+  it('011 adds email_log + automation_runs tables', async () => {
+    const { execForTests } = await import('@/lib/db');
+    const tables = (await execForTests("SELECT name FROM sqlite_master WHERE type='table'")).rows.map((r) => r.name as string);
+    expect(tables).toContain('email_log');
+    expect(tables).toContain('automation_runs');
+  });
+
   it('010 adds event_type/capacity + community tables', async () => {
     const { execForTests } = await import('@/lib/db');
     const ecols = (await execForTests('PRAGMA table_info(hub_events)')).rows.map((r) => r.name as string);
