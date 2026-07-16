@@ -11,6 +11,29 @@ This file is the authoritative state. See also `CLAUDE.md` (agent guide) and
 
 ---
 
+## PART 6 — Tiering & Engagement Automation (2026-07-16, merged to main + DEPLOYED)
+
+Branch `part-6-automation` → main → prod. **231 tests, build clean.**
+
+- **Migration 011**: `email_log` (dedupe: UNIQUE practitioner+job+period) + `automation_runs` (admin status).
+- **Engagement scoring** (`lib/reporting/scoring.ts`) extended with **event + community** weights (optional
+  args → back-compat). `lib/automation/engagement.ts` `practitionerEngagement()`.
+- **Tiering** (`lib/automation/tiering.ts`): `recalculateTiers()` — revenue (rolling 12mo from `orders` by
+  code) → `computeTier` → records `tier_history` **only on change** (idempotent); **recognition email** on
+  upgrade (once/month). Revenue is £0 until Shopify, so tiers stay Standard — mechanism is live.
+- **Lifecycle** (`lib/automation/lifecycle.ts`): `runReEngagement` (churn/dormant, once/month),
+  `runQuarterlyImpact` (once/quarter). All deduped via `email_log`; mock-send when SMTP absent.
+- **Dispatcher** (`lib/automation/dispatcher.ts`) + **cron** `app/api/cron/run` (Bearer `CRON_SECRET`);
+  `vercel.json` cron repointed from heartbeat → `/api/cron/run` daily 06:00. Records `automation_runs`.
+- **Leaderboard**: opt-in `/leaderboard` (`LeaderboardApp`) ranked by engagement (NOT revenue);
+  `app/api/me/leaderboard` GET(rank)+POST(optin). Homepage Quick Links now: Leaderboard/Community/Events ready.
+- **Admin Automation tab** (11th, `AdminAutomation`): per-job last-run status, "Run all now",
+  opt-in list, recent lifecycle-email log. APIs `app/api/admin/automation{,/run}`.
+- **Verified**: leaderboard opt-in → ranked live; cron endpoint 401/200 + ran tiering+re-engagement.
+- Migration 011 runs on first prod touch. `CRON_SECRET` already set in prod (Part 1). No new env vars.
+
+---
+
 ## PART 5 — Community & Events (2026-07-16, merged to main + DEPLOYED)
 
 Branch `part-5-community-events` → main → prod. **220 tests, build clean.** Order: Part 5 built before
