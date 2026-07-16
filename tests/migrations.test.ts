@@ -69,6 +69,15 @@ describe('migrations', () => {
     c.close();
   });
 
+  it('010 adds event_type/capacity + community tables', async () => {
+    const { execForTests } = await import('@/lib/db');
+    const ecols = (await execForTests('PRAGMA table_info(hub_events)')).rows.map((r) => r.name as string);
+    expect(ecols).toContain('event_type');
+    expect(ecols).toContain('capacity');
+    const tables = (await execForTests("SELECT name FROM sqlite_master WHERE type='table'")).rows.map((r) => r.name as string);
+    for (const t of ['community_posts', 'community_replies', 'community_upvotes']) expect(tables).toContain(t);
+  });
+
   it('009 adds pathway category + cpd_hours and module_completions table', async () => {
     const { execForTests } = await import('@/lib/db');
     const cols = (await execForTests('PRAGMA table_info(pathways)')).rows.map((r) => r.name as string);

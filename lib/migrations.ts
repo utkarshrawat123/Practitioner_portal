@@ -188,6 +188,43 @@ CREATE TABLE IF NOT EXISTS module_completions (
 CREATE INDEX IF NOT EXISTS idx_module_completions_practitioner ON module_completions(practitioner_id);
 `,
   },
+  {
+    // Part 5: events hub extras + native community board (community_posts/replies were
+    // deferred from Part 1). Upvotes tracked in their own table (one per practitioner).
+    id: '010_community_events',
+    sql: `
+ALTER TABLE hub_events ADD COLUMN event_type TEXT NOT NULL DEFAULT 'online';
+ALTER TABLE hub_events ADD COLUMN capacity INTEGER;
+CREATE TABLE IF NOT EXISTS community_posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  author_name TEXT NOT NULL,
+  post_type TEXT NOT NULL DEFAULT 'discussion',
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  pinned INTEGER NOT NULL DEFAULT 0,
+  hidden INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_community_posts_created ON community_posts(created_at);
+CREATE TABLE IF NOT EXISTS community_replies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL REFERENCES community_posts(id),
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  author_name TEXT NOT NULL,
+  body TEXT NOT NULL,
+  hidden INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_community_replies_post ON community_replies(post_id);
+CREATE TABLE IF NOT EXISTS community_upvotes (
+  post_id INTEGER NOT NULL REFERENCES community_posts(id),
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (post_id, practitioner_id)
+);
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */

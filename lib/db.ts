@@ -992,6 +992,146 @@ export async function issueCertificate(practitionerId: number, pathwayId: number
   return (await getCertificate(practitionerId, pathwayId))!;
 }
 
+// ---- Events hub + native community board (Part 5) ----
+
+export interface HubEvent {
+  id: number; title: string; description: string | null; startsAt: string; endsAt: string | null;
+  location: string | null; eventType: 'online' | 'in_person'; capacity: number | null;
+  audience: Audience; recordingUrl: string | null; published: boolean; createdAt: string;
+}
+export interface HubEventInput {
+  title: string; description?: string | null; startsAt: string; endsAt?: string | null;
+  location?: string | null; eventType?: 'online' | 'in_person'; capacity?: number | null;
+  audience?: Audience; recordingUrl?: string | null; published?: boolean;
+}
+function rowToEvent(r: Row): HubEvent {
+  return {
+    id: num(r.id), title: r.title as string, description: (r.description as string | null) ?? null,
+    startsAt: r.starts_at as string, endsAt: (r.ends_at as string | null) ?? null,
+    location: (r.location as string | null) ?? null,
+    eventType: ((r.event_type as string | null) ?? 'online') as 'online' | 'in_person',
+    capacity: r.capacity == null ? null : num(r.capacity),
+    audience: ((r.audience as string | null) ?? 'all') as Audience,
+    recordingUrl: (r.recording_url as string | null) ?? null,
+    published: num(r.published) === 1, createdAt: r.created_at as string,
+  };
+}
+export async function createHubEvent(e: HubEventInput): Promise<HubEvent> {
+  const res = await run(
+    `INSERT INTO hub_events (title, description, starts_at, ends_at, location, event_type, capacity, audience, recording_url, published)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [e.title, e.description ?? null, e.startsAt, e.endsAt ?? null, e.location ?? null,
+     e.eventType ?? 'online', e.capacity ?? null, e.audience ?? 'all', e.recordingUrl ?? null, e.published === false ? 0 : 1]
+  );
+  return (await getHubEvent(res.lastInsertRowid))!;
+}
+export async function getHubEvent(id: number): Promise<HubEvent | null> {
+  const r = await one(`SELECT * FROM hub_events WHERE id = ?`, [id]);
+  return r ? rowToEvent(r) : null;
+}
+export async function listHubEvents(): Promise<HubEvent[]> {
+  return (await all(`SELECT * FROM hub_events ORDER BY starts_at DESC`)).map(rowToEvent);
+}
+export async function listPublishedEvents(): Promise<HubEvent[]> {
+  return (await all(`SELECT * FROM hub_events WHERE published = 1 ORDER BY starts_at ASC`)).map(rowToEvent);
+}
+export async function updateHubEvent(id: number, patch: Partial<HubEventInput>): Promise<HubEvent | null> {
+  const map: Record<string, string> = { title: 'title', description: 'description', startsAt: 'starts_at', endsAt: 'ends_at', location: 'location', eventType: 'event_type', capacity: 'capacity', audience: 'audience', recordingUrl: 'recording_url' };
+  const sets: string[] = []; const args: InValue[] = [];
+  for (const [k, col] of Object.entries(map)) {
+    if ((patch as Record<string, unknown>)[k] !== undefined) { sets.push(`${col} = ?`); args.push(((patch as Record<string, unknown>)[k] as InValue) ?? null); }
+  }
+  if (patch.published !== undefined) { sets.push('published = ?'); args.push(patch.published ? 1 : 0); }
+  if (sets.length) { args.push(id); await run(`UPDATE hub_events SET ${sets.join(', ')} WHERE id = ?`, args); }
+  return getHubEvent(id);
+}
+export async function deleteHubEvent(id: number): Promise<void> {
+  await run(`DELETE FROM hub_event_registrations WHERE event_id = ?`, [id]);
+  await run(`DELETE FROM hub_events WHERE id = ?`, [id]);
+}
+export async function registerForEvent(practitionerId: number, eventId: number): Promise<void> {
+  await run(`INSERT INTO hub_event_registrations (event_id, practitioner_id) VALUES (?, ?) ON CONFLICT(event_id, practitioner_id) DO NOTHING`, [eventId, practitionerId]);
+}
+export async function unregisterFromEvent(practitionerId: number, eventId: number): Promise<void> {
+  await run(`DELETE FROM hub_event_registrations WHERE event_id = ? AND practitioner_id = ?`, [eventId, practitionerId]);
+}
+export async function registeredEventIds(practitionerId: number): Promise<number[]> {
+  return (await all(`SELECT event_id FROM hub_event_registrations WHERE practitioner_id = ?`, [practitionerId])).map((r) => num(r.event_id));
+}
+export async function eventRegistrationCount(eventId: number): Promise<number> {
+  const r = await one(`SELECT COUNT(*) AS n FROM hub_event_registrations WHERE event_id = ?`, [eventId]);
+  return num(r?.n);
+}
+
+export interface CommunityPost {
+  id: number; practitionerId: number; authorName: string; postType: string;
+  title: string; body: string; pinned: boolean; hidden: boolean; createdAt: string;
+  upvotes: number; replyCount: number;
+}
+export interface CommunityReply {
+  id: number; postId: number; practitionerId: number; authorName: string; body: string; hidden: boolean; createdAt: string;
+}
+function rowToPost(r: Row): CommunityPost {
+  return {
+    id: num(r.id), practitionerId: num(r.practitioner_id), authorName: r.author_name as string,
+    postType: r.post_type as string, title: r.title as string, body: r.body as string,
+    pinned: num(r.pinned) === 1, hidden: num(r.hidden) === 1, createdAt: r.created_at as string,
+    upvotes: num(r.upvotes), replyCount: num(r.reply_count),
+  };
+}
+export async function createCommunityPost(p: { practitionerId: number; authorName: string; postType: string; title: string; body: string }): Promise<number> {
+  const res = await run(
+    `INSERT INTO community_posts (practitioner_id, author_name, post_type, title, body) VALUES (?, ?, ?, ?, ?)`,
+    [p.practitionerId, p.authorName, p.postType, p.title, p.body]
+  );
+  return res.lastInsertRowid;
+}
+const POST_SELECT = `
+  SELECT p.*,
+    (SELECT COUNT(*) FROM community_upvotes u WHERE u.post_id = p.id) AS upvotes,
+    (SELECT COUNT(*) FROM community_replies r WHERE r.post_id = p.id AND r.hidden = 0) AS reply_count
+  FROM community_posts p`;
+export async function listCommunityPosts(opts: { includeHidden?: boolean } = {}): Promise<CommunityPost[]> {
+  const where = opts.includeHidden ? '' : 'WHERE p.hidden = 0';
+  return (await all(`${POST_SELECT} ${where} ORDER BY p.pinned DESC, p.created_at DESC`)).map(rowToPost);
+}
+export async function getCommunityPost(id: number): Promise<CommunityPost | null> {
+  const r = await one(`${POST_SELECT} WHERE p.id = ?`, [id]);
+  return r ? rowToPost(r) : null;
+}
+export async function setPostHidden(id: number, hidden: boolean): Promise<void> {
+  await run(`UPDATE community_posts SET hidden = ? WHERE id = ?`, [hidden ? 1 : 0, id]);
+}
+export async function setPostPinned(id: number, pinned: boolean): Promise<void> {
+  await run(`UPDATE community_posts SET pinned = ? WHERE id = ?`, [pinned ? 1 : 0, id]);
+}
+export async function deleteCommunityPost(id: number): Promise<void> {
+  await run(`DELETE FROM community_upvotes WHERE post_id = ?`, [id]);
+  await run(`DELETE FROM community_replies WHERE post_id = ?`, [id]);
+  await run(`DELETE FROM community_posts WHERE id = ?`, [id]);
+}
+export async function createCommunityReply(p: { postId: number; practitionerId: number; authorName: string; body: string }): Promise<number> {
+  const res = await run(`INSERT INTO community_replies (post_id, practitioner_id, author_name, body) VALUES (?, ?, ?, ?)`, [p.postId, p.practitionerId, p.authorName, p.body]);
+  return res.lastInsertRowid;
+}
+export async function listCommunityReplies(postId: number, opts: { includeHidden?: boolean } = {}): Promise<CommunityReply[]> {
+  const where = opts.includeHidden ? 'WHERE post_id = ?' : 'WHERE post_id = ? AND hidden = 0';
+  const rows = await all(`SELECT * FROM community_replies ${where} ORDER BY created_at ASC`, [postId]);
+  return rows.map((r) => ({ id: num(r.id), postId: num(r.post_id), practitionerId: num(r.practitioner_id), authorName: r.author_name as string, body: r.body as string, hidden: num(r.hidden) === 1, createdAt: r.created_at as string }));
+}
+export async function setReplyHidden(id: number, hidden: boolean): Promise<void> {
+  await run(`UPDATE community_replies SET hidden = ? WHERE id = ?`, [hidden ? 1 : 0, id]);
+}
+export async function toggleUpvote(practitionerId: number, postId: number): Promise<boolean> {
+  const existing = await one(`SELECT 1 AS x FROM community_upvotes WHERE post_id = ? AND practitioner_id = ?`, [postId, practitionerId]);
+  if (existing) { await run(`DELETE FROM community_upvotes WHERE post_id = ? AND practitioner_id = ?`, [postId, practitionerId]); return false; }
+  await run(`INSERT INTO community_upvotes (post_id, practitioner_id) VALUES (?, ?)`, [postId, practitionerId]);
+  return true;
+}
+export async function upvotedPostIds(practitionerId: number): Promise<number[]> {
+  return (await all(`SELECT post_id FROM community_upvotes WHERE practitioner_id = ?`, [practitionerId])).map((r) => num(r.post_id));
+}
+
 export async function recordLogin(practitionerId: number): Promise<void> {
   await run(`INSERT INTO login_events (practitioner_id) VALUES (?)`, [practitionerId]);
 }
