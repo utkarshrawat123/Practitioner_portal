@@ -18,6 +18,10 @@ interface Widget {
   id: number; title: string; body: string | null;
   linkUrl: string | null; imageUrl: string | null;
 }
+interface PathwayCard {
+  id: number; title: string; cpdHours: number;
+  progress: { percent: number; complete: boolean };
+}
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -33,7 +37,7 @@ const QUICK_LINKS: { label: string; href: string; ready: boolean }[] = [
   { label: 'Community', href: '/community', ready: false },
   { label: 'Events', href: '/events', ready: false },
   { label: 'My Downloads', href: '/coming-soon', ready: false },
-  { label: 'My CPD', href: '/coming-soon', ready: false },
+  { label: 'My CPD', href: '/cpd', ready: true },
 ];
 
 const card = 'border border-stone bg-white p-6';
@@ -78,6 +82,7 @@ export default function DashboardApp() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [widgets, setWidgets] = useState<Widget[]>([]);
+  const [pathways, setPathways] = useState<PathwayCard[]>([]);
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [devLink, setDevLink] = useState<string | null>(null);
@@ -96,6 +101,7 @@ export default function DashboardApp() {
       setAuthed(true);
       loadStats();
       fetch('/api/me/widgets').then(async (r) => { if (r.ok) setWidgets((await r.json()).widgets); });
+      fetch('/api/me/pathways').then(async (r) => { if (r.ok) setPathways((await r.json()).pathways); });
     })();
   }, [loadStats]);
 
@@ -185,18 +191,42 @@ export default function DashboardApp() {
       </h1>
 
       {/* Continue Learning */}
-      <div className={`${card} mt-8 flex flex-wrap items-center justify-between gap-4`}>
-        <div>
-          <p className={label}>Continue learning</p>
-          <p className="mt-2 font-heading text-3xl text-ink">
-            {stats ? stats.lessonsCompleted : '—'} <span className="text-base text-ink2/60">lessons completed</span>
-          </p>
-          <p className="mt-1 text-xs text-ink2/60">Pathway progress arrives with Learning Pathways.</p>
-        </div>
-        <a href="/library" className="bg-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">
-          Open the learning library
-        </a>
-      </div>
+      {(() => {
+        const inProgress = pathways.filter((p) => p.progress.percent > 0 && !p.progress.complete).sort((a, b) => b.progress.percent - a.progress.percent);
+        const next = pathways.filter((p) => p.progress.percent === 0);
+        const current = inProgress[0] ?? next[0] ?? null;
+        if (current) {
+          return (
+            <div className={`${card} mt-8 flex flex-wrap items-center justify-between gap-4`}>
+              <div className="min-w-0">
+                <p className={label}>Continue learning</p>
+                <p className="mt-2 font-heading text-2xl text-ink">{current.title}</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="h-1.5 w-40 overflow-hidden rounded-full bg-stone"><div className="h-full rounded-full bg-forest" style={{ width: `${current.progress.percent}%` }} /></div>
+                  <span className="text-xs text-ink2/60">{current.progress.percent}% · {current.cpdHours} CPD h</span>
+                </div>
+              </div>
+              <a href={`/learning/${current.id}`} className="bg-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">
+                {current.progress.percent > 0 ? 'Continue pathway' : 'Start pathway'}
+              </a>
+            </div>
+          );
+        }
+        return (
+          <div className={`${card} mt-8 flex flex-wrap items-center justify-between gap-4`}>
+            <div>
+              <p className={label}>Continue learning</p>
+              <p className="mt-2 font-heading text-3xl text-ink">
+                {stats ? stats.lessonsCompleted : '—'} <span className="text-base text-ink2/60">lessons completed</span>
+              </p>
+              <p className="mt-1 text-xs text-ink2/60">Explore structured Learning Pathways to earn CPD certificates.</p>
+            </div>
+            <a href="/learning" className="bg-forest px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">
+              Browse pathways
+            </a>
+          </div>
+        );
+      })()}
 
       {/* What's New */}
       {widgets.length > 0 && (
