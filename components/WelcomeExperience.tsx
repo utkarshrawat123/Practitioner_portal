@@ -5,11 +5,13 @@ import { motion, useInView, useScroll, useTransform, type MotionValue } from 'fr
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 
-const NAVY = '#16233F';
-const NAVY_DARK = '#101a30';
-const TERRACOTTA = '#C1573D';
-const CREAM = '#F3EEE1';
-const CARD = '#1E2C4C';
+// Brand-aligned deep-forest palette (matches the platform's forest #3a4f41 +
+// terracotta #a45248 + cream #f8f6f3), a darker cinematic take for the takeover.
+const FOREST = '#24352C';
+const FOREST_DARK = '#182420';
+const TERRACOTTA = '#a45248';
+const CREAM = '#f8f6f3';
+const CARD = '#2E4038';
 
 function Grain() {
   return (
@@ -77,10 +79,10 @@ function StartButton() {
   return (
     <button onClick={start} disabled={busy}
       className="group mt-10 inline-flex items-center gap-3 rounded-full px-7 py-3 text-sm font-medium transition-all hover:gap-4 disabled:opacity-60"
-      style={{ backgroundColor: TERRACOTTA, color: NAVY, fontFamily: 'var(--font-inter)' }}>
+      style={{ backgroundColor: TERRACOTTA, color: FOREST, fontFamily: 'var(--font-inter)' }}>
       Start Exploring
       <span className="flex h-7 w-7 items-center justify-center rounded-full transition-transform group-hover:scale-110"
-        style={{ backgroundColor: NAVY, color: CREAM }}>
+        style={{ backgroundColor: FOREST, color: CREAM }}>
         <ArrowRight size={16} />
       </span>
     </button>
@@ -89,11 +91,11 @@ function StartButton() {
 
 export default function WelcomeExperience({ firstName }: { firstName: string | null }) {
   return (
-    <div className="relative isolate" style={{ backgroundColor: NAVY, color: CREAM, fontFamily: 'var(--font-inter)' }}>
+    <div className="relative isolate" style={{ backgroundColor: FOREST, color: CREAM, fontFamily: 'var(--font-inter)' }}>
       <Grain />
       {/* Scene 1 — Hero */}
       <section className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center"
-        style={{ background: `radial-gradient(circle at 70% 20%, rgba(193,87,61,0.16), ${NAVY} 45%, ${NAVY_DARK})` }}>
+        style={{ background: `radial-gradient(circle at 70% 20%, rgba(164,82,72,0.16), ${FOREST} 45%, ${FOREST_DARK})` }}>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}
           className="mb-10 text-sm tracking-[0.35em]"
           style={{ fontFamily: 'var(--font-fraunces)', color: CREAM }}>
@@ -105,14 +107,14 @@ export default function WelcomeExperience({ firstName }: { firstName: string | n
         <motion.p initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
           className="mt-8 max-w-lg text-base leading-relaxed"
-          style={{ color: 'rgba(243,238,225,0.7)' }}>
+          style={{ color: 'rgba(248,246,243,0.7)' }}>
           Lorna and the team built this platform because practitioners told us they wanted
           practical support that saves time in clinic and helps them deliver the best outcomes.
         </motion.p>
         <motion.div animate={{ y: [0, 8, 0] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute bottom-10 text-xs uppercase tracking-[0.25em]"
-          style={{ color: 'rgba(243,238,225,0.6)' }}>
+          style={{ color: 'rgba(248,246,243,0.6)' }}>
           Scroll to continue
         </motion.div>
       </section>
