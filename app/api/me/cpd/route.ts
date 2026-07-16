@@ -20,7 +20,7 @@ export async function GET(req: Request): Promise<NextResponse> {
   const pathways = (await listPublishedPathways()).filter((pw) => hasAccess(p, pw));
   const progress = await Promise.all(
     pathways.map(async (pw) => ({
-      pathwayId: pw.id, title: pw.title, category: pw.category, cpdHours: pw.cpdHours,
+      title: pw.title, category: pw.category, cpdHours: pw.cpdHours,
       ...(await pathwayProgress(p.id, pw.id)),
     }))
   );
