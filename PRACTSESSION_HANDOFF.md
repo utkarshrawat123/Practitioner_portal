@@ -11,6 +11,27 @@ This file is the authoritative state. See also `CLAUDE.md` (agent guide) and
 
 ---
 
+## PART 5 — Community & Events (2026-07-16, merged to main + DEPLOYED)
+
+Branch `part-5-community-events` → main → prod. **220 tests, build clean.** Order: Part 5 built before
+Part 6 per the reordered roadmap ([[practitioner-portal-roadmap]]).
+
+- **Migration 010**: `hub_events.event_type` (online|in_person) + `hub_events.capacity`; new tables
+  `community_posts`, `community_replies`, `community_upvotes` (were deferred from Part 1).
+- **Events**: `/events` (`EventsApp`, tabs Upcoming/Live Online/On-Demand/My Events), register/cancel with
+  capacity enforcement (409 when full) + confirmation email w/ **.ics attachment** (`lib/events/ics.ts` +
+  `lib/events/notify.ts`; SMTP sender now takes `attachments`). Admin **Events** tab (`AdminEvents`).
+  APIs `app/api/admin/events{,/[id]}`, `app/api/me/events{,/[id]/register}`.
+- **Community**: `/community` (`CommunityApp`) native board — post types Discussion / Ask the Expert /
+  Member Spotlight, upvote toggle (one per practitioner via `community_upvotes`), inline replies, plus a
+  **Facebook Group link-out** card. Admin **Community** tab (`AdminCommunity`) — pin / hide / delete.
+  APIs `app/api/me/community{,/[id],/[id]/reply,/[id]/upvote}`, `app/api/admin/community{,/[id]}`.
+- Events registrations + community posts/replies are timestamped → ready as Part 6 engagement inputs.
+- **Verified** (local isolated DB): event register → My Events + spot decrement; community post → board.
+- Migration 010 runs on first prod DB touch. No new env vars.
+
+---
+
 ## PART 3 — Learning Pathways & CPD (2026-07-16, merged to main + DEPLOYED to prod)
 
 Branch `part-3-pathways` → merged to `main` → deployed (rose alias). **210 tests pass, build clean.**
