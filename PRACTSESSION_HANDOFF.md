@@ -11,6 +11,199 @@ This file is the authoritative state. See also `CLAUDE.md` (agent guide) and
 
 ---
 
+# ============================================================
+# CONSOLIDATED STATE — updated 2026-07-16 (Parts 3, 5, 6 shipped)
+# ============================================================
+
+**Live:** https://practitioner-portal-rose.vercel.app · branch `main` · **231 tests pass · build clean.**
+Parts done to date: **1, 2, 3, 5, 6** (+ Welcome recolor). Remaining: **4 (Ask Lorna on Gemini +
+Clinical Toolkit) → 7 (Content Factory + QA + launch) → Shopify connect (last)**. Per-part narrative
+detail is in the dated sections further down; this block is the authoritative cross-cutting reference.
+
+## 1. Acceptance checklists — item by item (parts built this session)
+
+### Part 3 — Learning Pathways & CPD — ALL DONE
+- [x] **Completing every required module generates a real downloadable certificate** — DONE + browser-verified.
+  `lib/certificates.ts` (`maybeIssueCertificate` → `generateCertificatePdf` pdf-lib → Vercel Blob `put`);
+  triggered from `app/api/me/pathways/[id]/complete/route.ts`; downloaded from `/cpd`.
+- [x] **Admin can build a pathway from existing content without code** — DONE. `components/AdminPathways.tsx`
+  (Pathways tab); `app/api/admin/pathways/{route,[id],[id]/modules,[id]/modules/[moduleId],content}`.
+- [x] **Catalogue matches the 8 deck categories** — DONE. `components/LearningCatalogue.tsx` (`CATEGORIES`).
+- [x] **Progress bars persist across sessions** — DONE. `module_completions` + `lesson_completions` unioned in
+  `pathwayProgress()` (`lib/db.ts`).
+
+### Part 5 — Community & Events — ALL DONE
+- [x] **Register for an event → confirmation email with calendar invite** — DONE. `.ics` built in
+  `lib/events/ics.ts`, emailed w/ attachment via `lib/events/notify.ts` (`sendSmtpEmail` now takes
+  `attachments`). Live email via Gmail SMTP in prod; **mock in local tests** (no real sends locally).
+- [x] **On-demand events show a recording link post-event** — DONE. `EventsApp` On-Demand tab uses `recording_url`.
+- [x] **Community board create/reply/moderate** — DONE. `CommunityApp` + `AdminCommunity` (pin/hide/delete).
+- [x] **Facebook Group card is a gated link-out, not a fake embed** — DONE. `CommunityApp` `FB_GROUP_URL`
+  (⚠ PLACEHOLDER URL — see §6).
+- [x] **Event regs + community activity feed the engagement score** — DONE (wired in Part 6:
+  `eventsAttendedCount`, `communityActivityCount`).
+
+### Part 6 — Tiering & Engagement Automation — ALL DONE
+- [x] **Tier recalculation runs on schedule + idempotent** — DONE. `lib/automation/tiering.ts` records
+  `tier_history` only on change; cron `app/api/cron/run` daily. (Revenue £0 until Shopify → tiers stay Standard.)
+- [x] **Leaderboard only shows opted-in** — DONE. `/leaderboard` + `app/api/me/leaderboard` (reads
+  `leaderboard_optins`). Ranks by engagement, NOT revenue.
+- [x] **All 3 lifecycle emails test-triggered, non-duplicate** — DONE. `lib/automation/lifecycle.ts`
+  (re-engagement, quarterly) + recognition in tiering; dedupe via `email_log` UNIQUE(practitioner,job,period).
+  Unit-tested in `tests/automation.test.ts`.
+- [x] **Admin sees job history + manual retry** — DONE. `components/AdminAutomation.tsx` (Automation tab) +
+  `app/api/admin/automation{,/run}` ("Run all now").
+
+## 2. Decisions made this session that were NOT explicitly specified
+- **Cert PDFs = `pdf-lib`** (pure JS, serverless-safe; avoided headless-browser renderers). A5 landscape,
+  brand colours, fields name/pathway/CPD-hours/date.
+- **Module completion = UNION** of an explicit `module_completions` row OR (for lesson modules) the lesson
+  already being in `lesson_completions`. So library progress auto-counts toward pathways.
+- **Migration 009** added `pathways.category` + `pathways.cpd_hours` (deck implied CPD hours but no schema).
+- **8 pathway categories hardcoded** in the UI (`LearningCatalogue`/`AdminPathways`), stored as free-text
+  `pathways.category`.
+- **Migration 010** added `hub_events.event_type` (`online`|`in_person`) + `hub_events.capacity` (deck tabs +
+  capacity implied, not in Part-1 schema).
+- **Community upvotes = own table** `community_upvotes` (PK post+practitioner) so one vote each; counts derived.
+- **Post types** = `discussion` | `ask_expert` | `member_spotlight` (single board, type tag — not 3 systems).
+- **ICS hand-built** (no library) in `lib/events/ics.ts`; **`sendSmtpEmail` extended** with `attachments`.
+- **Migration 011** = `email_log` (dedupe) + `automation_runs` (admin status) — invented, not named in spec.
+- **Engagement weights** (new): event = 6, community = 4 (`SCORING.engagement` in `lib/reporting/scoring.ts`);
+  added as **optional** args to `engagementScore` for back-compat with existing reporting.
+- **Tiering records only on change** (idempotent); **recognition email only on upgrade**, once/month.
+- **Quarterly impact** runs only in the first 3 days of a quarter (or admin "Run all now"); dedup by quarter.
+- **Cron repointed** `vercel.json` from `/api/cron/heartbeat` → `/api/cron/run` (dispatcher). Heartbeat route
+  still exists but is no longer scheduled.
+- **Leaderboard ranks by engagement, never revenue** (deliberate, non-commercial).
+- **Welcome recolored** navy → brand forest (`#24352C` bg / `#a45248` terracotta / `#f8f6f3` cream) in
+  `components/WelcomeExperience.tsx`. `components/ChromeGate.tsx` hides header/footer on `/onboarding/*`.
+- **Provider choice: Ask Lorna will use Google Gemini** (user's call), NOT Anthropic — Part 4, not yet built.
+
+## 3. Stack — real vs the original assumptions (all confirmed, one clarification)
+| Assumed | Reality |
+|---|---|
+| Next.js App Router on Vercel | ✅ `next ^14.2.5` |
+| Turso (libSQL) "raw SQL **or Drizzle**" | ✅ Turso — **RAW parameterized SQL via `@libsql/client`, NO ORM** (no Drizzle/Prisma). Schema = `SCHEMA` string in `lib/db.ts` + `lib/migrations.ts`. |
+| HMAC session cookie + magic-link, no password | ✅ `wn_session` (practitioner) / `wn_admin` (admin password) |
+| Gmail SMTP via nodemailer | ✅ `lib/providers/smtp.ts` |
+| Vercel Blob | ✅ `@vercel/blob` (media + now certificates) |
+| Tailwind | ✅ |
+| AI = Anthropic Messages API | ⚠ CHANGED: existing `/assistant` is Anthropic (dormant, no key). **Part 4 Ask Lorna targets Gemini.** |
+**Deps added this session:** `framer-motion`, `lucide-react` (Part 2), `pdf-lib` (Part 3). Validation = zod;
+tests = Vitest with a `DB_PATH` temp-file harness + `resetDbForTests()`; `execForTests()` is the raw-SQL escape hatch.
+
+## 4. Exact current DB schema (dumped from a fresh DB running all 11 migrations)
+**24 tables** (9 original + `media` + Part-1 tables + Part-2/3/5/6 additions + `schema_migrations`) + 9 indexes.
+Applied migrations: `001_orders, 002_pathways, 003_certificates, 004_toolkit_resources, 005_hub_events,
+006_tiering, 007_homepage_widgets, 008_has_seen_welcome, 009_pathways_cpd, 010_community_events, 011_automation`.
+
+Re-dump anytime: `SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%'`.
+
+- `practitioners(id, name, email UNIQUE, register_body, register_number, qualification_status,
+  tier DEFAULT 'standard', status DEFAULT 'pending', verification_json, affiliate_code UNIQUE, affiliate_link,
+  pending_sync, created_at, decided_at, decided_by, has_seen_welcome DEFAULT 0)`
+- `events(id, practitioner_id→practitioners, type, detail, created_at)` — **audit trail** (NOT the events hub).
+- `auth_tokens(token PK, practitioner_id→practitioners, expires_at, used_at)`
+- `clicks(id, practitioner_id→practitioners, code, created_at)`
+- `login_events(id, practitioner_id→practitioners, created_at)`
+- `ai_queries(id, practitioner_id→practitioners, profile_input, status, safety_flags, output_json,
+  grounding_warnings, model, input_tokens, output_tokens, created_at)`
+- `lessons(id, source_file, title, summary, takeaways_json, quiz_json, topics_json, claim_flags_json,
+  status DEFAULT 'draft', model, input_tokens, output_tokens, created_at, decided_at)`
+- `lesson_completions(id, practitioner_id→practitioners, lesson_id→lessons, completed_at, UNIQUE(practitioner_id,lesson_id))`
+- `media(id, title, type, description, content_kind, url, pathname, thumbnail_url, thumbnail_pathname, size,
+  published DEFAULT 1, created_at)`
+- `orders(id, order_id TEXT UNIQUE, practitioner_id→practitioners NULLABLE, code, total REAL,
+  currency DEFAULT 'GBP', financial_status, created_at, received_at)` — idx on code, practitioner_id.
+- `pathways(id, title, description, audience DEFAULT 'all', published DEFAULT 0, created_at,
+  category, cpd_hours REAL DEFAULT 0)`
+- `pathway_modules(id, pathway_id→pathways, title, content_kind[lesson|media], content_id, position,
+  required DEFAULT 1)` — idx on pathway_id. `content_id` = lessons.id or media.id (no FK).
+- `module_completions(id, practitioner_id→practitioners, module_id→pathway_modules, completed_at,
+  UNIQUE(practitioner_id,module_id))` — idx on practitioner_id.
+- `certificates(id, practitioner_id→practitioners, pathway_id→pathways, issued_at, pdf_url,
+  UNIQUE(practitioner_id,pathway_id))`
+- `toolkit_resources(id, title, type, description, audience DEFAULT 'all', content_kind, url, body, pathname,
+  thumbnail_url, published DEFAULT 1, created_at)` — **exists but UNUSED until Part 4**.
+- `hub_events(id, title, description, starts_at, ends_at, location, audience DEFAULT 'all', recording_url,
+  published DEFAULT 1, created_at, event_type DEFAULT 'online', capacity)`
+- `hub_event_registrations(id, event_id→hub_events, practitioner_id→practitioners, registered_at,
+  UNIQUE(event_id,practitioner_id))` — idx on event_id.
+- `community_posts(id, practitioner_id→practitioners, author_name, post_type DEFAULT 'discussion', title, body,
+  pinned DEFAULT 0, hidden DEFAULT 0, created_at)` — idx on created_at.
+- `community_replies(id, post_id→community_posts, practitioner_id→practitioners, author_name, body,
+  hidden DEFAULT 0, created_at)` — idx on post_id.
+- `community_upvotes(post_id→community_posts, practitioner_id→practitioners, created_at, PRIMARY KEY(post_id,practitioner_id))`
+- `tier_history(id, practitioner_id→practitioners, tier, computed_at)` — idx on practitioner_id.
+- `leaderboard_optins(practitioner_id PK→practitioners, opted_in DEFAULT 0, display_name, updated_at)`
+- `homepage_widgets(id, title, body, link_url, image_url, audience DEFAULT 'all', position DEFAULT 0,
+  published DEFAULT 1, created_at)`
+- `email_log(id, practitioner_id→practitioners, job, period, detail, sent_at, UNIQUE(practitioner_id,job,period))`
+- `automation_runs(id, job, status, detail, ran_at)` — idx on (job, ran_at).
+- `schema_migrations(id PK, applied_at)`
+> Turso enforces FKs. `orders.practitioner_id` nullable (webhook only sets it with a real id).
+
+## 5. Environment variables (no secret values)
+**Set in Vercel production (10):** `TURSO_DATABASE_URL` (libSQL URL), `TURSO_AUTH_TOKEN` (Turso auth),
+`ADMIN_PASSWORD` (=`wild-admin-2026`, /admin login), `SESSION_SECRET` (HMAC for `wn_session`),
+`PORTAL_URL` (referral/magic-link base = rose URL), `COMMISSION_PERCENT` (=20), `GMAIL_USER`
+(SMTP sender = utkarshrawatofficial@gmail.com), `GMAIL_APP_PASSWORD` (Gmail app pw), `BLOB_READ_WRITE_TOKEN`
+(Vercel Blob — media + certs), `CRON_SECRET` (Bearer guard for `/api/cron/run`).
+**Read by code, NOT set (features off until added):** `GEMINI_API_KEY` (Part 4 Ask Lorna — user adding now),
+`ANTHROPIC_API_KEY` (legacy /assistant + lesson gen), `SHOPIFY_STORE_DOMAIN`/`SHOPIFY_ADMIN_TOKEN`/
+`SHOPIFY_WEBHOOK_SECRET`/`AFFILIATE_DISCOUNT_PERCENT` (revenue/tiers → £0 until set),
+`STATS_SOURCE` (local|shopify-live|mock), `EMAIL_FROM` (From override), `RESEND_API_KEY` (dormant provider),
+`DB_PATH` (local/test only), `KB_DIR` (AI KB dir), `MAILCHIMP_API_KEY`/`MAILCHIMP_AUDIENCE_ID` (legacy, unused).
+
+## 6. Left broken / stubbed / partial — and how to finish
+1. **Clinical Toolkit** — `/toolkit` is still the `ComingSoon` stub; `toolkit_resources` table exists but has
+   no routes/UI. **Finish in Part 4** (admin CRUD + `/toolkit` browse).
+2. **Ask Lorna / AI** — existing `/assistant` (Anthropic) is dormant; Part 4 builds `/ask-lorna` on **Gemini**,
+   gated on `GEMINI_API_KEY`. Until built + key set, AI features return "not configured".
+3. **Tiers all "Standard"** — correct: revenue = £0 until **Shopify** is connected (the very last step).
+   Mechanism is live; will populate when orders arrive.
+4. **Facebook Group URL is a PLACEHOLDER** — `FB_GROUP_URL` in `components/CommunityApp.tsx`
+   (`https://www.facebook.com/groups/wildnutritionpractitioners`). Replace with the real group URL.
+5. **All lesson / media / KB content is SAMPLE placeholder** — never auto-publish AI content; replace before launch.
+6. **Coming-soon Quick Links / nav targets** still stubbed: Book Technical Consultation, live chat, Student
+   Mentoring (Part 4). `/toolkit` (Part 4).
+7. **Quarterly email job** only fires in the first 3 days of a quarter (or admin "Run all now") — by design.
+
+## 7. Test data / sandbox / manual steps to redo
+- **Prod practitioners (live Turso):** henrietta / utkarshrawatofficial@gmail.com (approved, TEST — your Gmail),
+  lucy / Mailmeutkarsh1999@gmail.com (approved, TEST), sam@wildnutrition.com, anna.jasinska@wildnutrition.com.
+  **All have `has_seen_welcome=1`** (migration-008 backfill) so none see the Welcome; delete the two test
+  accounts before real launch. The Welcome-flag reset for henrietta was **never applied** (creds not local +
+  sandbox blocks prod DB writes) — do it via the Turso web console if you want to see the cinematic Welcome.
+- **Orphan test artifact:** one certificate PDF `certificates/1-1-*.pdf` sits in the prod Blob store (from a
+  Part-3 local verify that used the real Blob token). Harmless; delete via Blob dashboard if you like.
+- **Migration probes:** a couple of `*@example.invalid` `request-link` calls were made against prod to trigger
+  migrations — they create **no** rows (unknown emails).
+- **No Shopify store connected** — nothing to re-point; when added, register `orders/create`+`orders/paid`
+  webhooks against the **production** store → `/api/webhooks/shopify` with `SHOPIFY_WEBHOOK_SECRET`.
+- **CRON_SECRET** set in Vercel prod; Vercel Cron calls `/api/cron/run` daily 06:00 UTC.
+- **Vercel CLI authed** on this machine (`utkarshrawatofficial-2811`, team `utkarsh-projects12`).
+  Deploy = `npx vercel --prod --yes`. `.env.local` has **blank** TURSO/token values (sensitive vars don't pull).
+- **Local dev against an isolated DB** (never touches prod): `export TURSO_DATABASE_URL="" TURSO_AUTH_TOKEN=""
+  VERCEL="" DB_PATH=/tmp/x.db ADMIN_PASSWORD=... SESSION_SECRET=... PORTAL_URL=http://localhost:3100` then
+  `npm run dev`; magic-link returns an on-screen `devLink` when `GMAIL_*` unset. Add `BLOB_READ_WRITE_TOKEN`
+  (from `.env.local`) only if testing certificate generation.
+- **GEMINI_API_KEY:** user is adding it to Vercel (Settings → Environment Variables) for Part 4; idle until Part 4 ships.
+
+## 8. If picking up in a new session — read these first, in order
+1. `CLAUDE.md` — architecture, conventions, gotchas (no-`/tmp` DB, no-store fetch, no `care@`).
+2. **This CONSOLIDATED STATE block** — authoritative current state.
+3. `lib/db.ts` — single data module (all async); `SCHEMA` + `getClient()` (runs SCHEMA then migrations).
+4. `lib/migrations.ts` — 011 migrations; how to add tables/columns safely (append-only).
+5. `lib/access.ts` — `hasAccess` audience gate used everywhere.
+6. Part 4 target files: `lib/ai/*` (existing Anthropic assistant + 3-net safety to make provider-agnostic),
+   `toolkit_resources` helpers to add, `app/{assistant,toolkit}` (currently stub/legacy).
+7. The 7-part build plan (in chat / `~/Downloads/wild-nutrition-hub-build-plan_4.md`) — reordered:
+   **Part 4 (Ask Lorna on Gemini + Toolkit) → Part 7 → Shopify**. See [[practitioner-portal-roadmap]] memory.
+8. `docs/superpowers/specs/2026-07-16-part-3-pathways-design.md` (+ Part 2 spec) for design rationale.
+
+---
+
 ## PART 6 — Tiering & Engagement Automation (2026-07-16, merged to main + DEPLOYED)
 
 Branch `part-6-automation` → main → prod. **231 tests, build clean.**
