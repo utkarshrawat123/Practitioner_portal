@@ -34,8 +34,9 @@ const QUICK_LINKS: { label: string; href: string; ready: boolean }[] = [
   { label: 'Ask Lorna', href: '/assistant', ready: true },
   { label: 'Book Technical Consultation', href: '/coming-soon', ready: false },
   { label: 'Clinical Toolkit', href: '/toolkit', ready: false },
-  { label: 'Community', href: '/community', ready: false },
-  { label: 'Events', href: '/events', ready: false },
+  { label: 'Community', href: '/community', ready: true },
+  { label: 'Events', href: '/events', ready: true },
+  { label: 'Leaderboard', href: '/leaderboard', ready: true },
   { label: 'My Downloads', href: '/coming-soon', ready: false },
   { label: 'My CPD', href: '/cpd', ready: true },
 ];

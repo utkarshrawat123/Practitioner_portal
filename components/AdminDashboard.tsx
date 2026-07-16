@@ -9,6 +9,7 @@ import AdminWidgets from '@/components/AdminWidgets';
 import AdminPathways from '@/components/AdminPathways';
 import AdminEvents from '@/components/AdminEvents';
 import AdminCommunity from '@/components/AdminCommunity';
+import AdminAutomation from '@/components/AdminAutomation';
 
 interface Verification {
   reasonCode: string;
@@ -39,6 +40,7 @@ const TABS = [
   { id: 'pathways', label: 'Pathways' },
   { id: 'events', label: 'Events' },
   { id: 'community', label: 'Community' },
+  { id: 'automation', label: 'Automation' },
 ];
 
 const REASON_LABELS: Record<string, string> = {
@@ -61,7 +63,7 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (currentTab: string) => {
-    if (['ai', 'lessons', 'reporting', 'media', 'homepage', 'pathways', 'events', 'community'].includes(currentTab)) {
+    if (['ai', 'lessons', 'reporting', 'media', 'homepage', 'pathways', 'events', 'community', 'automation'].includes(currentTab)) {
       // These tabs load their own data; just confirm the session is valid.
       const res = await fetch('/api/admin/practitioners');
       setAuthed(res.status !== 401);
@@ -156,6 +158,8 @@ export default function AdminDashboard() {
         <AdminEvents />
       ) : tab === 'community' ? (
         <AdminCommunity />
+      ) : tab === 'automation' ? (
+        <AdminAutomation />
       ) : (
       <div className={`mt-6 grid gap-8 ${selected ? 'xl:grid-cols-[2fr_1fr]' : 'grid-cols-1'}`}>
         <table className="w-full border-collapse bg-white text-sm">
