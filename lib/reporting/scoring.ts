@@ -7,7 +7,7 @@ export const SCORING = {
     { slug: 'silver' as const, min: 1000 },
     { slug: 'standard' as const, min: 0 },
   ],
-  engagement: { loginWeight: 10, clickWeight: 3, lessonWeight: 5, aiWeight: 4, cap: 100 },
+  engagement: { loginWeight: 10, clickWeight: 3, lessonWeight: 5, aiWeight: 4, eventWeight: 6, communityWeight: 4, cap: 100 },
   dormantDays: 90,
   churnDays: 60,
   powerUserPercentile: 0.2,
@@ -25,13 +25,17 @@ export function engagementScore(i: {
   clicks30: number;
   lessonsCompleted: number;
   aiQueries30: number;
+  eventsAttended?: number;
+  communityActivity?: number;
 }): number {
-  const { loginWeight, clickWeight, lessonWeight, aiWeight, cap } = SCORING.engagement;
+  const { loginWeight, clickWeight, lessonWeight, aiWeight, eventWeight, communityWeight, cap } = SCORING.engagement;
   const raw =
     i.logins30 * loginWeight +
     i.clicks30 * clickWeight +
     i.lessonsCompleted * lessonWeight +
-    i.aiQueries30 * aiWeight;
+    i.aiQueries30 * aiWeight +
+    (i.eventsAttended ?? 0) * eventWeight +
+    (i.communityActivity ?? 0) * communityWeight;
   return Math.min(cap, raw);
 }
 
