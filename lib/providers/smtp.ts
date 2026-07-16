@@ -32,6 +32,7 @@ export async function sendSmtpEmail(input: {
   to: string;
   subject: string;
   html: string;
+  attachments?: { filename: string; content: string; contentType?: string }[];
 }): Promise<SyncResult> {
   try {
     const info = await transport().sendMail({
@@ -40,6 +41,7 @@ export async function sendSmtpEmail(input: {
       replyTo: 'utkarshrawatofficial@gmail.com',
       subject: input.subject,
       html: input.html,
+      attachments: input.attachments,
     });
     return { ok: true, detail: `Gmail SMTP: emailed ${input.to} — "${input.subject}" (${info.messageId}).` };
   } catch (err) {
