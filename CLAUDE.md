@@ -12,7 +12,7 @@ reporting layer. Single Next.js app deployed to Vercel.
 ## Commands
 ```bash
 npm run dev                 # local dev, http://localhost:3100 (use this for previews)
-npm test                    # Vitest — currently 197 tests, keep green
+npm test                    # Vitest — currently 210 tests, keep green
 npm run build               # production build (also the type-check gate)
 npm run generate-lessons    # offline lesson pipeline (needs ANTHROPIC_API_KEY)
 npx vercel --prod --yes     # deploy to production (CLI already authed)

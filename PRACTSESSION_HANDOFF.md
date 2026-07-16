@@ -11,7 +11,33 @@ This file is the authoritative state. See also `CLAUDE.md` (agent guide) and
 
 ---
 
-## PART 2 — Homepage, Welcome onboarding & nav (2026-07-15, branch `part-2-homepage`, NOT yet merged/deployed)
+## PART 3 — Learning Pathways & CPD (2026-07-16, merged to main + DEPLOYED to prod)
+
+Branch `part-3-pathways` → merged to `main` → deployed (rose alias). **210 tests pass, build clean.**
+Also this session: Part 2 Welcome recolored navy → brand forest-green (`components/WelcomeExperience.tsx`).
+Spec `docs/superpowers/specs/2026-07-16-part-3-pathways-design.md`.
+
+- **Migration 009**: `pathways.category` + `pathways.cpd_hours`; new `module_completions` table.
+- **DB helpers** (`lib/db.ts`): pathways/modules CRUD, `pathwayProgress`/`allPathwayProgress`
+  (module complete = explicit `module_completions` row OR its lesson is in `lesson_completions`;
+  progress = required-and-complete ÷ required), certificates (`getCertificate/listCertificates/issueCertificate`).
+- **Certificate service** `lib/certificates.ts`: `generateCertificatePdf` (pdf-lib, A5, brand colours)
+  + `maybeIssueCertificate` (issues once on 100% required, uploads PDF to Vercel Blob, idempotent).
+- **Practitioner**: `/learning` (catalogue by 8 categories), `/learning/[id]` (modules, progress,
+  mark-complete, cert download), `/cpd` (certs + progress). APIs `app/api/me/pathways{,/[id],/[id]/complete}`,
+  `app/api/me/cpd`. Homepage **Continue Learning** now reads real pathway progress; **My CPD** Quick Link → `/cpd`.
+- **Admin**: 10th tab **Pathways** (`components/AdminPathways.tsx`) — create pathway (title/category/cpd_hours/
+  audience/publish), add/reorder/require/remove modules from published lessons+media. APIs
+  `app/api/admin/pathways{,/[id],/[id]/modules,/[id]/modules/[moduleId],/content}`.
+- **Dep added**: `pdf-lib`.
+- **Verified end-to-end** (local isolated DB + real Blob token): admin build → catalogue → detail →
+  complete both modules → certificate issued (real PDF at blob.vercel-storage.com, 200/application/pdf) → /cpd.
+  NOTE: that local verify uploaded one test cert `certificates/1-1-*.pdf` to the PROD Blob store (harmless orphan).
+- Migration 009 runs on first prod DB touch (adds columns + table). No new env vars.
+
+---
+
+## PART 2 — Homepage, Welcome onboarding & nav (2026-07-15, branch `part-2-homepage`, merged + deployed)
 
 Built on branch `part-2-homepage` (off `main` @ `f35dc2f`). **197 tests pass, `npm run build` clean.**
 Spec: `docs/superpowers/specs/2026-07-15-part-2-homepage-onboarding-design.md`;
