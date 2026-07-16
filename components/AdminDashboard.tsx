@@ -7,6 +7,8 @@ import AdminReporting from '@/components/AdminReporting';
 import AdminMedia from '@/components/AdminMedia';
 import AdminWidgets from '@/components/AdminWidgets';
 import AdminPathways from '@/components/AdminPathways';
+import AdminEvents from '@/components/AdminEvents';
+import AdminCommunity from '@/components/AdminCommunity';
 
 interface Verification {
   reasonCode: string;
@@ -35,6 +37,8 @@ const TABS = [
   { id: 'media', label: 'Media' },
   { id: 'homepage', label: 'Homepage' },
   { id: 'pathways', label: 'Pathways' },
+  { id: 'events', label: 'Events' },
+  { id: 'community', label: 'Community' },
 ];
 
 const REASON_LABELS: Record<string, string> = {
@@ -57,7 +61,7 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (currentTab: string) => {
-    if (currentTab === 'ai' || currentTab === 'lessons' || currentTab === 'reporting' || currentTab === 'media' || currentTab === 'homepage' || currentTab === 'pathways') {
+    if (['ai', 'lessons', 'reporting', 'media', 'homepage', 'pathways', 'events', 'community'].includes(currentTab)) {
       // These tabs load their own data; just confirm the session is valid.
       const res = await fetch('/api/admin/practitioners');
       setAuthed(res.status !== 401);
@@ -148,6 +152,10 @@ export default function AdminDashboard() {
         <AdminWidgets />
       ) : tab === 'pathways' ? (
         <AdminPathways />
+      ) : tab === 'events' ? (
+        <AdminEvents />
+      ) : tab === 'community' ? (
+        <AdminCommunity />
       ) : (
       <div className={`mt-6 grid gap-8 ${selected ? 'xl:grid-cols-[2fr_1fr]' : 'grid-cols-1'}`}>
         <table className="w-full border-collapse bg-white text-sm">
