@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 const schema = z.object({
   patientName: z.string().trim().min(1).max(120),
   patientEmail: z.string().trim().email().max(200).optional().or(z.literal('')),
-  items: z.array(z.object({ productRef: z.string().min(1), qty: z.number().int().positive().max(99) })).min(1),
+  items: z.array(z.object({ productRef: z.string().min(1), qty: z.number().int().positive().max(99) })).min(1).max(50),
 });
 
 export async function GET(req: Request): Promise<NextResponse> {
