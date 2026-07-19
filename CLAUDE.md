@@ -42,10 +42,46 @@ Live prod: https://practitioner-portal-rose.vercel.app · Admin: `/admin`, passw
 - Approved-on-apply practitioners are **auto-logged-in** (session cookie set in `app/api/apply/route.ts`).
 - External integrations run in **mock mode** without keys — the app is fully exercisable; real data lights up when keys are added.
 
+## Build status
+**Parts 1–8 all built + deployed.** Only **Shopify connect** remains (last step). Admin = **16 tabs**
+(15 + **Live Chat**). **Part 8 — Live Chat:** fast-polling (~2.5s) practitioner↔admin support chat +
+capture DB (migration `013_live_chat`) + shell-level admin popup + daily email backstop (`cron/chat-alerts`;
+**Vercel is Hobby → cron is once/day, a `*/5` schedule fails to deploy**) + Insights & FAQs (stats/CSV always-on;
+AI FAQ clustering via the Gemini seam, degrades gracefully on 429). Widget in `components/ChatWidget.tsx`
+(mounted via `ChatGate` in layout). **Welcome takeover now plays on EVERY login** via the per-login `wn_welcome`
+cookie (`lib/welcomeGate.ts`), not the permanent `has_seen_welcome` flag. See `PRACTSESSION_HANDOFF.md`
+"NEWEST SESSION" block + `docs/superpowers/specs/2026-07-16-live-chat-design.md`.
+See `PRACTSESSION_HANDOFF.md` "LATEST SESSION" block for the authoritative, exhaustive state.
+Ask the Expert (`/assistant`) + Content Factory run on **Google Gemini** (provider-agnostic; `selectProvider()`
+in `lib/ai/assistant.ts`, key fallback `GEMINI_API_KEY`→`GEMINI_API_KEY2`). Clinical Toolkit (`/toolkit`),
+Clinical Pearls (migration 012), Content Calendar are live.
+
+## Presence — "Live Now" (2026-07-19)
+Admin-only Messenger-style presence in the **Live Chat** tab. Signed-in practitioners heartbeat
+`POST /api/me/presence` every 30s while the tab is focused (`components/PresenceBeat.tsx`, mounted next to
+`ChatGate` in `app/layout.tsx`; pauses when the tab is hidden), updating `practitioners.last_seen_at`
+(migration `015_presence`, `touchPresence`). Online = seen within `PRESENCE_WINDOW_SECONDS` (=90). The admin
+Live Chat tab shows an **"Online now (N)"** strip + green/grey dots per conversation row (`listOnlinePractitioners`,
+`online` flag on `listConversationsForAdmin`, `GET /api/admin/presence`, `components/AdminChat.tsx`). Clicking an
+online practitioner starts/opens a chat via `POST /api/admin/chat {practitionerId}` (reuses `getOrCreateOpenConversation`).
+Spec/plan: `docs/superpowers/{specs,plans}/2026-07-19-presence-live-now*.md`. Deployed + browser-verified.
+
+## Onboarding — student certification (2026-07-17)
+Qualified applicants onboard as before. A **student** applicant is flagged (`STUDENT_MANUAL`) AND automatically
+emailed a secure, self-expiring upload link (`lib/certUpload.ts`, HMAC `cert:`-prefixed token — never a login
+session; `certificationRequestEmail`). They upload proof of study at `/upload-certification?token=…`
+(`app/api/certification` → Vercel Blob under `certifications/`; migration `014_certifications` adds the
+`certification_*` columns + `setCertification`). The admin **Flagged** detail then shows a "Student certification"
+block ("Open certification →" + timestamp) above Approve/Reject. Emailed only for `STUDENT_MANUAL`, not duplicates.
+Ask the Expert now cites **all** supporting KB docs (`sources: string[]` + top-level `sources_reviewed`), cross-
+references clinical materials, and drops fabricated citations (`isKnownDocument`) — active once a provider works.
+
 ## Integration / env status (Vercel production)
 Set: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `PORTAL_URL`,
 `COMMISSION_PERCENT` (20), `GMAIL_USER`, `GMAIL_APP_PASSWORD` (transactional email — live),
-`BLOB_READ_WRITE_TOKEN` (Vercel Blob — live).
-**Not set (features mock until added):** `ANTHROPIC_API_KEY` (AI assistant + lesson generation),
+`BLOB_READ_WRITE_TOKEN` (Vercel Blob — live), `CRON_SECRET`, `GEMINI_API_KEY` + `GEMINI_API_KEY2`
+(Ask the Expert + Content Factory — **both currently 429 quota-exhausted; enable billing/raise quota**).
+Optional: `GEMINI_MODEL` (default `gemini-2.0-flash`).
+**Not set (features mock until added):** `ANTHROPIC_API_KEY` (legacy AI fallback + lesson generation),
 `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_ADMIN_TOKEN` (real discount codes/orders/revenue/tiers → currently £0).
 Mailchimp not needed (Gmail SMTP covers transactional).
