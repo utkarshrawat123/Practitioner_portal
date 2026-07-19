@@ -302,6 +302,12 @@ ALTER TABLE practitioners ADD COLUMN certification_filename TEXT;
 ALTER TABLE practitioners ADD COLUMN certification_uploaded_at TEXT;
 `,
   },
+  {
+    id: '015_presence',
+    sql: `
+ALTER TABLE practitioners ADD COLUMN last_seen_at TEXT;
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */

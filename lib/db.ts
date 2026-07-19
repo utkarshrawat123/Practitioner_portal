@@ -8,6 +8,9 @@ import { hasAccess, type Audience } from '@/lib/access';
 export type QualificationStatus = 'qualified' | 'student';
 export type Status = 'pending' | 'approved' | 'flagged' | 'rejected';
 
+/** A practitioner is "online" if seen within this many seconds. */
+export const PRESENCE_WINDOW_SECONDS = 90;
+
 export interface Verification {
   reasonCode: string;
   confidence: string | null;
@@ -32,6 +35,7 @@ export interface Practitioner {
   decidedAt: string | null;
   decidedBy: string | null;
   hasSeenWelcome: boolean;
+  lastSeenAt: string | null;
   certificationUrl: string | null;
   certificationFilename: string | null;
   certificationUploadedAt: string | null;
@@ -297,6 +301,7 @@ function rowToPractitioner(row: Row): Practitioner {
     decidedAt: (row.decided_at as string | null) ?? null,
     decidedBy: (row.decided_by as string | null) ?? null,
     hasSeenWelcome: num(row.has_seen_welcome) === 1,
+    lastSeenAt: (row.last_seen_at as string | null) ?? null,
     certificationUrl: (row.certification_url as string | null) ?? null,
     certificationFilename: (row.certification_filename as string | null) ?? null,
     certificationUploadedAt: (row.certification_uploaded_at as string | null) ?? null,
@@ -397,6 +402,11 @@ export async function markApproved(
 
 export async function markSeenWelcome(id: number): Promise<void> {
   await run(`UPDATE practitioners SET has_seen_welcome = 1 WHERE id = ?`, [id]);
+}
+
+/** Record that this practitioner's browser is currently active (presence heartbeat). */
+export async function touchPresence(practitionerId: number): Promise<void> {
+  await run(`UPDATE practitioners SET last_seen_at = datetime('now') WHERE id = ?`, [practitionerId]);
 }
 
 export async function markRejected(id: number, decidedBy: string): Promise<Practitioner> {
