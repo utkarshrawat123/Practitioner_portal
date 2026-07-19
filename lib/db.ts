@@ -32,6 +32,9 @@ export interface Practitioner {
   decidedAt: string | null;
   decidedBy: string | null;
   hasSeenWelcome: boolean;
+  certificationUrl: string | null;
+  certificationFilename: string | null;
+  certificationUploadedAt: string | null;
 }
 
 export interface EventRow {
@@ -294,6 +297,9 @@ function rowToPractitioner(row: Row): Practitioner {
     decidedAt: (row.decided_at as string | null) ?? null,
     decidedBy: (row.decided_by as string | null) ?? null,
     hasSeenWelcome: num(row.has_seen_welcome) === 1,
+    certificationUrl: (row.certification_url as string | null) ?? null,
+    certificationFilename: (row.certification_filename as string | null) ?? null,
+    certificationUploadedAt: (row.certification_uploaded_at as string | null) ?? null,
   };
 }
 
@@ -343,6 +349,21 @@ export async function flagPractitioner(id: number, verification: Verification): 
     [JSON.stringify(verification), id]
   );
   return (await getPractitioner(id))!;
+}
+
+/** Attach an uploaded certification (Blob) to a practitioner — used by the student upload flow. */
+export async function setCertification(
+  id: number,
+  cert: { url: string; pathname: string; filename: string }
+): Promise<Practitioner | null> {
+  await run(
+    `UPDATE practitioners
+     SET certification_url = ?, certification_pathname = ?, certification_filename = ?,
+         certification_uploaded_at = datetime('now')
+     WHERE id = ?`,
+    [cert.url, cert.pathname, cert.filename, id]
+  );
+  return getPractitioner(id);
 }
 
 export async function markApproved(
@@ -497,6 +518,15 @@ export async function recordAiQuery(q: {
     ]
   );
   return res.lastInsertRowid;
+}
+
+/** Count a practitioner's AI queries since an ISO-ish timestamp — used for rate limiting. */
+export async function recentAiQueryCount(practitionerId: number, sinceSqlUtc: string): Promise<number> {
+  const r = await one(
+    `SELECT COUNT(*) AS n FROM ai_queries WHERE practitioner_id = ? AND created_at >= ?`,
+    [practitionerId, sinceSqlUtc]
+  );
+  return r ? num(r.n) : 0;
 }
 
 export async function listAiQueries(limit = 200): Promise<AiQueryRow[]> {
@@ -749,6 +779,190 @@ export async function setMediaPublished(id: number, published: boolean): Promise
 
 export async function deleteMedia(id: number): Promise<void> {
   await run(`DELETE FROM media WHERE id = ?`, [id]);
+}
+
+// ---- Clinical Toolkit resources (Part 4) ----
+
+export type ToolkitType =
+  | 'handout' | 'protocol' | 'decision_tree' | 'recipe' | 'faq' | 'email_template';
+
+export interface ToolkitResource {
+  id: number;
+  title: string;
+  type: ToolkitType;
+  description: string | null;
+  audience: Audience;
+  contentKind: 'file' | 'link' | 'text';
+  url: string | null;
+  body: string | null;
+  pathname: string | null;
+  thumbnailUrl: string | null;
+  published: boolean;
+  createdAt: string;
+}
+
+export interface ToolkitResourceInput {
+  title: string;
+  type: ToolkitType;
+  description?: string | null;
+  audience?: Audience;
+  contentKind: 'file' | 'link' | 'text';
+  url?: string | null;
+  body?: string | null;
+  pathname?: string | null;
+  thumbnailUrl?: string | null;
+  published?: boolean;
+}
+
+function rowToToolkit(r: Row): ToolkitResource {
+  return {
+    id: num(r.id),
+    title: r.title as string,
+    type: r.type as ToolkitType,
+    description: (r.description as string | null) ?? null,
+    audience: ((r.audience as string | null) ?? 'all') as Audience,
+    contentKind: r.content_kind as 'file' | 'link' | 'text',
+    url: (r.url as string | null) ?? null,
+    body: (r.body as string | null) ?? null,
+    pathname: (r.pathname as string | null) ?? null,
+    thumbnailUrl: (r.thumbnail_url as string | null) ?? null,
+    published: num(r.published) === 1,
+    createdAt: r.created_at as string,
+  };
+}
+
+export async function createToolkitResource(r: ToolkitResourceInput): Promise<ToolkitResource> {
+  const res = await run(
+    `INSERT INTO toolkit_resources
+       (title, type, description, audience, content_kind, url, body, pathname, thumbnail_url, published)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      r.title, r.type, r.description ?? null, r.audience ?? 'all', r.contentKind,
+      r.url ?? null, r.body ?? null, r.pathname ?? null, r.thumbnailUrl ?? null,
+      r.published === false ? 0 : 1,
+    ]
+  );
+  return (await getToolkitResource(res.lastInsertRowid))!;
+}
+
+export async function getToolkitResource(id: number): Promise<ToolkitResource | null> {
+  const row = await one(`SELECT * FROM toolkit_resources WHERE id = ?`, [id]);
+  return row ? rowToToolkit(row) : null;
+}
+
+export async function listToolkitResources(): Promise<ToolkitResource[]> {
+  return (await all(`SELECT * FROM toolkit_resources ORDER BY id DESC`)).map(rowToToolkit);
+}
+
+export async function listPublishedToolkitResourcesFor(
+  qualificationStatus: QualificationStatus | null,
+  type?: string
+): Promise<ToolkitResource[]> {
+  const rows = type
+    ? await all(`SELECT * FROM toolkit_resources WHERE published = 1 AND type = ? ORDER BY id DESC`, [type])
+    : await all(`SELECT * FROM toolkit_resources WHERE published = 1 ORDER BY id DESC`);
+  const practitioner = qualificationStatus ? { qualificationStatus } : null;
+  return rows.map(rowToToolkit).filter((r) => hasAccess(practitioner, r));
+}
+
+export async function updateToolkitResource(
+  id: number,
+  patch: Partial<ToolkitResourceInput>
+): Promise<ToolkitResource | null> {
+  const cols: string[] = [];
+  const vals: InValue[] = [];
+  const map: Record<string, string> = {
+    title: 'title', type: 'type', description: 'description', audience: 'audience',
+    contentKind: 'content_kind', url: 'url', body: 'body', pathname: 'pathname',
+    thumbnailUrl: 'thumbnail_url',
+  };
+  for (const [key, col] of Object.entries(map)) {
+    if (key in patch) { cols.push(`${col} = ?`); vals.push((patch as Record<string, InValue>)[key] ?? null); }
+  }
+  if ('published' in patch) { cols.push('published = ?'); vals.push(patch.published ? 1 : 0); }
+  if (cols.length === 0) return getToolkitResource(id);
+  vals.push(id);
+  await run(`UPDATE toolkit_resources SET ${cols.join(', ')} WHERE id = ?`, vals);
+  return getToolkitResource(id);
+}
+
+export async function deleteToolkitResource(id: number): Promise<void> {
+  await run(`DELETE FROM toolkit_resources WHERE id = ?`, [id]);
+}
+
+// ---- Clinical Pearls (Part 7) ----
+
+export interface ClinicalPearl {
+  id: number;
+  body: string;
+  category: string | null;
+  audience: Audience;
+  status: 'draft' | 'published';
+  source: string | null;
+  createdAt: string;
+}
+
+function rowToPearl(r: Row): ClinicalPearl {
+  return {
+    id: num(r.id),
+    body: r.body as string,
+    category: (r.category as string | null) ?? null,
+    audience: ((r.audience as string | null) ?? 'all') as Audience,
+    status: (r.status as 'draft' | 'published') ?? 'draft',
+    source: (r.source as string | null) ?? null,
+    createdAt: r.created_at as string,
+  };
+}
+
+export async function createClinicalPearl(p: {
+  body: string; category?: string | null; audience?: Audience;
+  status?: 'draft' | 'published'; source?: string | null;
+}): Promise<ClinicalPearl> {
+  const res = await run(
+    `INSERT INTO clinical_pearls (body, category, audience, status, source) VALUES (?, ?, ?, ?, ?)`,
+    [p.body, p.category ?? null, p.audience ?? 'all', p.status ?? 'draft', p.source ?? null]
+  );
+  return (await getClinicalPearl(res.lastInsertRowid))!;
+}
+
+export async function getClinicalPearl(id: number): Promise<ClinicalPearl | null> {
+  const row = await one(`SELECT * FROM clinical_pearls WHERE id = ?`, [id]);
+  return row ? rowToPearl(row) : null;
+}
+
+export async function listClinicalPearls(status?: string): Promise<ClinicalPearl[]> {
+  const rows = status
+    ? await all(`SELECT * FROM clinical_pearls WHERE status = ? ORDER BY id DESC`, [status])
+    : await all(`SELECT * FROM clinical_pearls ORDER BY id DESC`);
+  return rows.map(rowToPearl);
+}
+
+export async function listPublishedPearlsFor(
+  qualificationStatus: QualificationStatus | null
+): Promise<ClinicalPearl[]> {
+  const rows = await all(`SELECT * FROM clinical_pearls WHERE status = 'published' ORDER BY id DESC`);
+  const practitioner = qualificationStatus ? { qualificationStatus } : null;
+  return rows.map(rowToPearl).filter((p) => hasAccess(practitioner, p));
+}
+
+export async function updateClinicalPearl(
+  id: number,
+  patch: { body?: string; category?: string | null; audience?: Audience; status?: 'draft' | 'published' }
+): Promise<ClinicalPearl | null> {
+  const cols: string[] = [];
+  const vals: InValue[] = [];
+  if ('body' in patch) { cols.push('body = ?'); vals.push(patch.body ?? ''); }
+  if ('category' in patch) { cols.push('category = ?'); vals.push(patch.category ?? null); }
+  if ('audience' in patch) { cols.push('audience = ?'); vals.push(patch.audience ?? 'all'); }
+  if ('status' in patch) { cols.push('status = ?'); vals.push(patch.status ?? 'draft'); }
+  if (cols.length === 0) return getClinicalPearl(id);
+  vals.push(id);
+  await run(`UPDATE clinical_pearls SET ${cols.join(', ')} WHERE id = ?`, vals);
+  return getClinicalPearl(id);
+}
+
+export async function deleteClinicalPearl(id: number): Promise<void> {
+  await run(`DELETE FROM clinical_pearls WHERE id = ?`, [id]);
 }
 
 // ---- Homepage "What's New" widgets (Part 2) ----
@@ -1343,4 +1557,341 @@ export async function referralDataByCode(code: string): Promise<{
     orders12mo: num(row?.n12),
     lastReferralAt: (row?.last_at as string | null) ?? null,
   };
+}
+
+// ============================================================
+// Live chat (Part 8) — conversations + messages
+// ============================================================
+
+export type ChatSender = 'practitioner' | 'admin';
+export type ChatStatus = 'open' | 'closed';
+
+export interface ChatConversation {
+  id: number;
+  practitionerId: number;
+  status: ChatStatus;
+  subject: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastPractitionerAt: string | null;
+  lastAdminAt: string | null;
+  alertedAt: string | null;
+}
+
+export interface ChatMessage {
+  id: number;
+  conversationId: number;
+  sender: ChatSender;
+  body: string;
+  createdAt: string;
+  readByAdmin: boolean;
+  readByPractitioner: boolean;
+}
+
+/** A conversation enriched for the admin list view. */
+export interface ChatConversationSummary extends ChatConversation {
+  practitionerName: string;
+  practitionerEmail: string;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+  adminUnread: number;
+}
+
+function rowToConversation(r: Row): ChatConversation {
+  return {
+    id: num(r.id),
+    practitionerId: num(r.practitioner_id),
+    status: ((r.status as string | null) ?? 'open') as ChatStatus,
+    subject: (r.subject as string | null) ?? null,
+    createdAt: r.created_at as string,
+    updatedAt: r.updated_at as string,
+    lastPractitionerAt: (r.last_practitioner_at as string | null) ?? null,
+    lastAdminAt: (r.last_admin_at as string | null) ?? null,
+    alertedAt: (r.alerted_at as string | null) ?? null,
+  };
+}
+
+function rowToChatMessage(r: Row): ChatMessage {
+  return {
+    id: num(r.id),
+    conversationId: num(r.conversation_id),
+    sender: r.sender as ChatSender,
+    body: r.body as string,
+    createdAt: r.created_at as string,
+    readByAdmin: num(r.read_by_admin) === 1,
+    readByPractitioner: num(r.read_by_practitioner) === 1,
+  };
+}
+
+export async function getConversation(id: number): Promise<ChatConversation | null> {
+  const row = await one(`SELECT * FROM chat_conversations WHERE id = ?`, [id]);
+  return row ? rowToConversation(row) : null;
+}
+
+/** The practitioner's currently-open conversation, if any. */
+export async function getOpenConversationForPractitioner(
+  practitionerId: number
+): Promise<ChatConversation | null> {
+  const row = await one(
+    `SELECT * FROM chat_conversations WHERE practitioner_id = ? AND status = 'open'
+     ORDER BY id DESC LIMIT 1`,
+    [practitionerId]
+  );
+  return row ? rowToConversation(row) : null;
+}
+
+/** Get-or-create the practitioner's open conversation. `subject` seeds a new one only. */
+export async function getOrCreateOpenConversation(
+  practitionerId: number,
+  subject?: string | null
+): Promise<ChatConversation> {
+  const existing = await getOpenConversationForPractitioner(practitionerId);
+  if (existing) return existing;
+  const res = await run(
+    `INSERT INTO chat_conversations (practitioner_id, subject) VALUES (?, ?)`,
+    [practitionerId, subject ?? null]
+  );
+  return (await getConversation(res.lastInsertRowid))!;
+}
+
+/**
+ * Append a message and keep the parent conversation's activity columns current.
+ * A practitioner message re-arms the missed-message backstop (clears alerted_at);
+ * an admin reply also clears it (the practitioner is no longer waiting).
+ */
+export async function addChatMessage(input: {
+  conversationId: number;
+  sender: ChatSender;
+  body: string;
+}): Promise<ChatMessage> {
+  const { conversationId, sender, body } = input;
+  // The sender has, by definition, "read" their own message.
+  const readByAdmin = sender === 'admin' ? 1 : 0;
+  const readByPractitioner = sender === 'practitioner' ? 1 : 0;
+  const res = await run(
+    `INSERT INTO chat_messages (conversation_id, sender, body, read_by_admin, read_by_practitioner)
+     VALUES (?, ?, ?, ?, ?)`,
+    [conversationId, sender, body, readByAdmin, readByPractitioner]
+  );
+  const stampCol = sender === 'admin' ? 'last_admin_at' : 'last_practitioner_at';
+  await run(
+    `UPDATE chat_conversations
+       SET updated_at = datetime('now'), ${stampCol} = datetime('now'), alerted_at = NULL
+     WHERE id = ?`,
+    [conversationId]
+  );
+  return (await one(`SELECT * FROM chat_messages WHERE id = ?`, [res.lastInsertRowid]).then(
+    (r) => rowToChatMessage(r!)
+  ));
+}
+
+/** Messages for a conversation, oldest-first. `sinceId` returns only newer ones (for polling). */
+export async function listChatMessages(
+  conversationId: number,
+  sinceId = 0
+): Promise<ChatMessage[]> {
+  const rows = await all(
+    `SELECT * FROM chat_messages WHERE conversation_id = ? AND id > ? ORDER BY id ASC`,
+    [conversationId, sinceId]
+  );
+  return rows.map(rowToChatMessage);
+}
+
+export async function markConversationReadByAdmin(conversationId: number): Promise<void> {
+  await run(
+    `UPDATE chat_messages SET read_by_admin = 1
+     WHERE conversation_id = ? AND sender = 'practitioner' AND read_by_admin = 0`,
+    [conversationId]
+  );
+}
+
+export async function markConversationReadByPractitioner(conversationId: number): Promise<void> {
+  await run(
+    `UPDATE chat_messages SET read_by_practitioner = 1
+     WHERE conversation_id = ? AND sender = 'admin' AND read_by_practitioner = 0`,
+    [conversationId]
+  );
+}
+
+export async function setConversationStatus(
+  id: number,
+  status: ChatStatus
+): Promise<ChatConversation | null> {
+  await run(
+    `UPDATE chat_conversations SET status = ?, updated_at = datetime('now') WHERE id = ?`,
+    [status, id]
+  );
+  return getConversation(id);
+}
+
+/** Total practitioner messages the admin has not yet read, across all conversations. */
+export async function adminUnreadCount(): Promise<number> {
+  const row = await one(
+    `SELECT COUNT(*) AS n FROM chat_messages WHERE sender = 'practitioner' AND read_by_admin = 0`
+  );
+  return num(row?.n);
+}
+
+/** Conversation list for the admin console, most-recent activity first. */
+export async function listConversationsForAdmin(
+  status?: ChatStatus
+): Promise<ChatConversationSummary[]> {
+  const rows = await all(
+    `SELECT c.*, p.name AS p_name, p.email AS p_email,
+       (SELECT body FROM chat_messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_body,
+       (SELECT created_at FROM chat_messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_at,
+       (SELECT COUNT(*) FROM chat_messages m WHERE m.conversation_id = c.id AND m.sender = 'practitioner' AND m.read_by_admin = 0) AS admin_unread
+     FROM chat_conversations c
+     JOIN practitioners p ON p.id = c.practitioner_id
+     ${status ? 'WHERE c.status = ?' : ''}
+     ORDER BY c.updated_at DESC, c.id DESC`,
+    status ? [status] : []
+  );
+  return rows.map((r) => ({
+    ...rowToConversation(r),
+    practitionerName: r.p_name as string,
+    practitionerEmail: r.p_email as string,
+    lastMessage: (r.last_body as string | null) ?? null,
+    lastMessageAt: (r.last_at as string | null) ?? null,
+    adminUnread: num(r.admin_unread),
+  }));
+}
+
+/**
+ * Open conversations awaiting an admin reply (latest message is the practitioner's,
+ * older than `minutes`) that have not already been alerted for this wait. Drives the
+ * missed-message email backstop.
+ */
+export async function conversationsAwaitingAlert(minutes: number): Promise<
+  (ChatConversation & { practitionerName: string; practitionerEmail: string })[]
+> {
+  const rows = await all(
+    `SELECT c.*, p.name AS p_name, p.email AS p_email
+     FROM chat_conversations c
+     JOIN practitioners p ON p.id = c.practitioner_id
+     WHERE c.status = 'open'
+       AND c.last_practitioner_at IS NOT NULL
+       AND (c.last_admin_at IS NULL OR c.last_admin_at < c.last_practitioner_at)
+       AND c.last_practitioner_at <= datetime('now', ?)
+       AND (c.alerted_at IS NULL OR c.alerted_at < c.last_practitioner_at)
+     ORDER BY c.last_practitioner_at ASC`,
+    [`-${minutes} minutes`]
+  );
+  return rows.map((r) => ({
+    ...rowToConversation(r),
+    practitionerName: r.p_name as string,
+    practitionerEmail: r.p_email as string,
+  }));
+}
+
+export async function markConversationAlerted(id: number): Promise<void> {
+  await run(`UPDATE chat_conversations SET alerted_at = datetime('now') WHERE id = ?`, [id]);
+}
+
+export interface ChatStats {
+  totalConversations: number;
+  totalMessages: number;
+  practitionerMessages: number;
+  adminMessages: number;
+  openConversations: number;
+  uniquePractitioners: number;
+  byMonth: { month: string; conversations: number; messages: number }[];
+  byWeekday: { weekday: number; messages: number }[];
+  byHour: { hour: number; messages: number }[];
+  topPractitioners: { practitionerId: number; name: string; messages: number }[];
+}
+
+/** Aggregate chat analytics over an optional [from, to] ISO window (practitioner filter optional). */
+export async function chatStats(opts: {
+  from?: string | null;
+  to?: string | null;
+  practitionerId?: number | null;
+} = {}): Promise<ChatStats> {
+  const where: string[] = [];
+  const args: InValue[] = [];
+  if (opts.from) { where.push(`m.created_at >= ?`); args.push(opts.from); }
+  if (opts.to) { where.push(`m.created_at <= ?`); args.push(opts.to); }
+  if (opts.practitionerId) { where.push(`c.practitioner_id = ?`); args.push(opts.practitionerId); }
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const base = `FROM chat_messages m JOIN chat_conversations c ON c.id = m.conversation_id ${clause}`;
+
+  const totals = await one(
+    `SELECT
+       COUNT(*) AS msgs,
+       COUNT(DISTINCT c.id) AS convos,
+       COUNT(DISTINCT c.practitioner_id) AS people,
+       SUM(CASE WHEN m.sender = 'practitioner' THEN 1 ELSE 0 END) AS p_msgs,
+       SUM(CASE WHEN m.sender = 'admin' THEN 1 ELSE 0 END) AS a_msgs,
+       SUM(CASE WHEN c.status = 'open' THEN 1 ELSE 0 END) AS open_flag
+     ${base}`,
+    args
+  );
+  const openConvos = await one(
+    `SELECT COUNT(DISTINCT c.id) AS n
+     FROM chat_conversations c
+     ${opts.practitionerId ? 'WHERE c.status = \'open\' AND c.practitioner_id = ?' : 'WHERE c.status = \'open\''}`,
+    opts.practitionerId ? [opts.practitionerId] : []
+  );
+  const byMonth = (await all(
+    `SELECT strftime('%Y-%m', m.created_at) AS month,
+       COUNT(DISTINCT c.id) AS convos, COUNT(*) AS msgs
+     ${base} GROUP BY month ORDER BY month ASC`,
+    args
+  )).map((r) => ({ month: r.month as string, conversations: num(r.convos), messages: num(r.msgs) }));
+  const byWeekday = (await all(
+    `SELECT CAST(strftime('%w', m.created_at) AS INTEGER) AS wd, COUNT(*) AS msgs
+     ${base} GROUP BY wd ORDER BY wd ASC`,
+    args
+  )).map((r) => ({ weekday: num(r.wd), messages: num(r.msgs) }));
+  const byHour = (await all(
+    `SELECT CAST(strftime('%H', m.created_at) AS INTEGER) AS hr, COUNT(*) AS msgs
+     ${base} GROUP BY hr ORDER BY hr ASC`,
+    args
+  )).map((r) => ({ hour: num(r.hr), messages: num(r.msgs) }));
+  const topPractitioners = (await all(
+    `SELECT c.practitioner_id AS pid, p.name AS name, COUNT(*) AS msgs
+     FROM chat_messages m
+     JOIN chat_conversations c ON c.id = m.conversation_id
+     JOIN practitioners p ON p.id = c.practitioner_id
+     ${clause ? clause + ' AND' : 'WHERE'} m.sender = 'practitioner'
+     GROUP BY c.practitioner_id ORDER BY msgs DESC LIMIT 10`,
+    args
+  )).map((r) => ({ practitionerId: num(r.pid), name: r.name as string, messages: num(r.msgs) }));
+
+  return {
+    totalConversations: num(totals?.convos),
+    totalMessages: num(totals?.msgs),
+    practitionerMessages: num(totals?.p_msgs),
+    adminMessages: num(totals?.a_msgs),
+    openConversations: num(openConvos?.n),
+    uniquePractitioners: num(totals?.people),
+    byMonth,
+    byWeekday,
+    byHour,
+    topPractitioners,
+  };
+}
+
+/** All practitioner messages in an optional window — feeds the AI FAQ consolidation. */
+export async function practitionerChatMessages(opts: {
+  from?: string | null;
+  to?: string | null;
+  limit?: number;
+} = {}): Promise<{ id: number; body: string; createdAt: string; practitionerId: number }[]> {
+  const where: string[] = [`m.sender = 'practitioner'`];
+  const args: InValue[] = [];
+  if (opts.from) { where.push(`m.created_at >= ?`); args.push(opts.from); }
+  if (opts.to) { where.push(`m.created_at <= ?`); args.push(opts.to); }
+  const rows = await all(
+    `SELECT m.id, m.body, m.created_at, c.practitioner_id AS pid
+     FROM chat_messages m JOIN chat_conversations c ON c.id = m.conversation_id
+     WHERE ${where.join(' AND ')} ORDER BY m.id DESC LIMIT ?`,
+    [...args, opts.limit ?? 1000]
+  );
+  return rows.map((r) => ({
+    id: num(r.id),
+    body: r.body as string,
+    createdAt: r.created_at as string,
+    practitionerId: num(r.pid),
+  }));
 }

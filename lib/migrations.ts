@@ -249,6 +249,59 @@ CREATE TABLE IF NOT EXISTS automation_runs (
 CREATE INDEX IF NOT EXISTS idx_automation_runs_job ON automation_runs(job, ran_at);
 `,
   },
+  {
+    id: '012_clinical_pearls',
+    sql: `
+CREATE TABLE IF NOT EXISTS clinical_pearls (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  body TEXT NOT NULL,
+  category TEXT,
+  audience TEXT NOT NULL DEFAULT 'all',
+  status TEXT NOT NULL DEFAULT 'draft',
+  source TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_clinical_pearls_status ON clinical_pearls(status);
+`,
+  },
+  {
+    id: '013_live_chat',
+    sql: `
+CREATE TABLE IF NOT EXISTS chat_conversations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  subject TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_practitioner_at TEXT,
+  last_admin_at TEXT,
+  alerted_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_status ON chat_conversations(status);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_updated ON chat_conversations(updated_at);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_practitioner ON chat_conversations(practitioner_id);
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id INTEGER NOT NULL,
+  sender TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  read_by_admin INTEGER NOT NULL DEFAULT 0,
+  read_by_practitioner INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages(conversation_id);
+`,
+  },
+  {
+    id: '014_certifications',
+    sql: `
+ALTER TABLE practitioners ADD COLUMN certification_url TEXT;
+ALTER TABLE practitioners ADD COLUMN certification_pathname TEXT;
+ALTER TABLE practitioners ADD COLUMN certification_filename TEXT;
+ALTER TABLE practitioners ADD COLUMN certification_uploaded_at TEXT;
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */
