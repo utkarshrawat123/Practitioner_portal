@@ -1598,6 +1598,14 @@ export interface ChatMessage {
   readByPractitioner: boolean;
 }
 
+export interface OnlinePractitioner {
+  id: number;
+  name: string;
+  email: string;
+  lastSeenAt: string;
+  conversationId: number | null;
+}
+
 /** A conversation enriched for the admin list view. */
 export interface ChatConversationSummary extends ChatConversation {
   practitionerName: string;
@@ -1605,6 +1613,7 @@ export interface ChatConversationSummary extends ChatConversation {
   lastMessage: string | null;
   lastMessageAt: string | null;
   adminUnread: number;
+  online: boolean;
 }
 
 function rowToConversation(r: Row): ChatConversation {
@@ -1742,12 +1751,40 @@ export async function adminUnreadCount(): Promise<number> {
   return num(row?.n);
 }
 
+/** Approved practitioners whose last heartbeat is within `windowSeconds`, newest first. */
+export async function listOnlinePractitioners(
+  windowSeconds: number = PRESENCE_WINDOW_SECONDS
+): Promise<OnlinePractitioner[]> {
+  const rows = await all(
+    `SELECT p.id, p.name, p.email, p.last_seen_at,
+       (SELECT c.id FROM chat_conversations c
+         WHERE c.practitioner_id = p.id AND c.status = 'open'
+         ORDER BY c.id DESC LIMIT 1) AS convo_id
+     FROM practitioners p
+     WHERE p.status = 'approved'
+       AND p.last_seen_at IS NOT NULL
+       AND p.last_seen_at >= datetime('now', ?)
+     ORDER BY p.last_seen_at DESC`,
+    [`-${windowSeconds} seconds`]
+  );
+  return rows.map((r) => ({
+    id: num(r.id),
+    name: r.name as string,
+    email: r.email as string,
+    lastSeenAt: r.last_seen_at as string,
+    conversationId: r.convo_id != null ? num(r.convo_id) : null,
+  }));
+}
+
 /** Conversation list for the admin console, most-recent activity first. */
 export async function listConversationsForAdmin(
   status?: ChatStatus
 ): Promise<ChatConversationSummary[]> {
   const rows = await all(
     `SELECT c.*, p.name AS p_name, p.email AS p_email,
+       (CASE WHEN p.last_seen_at IS NOT NULL
+             AND p.last_seen_at >= datetime('now', '-90 seconds')
+            THEN 1 ELSE 0 END) AS p_online,
        (SELECT body FROM chat_messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_body,
        (SELECT created_at FROM chat_messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_at,
        (SELECT COUNT(*) FROM chat_messages m WHERE m.conversation_id = c.id AND m.sender = 'practitioner' AND m.read_by_admin = 0) AS admin_unread
@@ -1764,6 +1801,7 @@ export async function listConversationsForAdmin(
     lastMessage: (r.last_body as string | null) ?? null,
     lastMessageAt: (r.last_at as string | null) ?? null,
     adminUnread: num(r.admin_unread),
+    online: num(r.p_online) === 1,
   }));
 }
 
