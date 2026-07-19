@@ -3,6 +3,7 @@ import './globals.css';
 import SiteHeader from '@/components/SiteHeader';
 import ChromeGate from '@/components/ChromeGate';
 import ChatGate from '@/components/ChatGate';
+import PresenceBeat from '@/components/PresenceBeat';
 import { getServerSessionPractitioner } from '@/lib/serverSession';
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ChromeGate><SiteHeader /></ChromeGate>
         <main>{children}</main>
         <ChatGate signedIn={signedIn} />
+        <PresenceBeat signedIn={signedIn} />
         <ChromeGate>
           <footer className="mt-24 border-t border-stone bg-forest text-cream">
             <div className="mx-auto max-w-7xl px-6 py-10 text-sm">
