@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import AdminAiQueries from '@/components/AdminAiQueries';
+import AdminChat from '@/components/AdminChat';
 import AdminLessons from '@/components/AdminLessons';
 import AdminReporting from '@/components/AdminReporting';
 import AdminMedia from '@/components/AdminMedia';
@@ -10,6 +11,10 @@ import AdminPathways from '@/components/AdminPathways';
 import AdminEvents from '@/components/AdminEvents';
 import AdminCommunity from '@/components/AdminCommunity';
 import AdminAutomation from '@/components/AdminAutomation';
+import AdminToolkit from '@/components/AdminToolkit';
+import AdminFactory from '@/components/AdminFactory';
+import AdminCalendar from '@/components/AdminCalendar';
+import AdminPearls from '@/components/AdminPearls';
 
 interface Verification {
   reasonCode: string;
@@ -24,6 +29,8 @@ interface Practitioner {
   affiliateCode: string | null; affiliateLink: string | null;
   pendingSync: boolean; createdAt: string;
   decidedAt: string | null; decidedBy: string | null;
+  certificationUrl: string | null; certificationFilename: string | null;
+  certificationUploadedAt: string | null;
 }
 interface EventRow { id: number; type: string; detail: string; createdAt: string }
 
@@ -38,9 +45,14 @@ const TABS = [
   { id: 'media', label: 'Media' },
   { id: 'homepage', label: 'Homepage' },
   { id: 'pathways', label: 'Pathways' },
+  { id: 'toolkit', label: 'Toolkit' },
   { id: 'events', label: 'Events' },
   { id: 'community', label: 'Community' },
   { id: 'automation', label: 'Automation' },
+  { id: 'factory', label: 'Factory' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'pearls', label: 'Pearls' },
+  { id: 'chat', label: 'Live Chat' },
 ];
 
 const REASON_LABELS: Record<string, string> = {
@@ -61,9 +73,13 @@ export default function AdminDashboard() {
   const [selected, setSelected] = useState<Practitioner | null>(null);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [busy, setBusy] = useState(false);
+  // Live-chat capture popup: poll unread across all tabs; toast on a new message.
+  const [chatUnread, setChatUnread] = useState(0);
+  const [chatToast, setChatToast] = useState(false);
+  const prevUnreadRef = useRef(0);
 
   const load = useCallback(async (currentTab: string) => {
-    if (['ai', 'lessons', 'reporting', 'media', 'homepage', 'pathways', 'events', 'community', 'automation'].includes(currentTab)) {
+    if (['ai', 'lessons', 'reporting', 'media', 'homepage', 'pathways', 'toolkit', 'events', 'community', 'automation', 'factory', 'calendar', 'pearls', 'chat'].includes(currentTab)) {
       // These tabs load their own data; just confirm the session is valid.
       const res = await fetch('/api/admin/practitioners');
       setAuthed(res.status !== 401);
@@ -77,6 +93,29 @@ export default function AdminDashboard() {
 
   useEffect(() => { load(tab); }, [tab, load]);
 
+  // Global live-chat poller — runs on every tab while authed. Raises a toast the
+  // moment a new unread practitioner message arrives, so support is never missed.
+  useEffect(() => {
+    if (authed !== true) return;
+    let alive = true;
+    const check = async () => {
+      try {
+        const res = await fetch('/api/admin/chat?unread=1', { cache: 'no-store' });
+        if (!alive || !res.ok) return;
+        const { unread } = await res.json();
+        setChatUnread(unread);
+        if (unread > prevUnreadRef.current && tab !== 'chat') setChatToast(true);
+        prevUnreadRef.current = unread;
+      } catch { /* transient — next tick retries */ }
+    };
+    check();
+    const t = setInterval(check, 2500);
+    return () => { alive = false; clearInterval(t); };
+  }, [authed, tab]);
+
+  // Opening the Live Chat tab dismisses the toast.
+  useEffect(() => { if (tab === 'chat') setChatToast(false); }, [tab]);
+
   async function login(e: React.FormEvent) {
     e.preventDefault();
     setLoginError('');
@@ -87,6 +126,13 @@ export default function AdminDashboard() {
     });
     if (res.ok) { setAuthed(true); load(tab); }
     else setLoginError('Incorrect password');
+  }
+
+  async function logout() {
+    await fetch('/api/admin/logout', { method: 'POST' });
+    setAuthed(false);
+    setPassword('');
+    setSelected(null);
   }
 
   async function select(p: Practitioner) {
@@ -129,16 +175,46 @@ export default function AdminDashboard() {
 
   return (
     <div className="mt-8">
-      <div className="flex gap-2 border-b border-stone">
+      {chatToast && (
+        <button
+          onClick={() => { setTab('chat'); setSelected(null); setChatToast(false); }}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-stone bg-forest px-5 py-4 text-left text-cream shadow-2xl"
+        >
+          <span className="relative flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-terracotta opacity-75" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-terracotta" />
+          </span>
+          <span>
+            <span className="block text-sm font-medium">New live-chat message</span>
+            <span className="block text-xs opacity-80">
+              {chatUnread} unread — click to open Live Chat
+            </span>
+          </span>
+        </button>
+      )}
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={logout}
+          className="whitespace-nowrap text-xs uppercase tracking-[0.2em] text-ink2 transition-colors hover:text-terracotta"
+        >
+          Log out
+        </button>
+      </div>
+      <div className="flex gap-2 border-b border-stone overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => { setTab(t.id); setSelected(null); }}
-            className={`px-4 py-2 text-xs uppercase tracking-[0.15em] ${
+            className={`flex items-center gap-1.5 whitespace-nowrap px-4 py-2 text-xs uppercase tracking-[0.15em] ${
               tab === t.id ? 'border-b-2 border-terracotta text-terracotta' : 'text-ink2/70'
             }`}
           >
             {t.label}
+            {t.id === 'chat' && chatUnread > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-terracotta px-1 text-[10px] font-semibold text-cream">
+                {chatUnread}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -154,12 +230,22 @@ export default function AdminDashboard() {
         <AdminWidgets />
       ) : tab === 'pathways' ? (
         <AdminPathways />
+      ) : tab === 'toolkit' ? (
+        <AdminToolkit />
       ) : tab === 'events' ? (
         <AdminEvents />
       ) : tab === 'community' ? (
         <AdminCommunity />
       ) : tab === 'automation' ? (
         <AdminAutomation />
+      ) : tab === 'factory' ? (
+        <AdminFactory />
+      ) : tab === 'calendar' ? (
+        <AdminCalendar />
+      ) : tab === 'pearls' ? (
+        <AdminPearls />
+      ) : tab === 'chat' ? (
+        <AdminChat />
       ) : (
       <div className={`mt-6 grid gap-8 ${selected ? 'xl:grid-cols-[2fr_1fr]' : 'grid-cols-1'}`}>
         <table className="w-full border-collapse bg-white text-sm">
@@ -220,6 +306,29 @@ export default function AdminDashboard() {
                 >
                   Check the {selected.registerBody} register →
                 </a>
+              </div>
+            )}
+            {selected.qualificationStatus === 'student' && (
+              <div className="mt-4 border border-sage bg-cream p-4 text-sm">
+                <p className="font-semibold">Student certification</p>
+                {selected.certificationUrl ? (
+                  <>
+                    <a
+                      href={selected.certificationUrl}
+                      target="_blank" rel="noreferrer"
+                      className="mt-1 inline-block text-terracotta underline"
+                    >
+                      Open certification{selected.certificationFilename ? ` (${selected.certificationFilename})` : ''} →
+                    </a>
+                    {selected.certificationUploadedAt && (
+                      <p className="mt-1 text-xs text-ink2/60">Uploaded {selected.certificationUploadedAt}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="mt-1 text-ink2/70">
+                    Not yet uploaded — the student has been emailed a secure upload link.
+                  </p>
+                )}
               </div>
             )}
             <div className="mt-5 flex gap-3">
