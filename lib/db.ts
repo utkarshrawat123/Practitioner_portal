@@ -1569,6 +1569,97 @@ export async function referralDataByCode(code: string): Promise<{
   };
 }
 
+// ---- Patient carts ----
+
+export type PatientCartStatus = 'draft' | 'sent' | 'paid';
+export interface PatientCartItem {
+  id: number; productRef: string; title: string; imageUrl: string | null; unitPrice: number; qty: number;
+}
+export interface PatientCart {
+  id: number; practitionerId: number; patientName: string; patientEmail: string | null;
+  token: string; status: PatientCartStatus; currency: string;
+  subtotal: number; discountAmount: number; total: number; commissionAmount: number;
+  provider: string; externalId: string | null; payUrl: string;
+  createdAt: string; sentAt: string | null; paidAt: string | null;
+  items?: PatientCartItem[];
+}
+
+function rowToCart(r: Row): PatientCart {
+  return {
+    id: num(r.id), practitionerId: num(r.practitioner_id),
+    patientName: r.patient_name as string, patientEmail: (r.patient_email as string | null) ?? null,
+    token: r.token as string, status: (r.status as string) as PatientCartStatus,
+    currency: r.currency as string,
+    subtotal: Number(r.subtotal), discountAmount: Number(r.discount_amount),
+    total: Number(r.total), commissionAmount: Number(r.commission_amount),
+    provider: r.provider as string, externalId: (r.external_id as string | null) ?? null,
+    payUrl: r.pay_url as string, createdAt: r.created_at as string,
+    sentAt: (r.sent_at as string | null) ?? null, paidAt: (r.paid_at as string | null) ?? null,
+  };
+}
+
+export interface CreatePatientCartInput {
+  practitionerId: number; patientName: string; patientEmail: string | null; token: string;
+  provider: string; externalId: string | null; payUrl: string;
+  subtotal: number; discountAmount: number; total: number; commissionAmount: number; currency: string;
+  items: { productRef: string; title: string; imageUrl: string | null; unitPrice: number; qty: number }[];
+}
+
+export async function createPatientCart(input: CreatePatientCartInput): Promise<PatientCart> {
+  const res = await run(
+    `INSERT INTO patient_carts
+       (practitioner_id, patient_name, patient_email, token, currency, subtotal, discount_amount, total, commission_amount, provider, external_id, pay_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [input.practitionerId, input.patientName, input.patientEmail, input.token, input.currency,
+     input.subtotal, input.discountAmount, input.total, input.commissionAmount,
+     input.provider, input.externalId, input.payUrl]
+  );
+  const cartId = res.lastInsertRowid;
+  for (const it of input.items) {
+    await run(
+      `INSERT INTO patient_cart_items (cart_id, product_ref, title, image_url, unit_price, qty)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [cartId, it.productRef, it.title, it.imageUrl, it.unitPrice, it.qty]
+    );
+  }
+  return (await getCartById(cartId))!;
+}
+
+async function getCartById(id: number): Promise<PatientCart | null> {
+  const row = await one(`SELECT * FROM patient_carts WHERE id = ?`, [id]);
+  return row ? rowToCart(row) : null;
+}
+
+async function loadItems(cartId: number): Promise<PatientCartItem[]> {
+  const rows = await all(`SELECT * FROM patient_cart_items WHERE cart_id = ? ORDER BY id`, [cartId]);
+  return rows.map((r) => ({
+    id: num(r.id), productRef: r.product_ref as string, title: r.title as string,
+    imageUrl: (r.image_url as string | null) ?? null, unitPrice: Number(r.unit_price), qty: num(r.qty),
+  }));
+}
+
+export async function getCartByToken(token: string): Promise<PatientCart | null> {
+  const row = await one(`SELECT * FROM patient_carts WHERE token = ?`, [token]);
+  if (!row) return null;
+  const cart = rowToCart(row);
+  cart.items = await loadItems(cart.id);
+  return cart;
+}
+
+export async function listPatientCartsForPractitioner(practitionerId: number): Promise<PatientCart[]> {
+  const rows = await all(
+    `SELECT * FROM patient_carts WHERE practitioner_id = ? ORDER BY id DESC`, [practitionerId]);
+  return rows.map(rowToCart);
+}
+
+export async function markCartSent(id: number): Promise<void> {
+  await run(`UPDATE patient_carts SET status = 'sent', sent_at = datetime('now') WHERE id = ?`, [id]);
+}
+
+export async function markCartPaid(id: number): Promise<void> {
+  await run(`UPDATE patient_carts SET status = 'paid', paid_at = datetime('now') WHERE id = ? AND status != 'paid'`, [id]);
+}
+
 // ============================================================
 // Live chat (Part 8) — conversations + messages
 // ============================================================

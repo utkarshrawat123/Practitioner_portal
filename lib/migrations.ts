@@ -308,6 +308,41 @@ ALTER TABLE practitioners ADD COLUMN certification_uploaded_at TEXT;
 ALTER TABLE practitioners ADD COLUMN last_seen_at TEXT;
 `,
   },
+  {
+    id: '016_patient_carts',
+    sql: `
+CREATE TABLE IF NOT EXISTS patient_carts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  patient_name TEXT NOT NULL,
+  patient_email TEXT,
+  token TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'draft',
+  currency TEXT NOT NULL DEFAULT 'GBP',
+  subtotal REAL NOT NULL DEFAULT 0,
+  discount_amount REAL NOT NULL DEFAULT 0,
+  total REAL NOT NULL DEFAULT 0,
+  commission_amount REAL NOT NULL DEFAULT 0,
+  provider TEXT NOT NULL DEFAULT 'mock',
+  external_id TEXT,
+  pay_url TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  sent_at TEXT,
+  paid_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_patient_carts_practitioner ON patient_carts(practitioner_id);
+CREATE TABLE IF NOT EXISTS patient_cart_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cart_id INTEGER NOT NULL REFERENCES patient_carts(id),
+  product_ref TEXT NOT NULL,
+  title TEXT NOT NULL,
+  image_url TEXT,
+  unit_price REAL NOT NULL,
+  qty INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS idx_patient_cart_items_cart ON patient_cart_items(cart_id);
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */
