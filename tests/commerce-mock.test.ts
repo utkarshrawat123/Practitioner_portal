@@ -29,6 +29,23 @@ describe('commerce mock provider', () => {
     expect(r.commissionAmount).toBe(13.45);
   });
 
+  it('priceCart falls back to defaults when the percent env vars are empty strings', async () => {
+    const prevC = process.env.COMMISSION_PERCENT;
+    const prevD = process.env.AFFILIATE_DISCOUNT_PERCENT;
+    process.env.COMMISSION_PERCENT = '';
+    process.env.AFFILIATE_DISCOUNT_PERCENT = '';
+    try {
+      const { priceCart } = await import('@/lib/commerce');
+      const r = priceCart([{ unitPrice: 50, qty: 1 }]);
+      expect(r.discountAmount).toBe(5);     // 10% default, not 0
+      expect(r.total).toBe(45);
+      expect(r.commissionAmount).toBe(9);   // 20% default, not 0
+    } finally {
+      process.env.COMMISSION_PERCENT = prevC;
+      process.env.AFFILIATE_DISCOUNT_PERCENT = prevD;
+    }
+  });
+
   it('createDraftOrder (mock) returns our /pay/{token} link', async () => {
     const { createDraftOrder } = await import('@/lib/commerce');
     const res = await createDraftOrder({
