@@ -56,6 +56,23 @@ Ask the Expert (`/assistant`) + Content Factory run on **Google Gemini** (provid
 in `lib/ai/assistant.ts`, key fallback `GEMINI_API_KEY`→`GEMINI_API_KEY2`). Clinical Toolkit (`/toolkit`),
 Clinical Pearls (migration 012), Content Calendar are live.
 
+## Patient Carts — practitioner-curated cart → pay link (2026-07-19)
+Demo-ready (built for an exec presentation), runs on a **mock commerce provider** — no Shopify needed. A practitioner
+builds a cart for a patient from a mock catalog of **real Wild Nutrition products** (`lib/commerce/catalog.mock.ts`,
+real Shopify-CDN images), gets a tokenized login-free pay link, and the patient pays on a branded mock checkout;
+the sale is attributed to the practitioner via the existing `recordOrder` pipeline and shows in dashboard/Reporting revenue.
+- **Provider seam** `lib/commerce/` (`commerceProvider()` = 'shopify' when store creds set, else 'mock'; the swap point).
+  `getCatalog()` + `createDraftOrder()` are the two functions to implement for real Shopify (draft order → invoice_url).
+- **DB** migration `016_patient_carts` (`patient_carts` + `patient_cart_items`); helpers `createPatientCart`,
+  `getCartByToken`, `listPatientCartsForPractitioner`, `markCartSent`, `markCartPaid` in `lib/db.ts`. Token = opaque random.
+- **Practitioner** `/carts` (`components/CartsApp.tsx`, nav link in SiteHeader); APIs `app/api/me/{catalog,carts,carts/[id]/send}`.
+  Server recomputes all prices from the catalog (client prices ignored). Pricing: 10% patient discount, 20% commission.
+- **Patient** `/pay/[token]` (`components/PayPage.tsx`, chrome hidden via ChromeGate); API `app/api/pay/[token]` (view + mock pay,
+  idempotent attribution). Demo card form collects nothing that is stored/sent.
+- Spec/plan: `docs/superpowers/{specs,plans}/2026-07-19-patient-carts*.md`. Deployed + browser-verified end-to-end.
+- Follow-ups (non-blocking, from final review): guard getCatalog/createDraftOrder so setting Shopify creds can't half-activate
+  (they still return mock); surface create-cart errors in CartsApp UI; PayPage money() hardcodes £.
+
 ## Presence — "Live Now" (2026-07-19)
 Admin-only Messenger-style presence in the **Live Chat** tab. Signed-in practitioners heartbeat
 `POST /api/me/presence` every 30s while the tab is focused (`components/PresenceBeat.tsx`, mounted next to

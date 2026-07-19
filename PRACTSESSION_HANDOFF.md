@@ -10,7 +10,33 @@ This file is the single source of truth for the next session. Older narrative li
 
 ---
 
-# 0. NEWEST SESSION (2026-07-19) — Presence "Live Now" — ✅ DONE, DEPLOYED
+# 0. NEWEST SESSION (2026-07-19) — Patient Carts (curated cart → pay link) — ✅ DONE, DEPLOYED
+
+Demo-ready feature for an **executive presentation**, built subagent-driven (spec+plan in
+`docs/superpowers/{specs,plans}/2026-07-19-patient-carts*.md`), final review READY TO MERGE, merged to `main`, deployed,
+live-verified. Runs on a **mock commerce provider — NO Shopify required**; swaps to real Shopify by implementing one file.
+
+- **What it does:** practitioner builds a cart for a patient from a mock catalog of real Wild Nutrition products (real
+  Shopify-CDN images) → tokenized login-free pay link → patient pays on a branded mock checkout → sale attributed to the
+  practitioner via the existing `recordOrder` pipeline → shows in dashboard/Reporting revenue (browser-verified: £73.35
+  order → practitioner dashboard revenue £73.35, 1 order, commission £14.67).
+- **Swap point:** `lib/commerce/` (`commerceProvider()`, `getCatalog()`, `createDraftOrder()`). For real Shopify: implement
+  the shopify branch (products API + draft order → invoice_url), point pay_url to the invoice_url, extend the order webhook.
+- **Pieces:** migration `016_patient_carts` (+ items) & cart helpers in `lib/db.ts`; practitioner `/carts`
+  (`components/CartsApp.tsx` + SiteHeader nav) with APIs `app/api/me/{catalog,carts,carts/[id]/send}`; patient `/pay/[token]`
+  (`components/PayPage.tsx`, chrome hidden) with API `app/api/pay/[token]`. Server recomputes prices (client ignored);
+  10% patient discount, 20% commission.
+- **DEMO SCRIPT (exec):** sign in as an approved practitioner → **Patient Carts** → add products, enter patient name →
+  totals + "You earn £X" update → **Create pay link** → copy → open the link (patient view) → pay on the branded page →
+  "Payment successful" → **admin/dashboard revenue reflects it**.
+- **Bug found+fixed in the demo run:** empty `COMMISSION_PERCENT` in `.env.local` stored £0 commission (Number('')=0, ?? doesn't
+  catch ''); fixed with a robust `pct()` helper read at call-time (prod `COMMISSION_PERCENT=20` was always fine). Tests 309 pass.
+- **Follow-ups (non-blocking):** guard getCatalog/createDraftOrder against a half-activated Shopify (still return mock even
+  when commerceProvider()=='shopify'); CartsApp swallows create errors (no UX message); PayPage money() hardcodes £.
+
+---
+
+# 0b. Presence "Live Now" (2026-07-19) — ✅ DONE, DEPLOYED
 
 Admin-only Messenger-style presence in the **Live Chat** tab. Built subagent-driven (spec + plan in
 `docs/superpowers/{specs,plans}/2026-07-19-presence-live-now*.md`), final review READY TO MERGE, merged to
