@@ -6,9 +6,10 @@ import ChatInsights from '@/components/ChatInsights';
 interface Convo {
   id: number; practitionerName: string; practitionerEmail: string;
   status: 'open' | 'closed'; lastMessage: string | null; lastMessageAt: string | null;
-  adminUnread: number; updatedAt: string;
+  adminUnread: number; updatedAt: string; online: boolean;
 }
 interface Msg { id: number; sender: 'practitioner' | 'admin'; body: string; createdAt: string }
+interface OnlineP { id: number; name: string; email: string; lastSeenAt: string; conversationId: number | null }
 
 const POLL_MS = 2500;
 
@@ -30,6 +31,7 @@ export default function AdminChat() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [online, setOnline] = useState<OnlineP[]>([]);
   const activeRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   activeRef.current = activeId;
@@ -45,16 +47,22 @@ export default function AdminChat() {
     if (res.ok) setMessages((await res.json()).messages);
   }, []);
 
-  useEffect(() => { loadList(); }, [loadList]);
+  const loadOnline = useCallback(async () => {
+    const res = await fetch('/api/admin/presence', { cache: 'no-store' });
+    if (res.ok) setOnline((await res.json()).online);
+  }, []);
+
+  useEffect(() => { loadList(); loadOnline(); }, [loadList, loadOnline]);
 
   // Poll the list, and the open thread, so replies + new messages appear live.
   useEffect(() => {
     const t = setInterval(() => {
       loadList();
+      loadOnline();
       if (activeRef.current) loadThread(activeRef.current);
     }, POLL_MS);
     return () => clearInterval(t);
-  }, [loadList, loadThread]);
+  }, [loadList, loadOnline, loadThread]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView(); }, [messages.length]);
 
@@ -62,6 +70,20 @@ export default function AdminChat() {
     setActiveId(id);
     await loadThread(id);
     loadList(); // unread cleared server-side on view
+  }
+
+  async function openOrStart(o: OnlineP) {
+    if (o.conversationId) { await openConvo(o.conversationId); return; }
+    const res = await fetch('/api/admin/chat', {
+      method: 'POST', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ practitionerId: o.id }),
+    });
+    if (res.ok) {
+      const { conversationId } = await res.json();
+      await loadList();
+      await openConvo(conversationId);
+    }
   }
 
   async function send(e: React.FormEvent) {
@@ -112,6 +134,27 @@ export default function AdminChat() {
           </button>
         ))}
       </div>
+      <div className="mb-3 rounded-lg border border-stone bg-white p-3">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-forest">
+          Online now ({online.length})
+        </div>
+        {online.length === 0 ? (
+          <p className="text-sm text-ink2/60">No practitioners online right now.</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {online.map((o) => (
+              <li key={o.id}>
+                <button type="button" onClick={() => openOrStart(o)}
+                  title={`Message ${o.name}`}
+                  className="flex items-center gap-2 rounded-full border border-stone px-3 py-1 text-sm hover:bg-cream">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" aria-hidden />
+                  <span className="text-ink">{o.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       <div className="grid gap-4 md:grid-cols-[20rem_1fr]">
         {/* Conversation list */}
         <div className="max-h-[32rem] overflow-y-auto border border-stone bg-white">
@@ -120,7 +163,14 @@ export default function AdminChat() {
             <button key={c.id} onClick={() => openConvo(c.id)}
               className={`block w-full border-b border-stone px-4 py-3 text-left hover:bg-cream ${activeId === c.id ? 'bg-cream' : ''}`}>
               <div className="flex items-center justify-between">
-                <span className="font-medium text-ink">{c.practitionerName}</span>
+                <span className="flex items-center gap-2 font-medium text-ink">
+                  <span
+                    className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${c.online ? 'bg-green-500' : 'bg-stone'}`}
+                    title={c.online ? 'Online now' : (c.lastMessageAt ? `Last active ${timeAgo(c.lastMessageAt)}` : 'Offline')}
+                    aria-hidden
+                  />
+                  {c.practitionerName}
+                </span>
                 <span className="flex items-center gap-2">
                   {c.adminUnread > 0 && (
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1 text-[11px] font-semibold text-cream">
