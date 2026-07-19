@@ -8,6 +8,7 @@ interface NavItem { label: string; href: string; audience?: Audience }
 const PRACTITIONER_NAV: NavItem[] = [
   { label: 'Home', href: '/dashboard' },
   { label: 'Learning', href: '/learning' },
+  { label: 'Resources', href: '/resources' },
   { label: 'Clinical Toolkit', href: '/toolkit' },
   { label: 'Community', href: '/community' },
   { label: 'Events', href: '/events' },
