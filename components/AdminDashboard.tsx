@@ -159,6 +159,13 @@ export default function AdminDashboard() {
   // Opening the Live Chat section dismisses the toast.
   useEffect(() => { if (section === 'chat') setChatToast(false); }, [section]);
 
+  // The header logo (AdminLogoLink) fires this to return to the card home.
+  useEffect(() => {
+    const home = () => { setSection(null); setSelected(null); };
+    window.addEventListener('admin:home', home);
+    return () => window.removeEventListener('admin:home', home);
+  }, []);
+
   async function login(e: React.FormEvent) {
     e.preventDefault();
     setLoginError('');

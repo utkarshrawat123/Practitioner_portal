@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import AdminDashboard from '@/components/AdminDashboard';
+import AdminLogoLink from '@/components/AdminLogoLink';
 
 export const metadata = { title: 'Admin | WN Practitioner Community' };
 
@@ -8,10 +8,10 @@ export default function AdminPage() {
     <>
       <header className="border-b border-stone bg-cream">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
-          <Link href="/admin" className="shrink-0 font-heading text-2xl tracking-wide text-ink">
+          <AdminLogoLink className="shrink-0 font-heading text-2xl tracking-wide text-ink">
             Wild Nutrition<sup className="align-super text-xs">®</sup>
             <span className="ml-3 align-middle text-xs uppercase tracking-[0.2em] text-ink2/60">Admin</span>
-          </Link>
+          </AdminLogoLink>
         </div>
       </header>
       <div className="mx-auto max-w-7xl px-6 py-10">
