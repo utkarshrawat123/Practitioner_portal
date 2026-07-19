@@ -127,6 +127,30 @@ describe('admin chat API', () => {
     }), { params: { id: String(posted.conversationId) } });
     expect((await res.json()).conversation.status).toBe('closed');
   });
+
+  it('POST /api/admin/chat starts (and reuses) an open conversation for a practitioner', async () => {
+    const p = await seedApproved('start@example.com', 'Start Target');
+    const { POST } = await import('@/app/api/admin/chat/route');
+    const headers = await adminHeaders();
+    const mk = () => new Request('http://x/api/admin/chat', {
+      method: 'POST', headers, body: JSON.stringify({ practitionerId: p.id }),
+    });
+    const first = await POST(mk());
+    expect(first.status).toBe(201);
+    const a = await first.json();
+    expect(a.conversationId).toBeGreaterThan(0);
+    const second = await POST(mk());
+    const b = await second.json();
+    expect(b.conversationId).toBe(a.conversationId); // idempotent get-or-create
+  });
+
+  it('POST /api/admin/chat 401 without admin auth', async () => {
+    const { POST } = await import('@/app/api/admin/chat/route');
+    const res = await POST(new Request('http://x/api/admin/chat', {
+      method: 'POST', body: JSON.stringify({ practitionerId: 1 }),
+    }));
+    expect(res.status).toBe(401);
+  });
 });
 
 describe('chat insights API', () => {
