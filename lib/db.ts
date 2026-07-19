@@ -1783,7 +1783,7 @@ export async function listConversationsForAdmin(
   const rows = await all(
     `SELECT c.*, p.name AS p_name, p.email AS p_email,
        (CASE WHEN p.last_seen_at IS NOT NULL
-             AND p.last_seen_at >= datetime('now', '-90 seconds')
+             AND p.last_seen_at >= datetime('now', '-${PRESENCE_WINDOW_SECONDS} seconds')
             THEN 1 ELSE 0 END) AS p_online,
        (SELECT body FROM chat_messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_body,
        (SELECT created_at FROM chat_messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_at,
