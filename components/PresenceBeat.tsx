@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-
-const BEAT_MS = 30_000;
+import { PRESENCE_BEAT_MS as BEAT_MS } from '@/lib/presence/config';
 
 /**
  * Invisible presence heartbeat. Mounted globally for signed-in practitioners

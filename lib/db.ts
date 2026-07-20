@@ -4,12 +4,14 @@ import fs from 'fs';
 import path from 'path';
 import { runMigrations } from '@/lib/migrations';
 import { hasAccess, type Audience } from '@/lib/access';
+import { PRESENCE_WINDOW_SECONDS } from '@/lib/presence/config';
 
 export type QualificationStatus = 'qualified' | 'student';
 export type Status = 'pending' | 'approved' | 'flagged' | 'rejected';
 
-/** A practitioner is "online" if seen within this many seconds. */
-export const PRESENCE_WINDOW_SECONDS = 90;
+/** A practitioner is "online" if seen within this many seconds. Re-exported from
+ * the shared presence config so the server window and client heartbeat stay in sync. */
+export { PRESENCE_WINDOW_SECONDS };
 
 export interface Verification {
   reasonCode: string;
