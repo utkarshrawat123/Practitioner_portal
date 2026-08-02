@@ -3,13 +3,53 @@
 **Wild Nutrition Practitioner Hub — authoritative session handoff.** Rewritten 2026-07-19 (fresh, complete, exhaustive).
 Repo root: `/Users/utkarshrawat/Wild Dash/practitioner-portal` (this dir holds `.git`; the parent `Wild Dash` is **NOT** a git repo).
 Branch `main`. Live: https://practitioner-portal-rose.vercel.app · Admin: `/admin` (prod password `wild-admin-2026`).
-**309 tests pass · production build clean · everything in §1 is deployed to production.**
+**319 tests pass · production build clean · everything in §1 is deployed to production.**
+(Newest work: **2026-08-02 mobile-responsive pass + dead-code removal, DEPLOYED** — see the block right below.)
 
 This file is the single source of truth for the next session. Agent guide/architecture: `CLAUDE.md`. Early history:
 `PROJECT_HANDOFF.md`. Specs + plans: `docs/superpowers/{specs,plans}/`.
 
 > **This session (2026-07-19) shipped FOUR features, all deployed:** (A) Presence "Live Now", (B) card-based admin
 > navigation, (C) admin logo → card home, (D) Patient Carts (curated cart → pay link, mock-commerce demo). Details below.
+
+---
+
+# NEWEST SESSION (2026-08-02) — Mobile-responsive pass + dead-code removal — ✅ DEPLOYED (commit `4b73f86`)
+
+Made both the practitioner and admin sides mobile-friendly, ran a full end-to-end mobile pass, and removed dead
+code. **Presentational-only change** — the commit touches **zero** `lib/`, `app/api/`, auth, `db.ts`, or migration
+files, so no data/auth/API behaviour changed. **319 tests pass · production build clean · verified live on prod.**
+
+- **Mobile hamburger nav** — `components/HeaderNav.tsx` (**NEW**, client). The signed-in practitioner nav was a
+  cramped horizontal-scroll strip; it now collapses to a hamburger drop-down below the `md` breakpoint (desktop nav
+  unchanged). `SiteHeader.tsx` (server) still computes the audience-filtered nav items and passes them in as props —
+  **no auth/session logic moved**. Drop-down auto-closes on route change (`usePathname` effect) and includes Log out.
+- **Patient Carts overflow fix** — `components/CartsApp.tsx`: added `min-w-0` to the left grid column + the
+  product-row flex items. CSS grid/flex children default to `min-width:auto`, which forced the page ~456px wide on a
+  375px phone (inputs + qty steppers ran off-screen). Now fits the viewport exactly.
+- **Admin tables wrapped** — 5 raw `<table>`s blew out the mobile viewport width; each is now wrapped in
+  `overflow-x-auto` (grid-child tables also get `min-w-0` so the wrapper can shrink and scroll instead of growing):
+  `AdminDashboard` (Applications), `AdminCalendar`, `AdminLessons`, `AdminAiQueries`, `ChatInsights`. Wide tables now
+  scroll **inside their card** instead of overflowing the page. (Verified live: Applications table 504px scrolls in a
+  327px wrapper; page no longer overflows.)
+- **Dead code removed** — the `/coming-soon` route (`app/coming-soon/page.tsx` + `components/ComingSoon.tsx`) —
+  nothing linked to it (now **404 on prod**). Also deleted the stale local `data/practitioners.db` (an **untracked**
+  local artifact holding old test rows; the `lib/db.ts` last-resort fallback path recreates it on demand — dev uses
+  the scratch file DB, prod uses Turso, so removal is inert).
+- **Note on diff sizes:** `components/AdminCalendar.tsx` (+75) and `components/ChatInsights.tsx` (+217) show large
+  additions only because they were previously **deployed-but-untracked**; this commit brings them under version
+  control. The actual edit to each was the 2-line table wrapper.
+- **Verified E2E on mobile (local `next dev`, isolated scratch DB, 375px):** every practitioner page + admin section
+  walked — no console errors; hamburger opens/navigates/auto-closes; Patient Carts + all admin tables no longer
+  overflow; desktop nav confirmed unchanged (regression check).
+- **Verified LIVE on prod (read-only, no prod data touched):** new build confirmed live (`/coming-soon`→404); full
+  route sweep — every page 200/307 as expected, `/api/resources`→401 (auth gate intact), `/r/[code]`→302,
+  `/pay/[token]` renders — **zero 500s**; `/apply` + `/dashboard` render clean on a 375px viewport with no console
+  errors.
+- **Git/deploy:** committed to `main` as `4b73f86` with a surgical `git add` of exactly the 10 changed files (the
+  repo's ~60 pre-existing deployed-but-uncommitted files were left untouched). Deployed via `npx vercel --prod --yes`
+  (whole-working-tree deploy, per this repo's convention). The commit was **not** pushed to a git remote (deploys are
+  tree-based here, not git-based).
 
 ---
 
