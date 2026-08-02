@@ -68,7 +68,7 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
 
   return (
     <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_20rem]">
-      <div>
+      <div className="min-w-0">
         <div className="mb-5 grid gap-3 sm:grid-cols-2">
           <input value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Patient name"
             className="border border-stone px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none" />
@@ -77,7 +77,7 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {catalog.map((p) => (
-            <div key={p.id} className="flex items-center gap-3 border border-stone bg-white p-3">
+            <div key={p.id} className="flex min-w-0 items-center gap-3 border border-stone bg-white p-3">
               <img src={p.imageUrl} alt="" className="h-14 w-14 shrink-0 rounded object-cover" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{p.title}</p>

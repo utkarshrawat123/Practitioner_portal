@@ -34,6 +34,7 @@ export default function AdminAiQueries() {
 
   return (
     <div className="mt-6 grid gap-8 lg:grid-cols-[1.3fr_1fr]">
+      <div className="min-w-0 overflow-x-auto">
       <table className="w-full border-collapse bg-white text-sm">
         <thead>
           <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
@@ -71,6 +72,7 @@ export default function AdminAiQueries() {
           )}
         </tbody>
       </table>
+      </div>
 
       {selected && (
         <div className="h-fit border border-stone bg-white p-6 text-sm">

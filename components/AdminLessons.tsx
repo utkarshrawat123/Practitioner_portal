@@ -60,7 +60,8 @@ export default function AdminLessons() {
 
   return (
     <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_1.2fr]">
-      <table className="h-fit w-full border-collapse bg-white text-sm">
+      <div className="h-fit min-w-0 overflow-x-auto">
+      <table className="w-full border-collapse bg-white text-sm">
         <thead>
           <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
             <th className="p-3">Title</th><th className="p-3">Status</th>
@@ -92,6 +93,7 @@ export default function AdminLessons() {
           )}
         </tbody>
       </table>
+      </div>
 
       {draft && (
         <div className={`${card} h-fit`}>

@@ -338,6 +338,7 @@ export default function AdminDashboard() {
             ))}
           </div>
           <div className={`grid gap-8 ${selected ? 'xl:grid-cols-[2fr_1fr]' : 'grid-cols-1'}`}>
+            <div className="min-w-0 overflow-x-auto">
             <table className="w-full border-collapse bg-white text-sm">
               <thead>
                 <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
@@ -373,6 +374,7 @@ export default function AdminDashboard() {
                 )}
               </tbody>
             </table>
+            </div>
 
             {selected && (
               <div className="h-fit border border-stone bg-white p-6">
