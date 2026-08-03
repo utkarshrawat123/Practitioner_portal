@@ -11,7 +11,7 @@ const REGISTERS = [
 
 type Result =
   | { kind: 'approved'; code: string; link: string }
-  | { kind: 'flagged' }
+  | { kind: 'flagged'; certificationRequested: boolean }
   | { kind: 'error'; message: string }
   | null;
 
@@ -22,6 +22,10 @@ const labelClass = 'mb-1.5 block text-xs uppercase tracking-[0.15em] text-ink2';
 export default function ApplyForm() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<Result>(null);
+  // Pre-fill the referral code from ?ref= (read client-side to avoid a Suspense boundary).
+  const [refCode] = useState<string>(() =>
+    typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('ref') ?? ''
+  );
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,7 +45,7 @@ export default function ApplyForm() {
       } else if (body.status === 'approved') {
         setResult({ kind: 'approved', code: body.code, link: body.link });
       } else {
-        setResult({ kind: 'flagged' });
+        setResult({ kind: 'flagged', certificationRequested: !!body.certificationRequested });
       }
     } catch {
       setResult({ kind: 'error', message: 'Network error — please try again.' });
@@ -82,11 +86,20 @@ export default function ApplyForm() {
     return (
       <div className="border border-sage bg-white p-8">
         <h2 className="font-heading text-3xl text-ink">Thank you — application received</h2>
-        <p className="mt-4">
-          Our practitioner team is verifying your details with your professional register. We
-          aim to be in touch within two working days with your account confirmation and
-          referral code.
-        </p>
+        {result.certificationRequested ? (
+          <p className="mt-4">
+            As a student applicant, we need to see your certification before we can confirm your
+            account. We&apos;ve just emailed you a secure link to upload proof of study — please
+            check your inbox (and spam). Once you&apos;ve uploaded it, our practitioner team will
+            review and be in touch.
+          </p>
+        ) : (
+          <p className="mt-4">
+            Our practitioner team is verifying your details with your professional register. We
+            aim to be in touch within two working days with your account confirmation and
+            referral code.
+          </p>
+        )}
       </div>
     );
   }
@@ -132,6 +145,18 @@ export default function ApplyForm() {
               <span>Student</span>
             </label>
           </div>
+        </div>
+        <div>
+          <label htmlFor="referredByCode" className={labelClass}>Referred by (optional)</label>
+          <input
+            id="referredByCode"
+            name="referredByCode"
+            defaultValue={refCode}
+            maxLength={30}
+            className={inputClass}
+            placeholder="Colleague's referral code"
+          />
+          <p className="mt-1 text-xs text-ink2/60">If a Wild Nutrition practitioner invited you, their code is pre-filled here.</p>
         </div>
       </div>
       <button
