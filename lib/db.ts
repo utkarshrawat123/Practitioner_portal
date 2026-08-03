@@ -407,6 +407,38 @@ export async function referralEarnings(referrerId: number): Promise<{ creditedTo
   return { creditedTotal: num(row?.credited_total), pendingCount: num(row?.pending_count) };
 }
 
+/** Per-referral bonus in GBP. Env REFERRAL_BONUS_GBP, default 50; empty/NaN/≤0 → 50. */
+export function referralBonusGbp(): number {
+  const n = Number(process.env.REFERRAL_BONUS_GBP);
+  return Number.isFinite(n) && n > 0 ? n : 50;
+}
+
+export async function creditReferral(referralId: number, orderId: string, bonus: number): Promise<void> {
+  await run(
+    `UPDATE practitioner_referrals
+        SET status = 'credited',
+            first_sale_at = COALESCE(first_sale_at, datetime('now')),
+            completed_at  = datetime('now'),
+            credited_at   = datetime('now'),
+            qualifying_order_id = ?,
+            bonus_amount = ?
+      WHERE id = ? AND status != 'credited'`,
+    [orderId, bonus, referralId]
+  );
+}
+
+/**
+ * If this practitioner was referred and the referral hasn't paid out yet, award the
+ * bonus. Called from recordOrder, so every recorded (paid) order is a qualifying sale.
+ * Idempotent: the `status != 'credited'` guard makes it strictly first-sale, once.
+ */
+export async function maybeAwardReferralBonus(referredPractitionerId: number | null, orderId: string): Promise<void> {
+  if (!referredPractitionerId) return;
+  const ref = await getReferralByReferredId(referredPractitionerId);
+  if (!ref || ref.status === 'credited') return;
+  await creditReferral(ref.id, orderId, referralBonusGbp());
+}
+
 export async function insertApplication(input: {
   name: string;
   email: string;
@@ -1619,6 +1651,8 @@ export async function recordOrder(o: OrderInput): Promise<void> {
        created_at = excluded.created_at`,
     [o.orderId, o.practitionerId, o.code, o.total, o.currency, o.financialStatus, o.createdAt]
   );
+  // P2P referral: a recorded (paid) sale by a referred practitioner awards their referrer.
+  await maybeAwardReferralBonus(o.practitionerId, o.orderId);
 }
 
 /** Dashboard order figures for one referral code, from the local orders table. */
