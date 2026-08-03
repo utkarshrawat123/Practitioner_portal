@@ -5,7 +5,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   ClipboardList, BookOpen, Image as ImageIcon, Route, Briefcase, LayoutDashboard,
   Sparkles, Lightbulb, Calendar, Users, CalendarDays, MessageSquare, Bot, BarChart3,
-  Zap, ChevronLeft,
+  Zap, ChevronLeft, Gift,
 } from 'lucide-react';
 import AdminAiQueries from '@/components/AdminAiQueries';
 import AdminChat from '@/components/AdminChat';
@@ -21,6 +21,7 @@ import AdminToolkit from '@/components/AdminToolkit';
 import AdminFactory from '@/components/AdminFactory';
 import AdminCalendar from '@/components/AdminCalendar';
 import AdminPearls from '@/components/AdminPearls';
+import AdminReferrals from '@/components/AdminReferrals';
 
 interface Verification {
   reasonCode: string;
@@ -68,6 +69,7 @@ const GROUPS: { title: string; cards: SectionCard[] }[] = [
   { title: 'Insights and ops', cards: [
     { id: 'ai', label: 'AI queries', desc: 'Ask-the-Expert log', Icon: Bot },
     { id: 'reporting', label: 'Reporting', desc: 'Revenue and stats', Icon: BarChart3 },
+    { id: 'referrals', label: 'Referrals', desc: 'P2P bonuses', Icon: Gift },
     { id: 'automation', label: 'Automation', desc: 'Scheduled jobs', Icon: Zap },
   ] },
 ];
@@ -324,6 +326,8 @@ export default function AdminDashboard() {
         <AdminPearls />
       ) : section === 'chat' ? (
         <AdminChat />
+      ) : section === 'referrals' ? (
+        <AdminReferrals />
       ) : (
         <>
           <div className="mb-4 flex gap-2 text-xs uppercase tracking-[0.15em]">

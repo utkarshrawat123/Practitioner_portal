@@ -407,6 +407,22 @@ export async function referralEarnings(referrerId: number): Promise<{ creditedTo
   return { creditedTotal: num(row?.credited_total), pendingCount: num(row?.pending_count) };
 }
 
+export async function listAllReferrals(): Promise<Array<ReferralView & { referrerName: string }>> {
+  const rows = await all(
+    `SELECT r.*, ref.name AS referee_name, ref.status AS referee_status, rr.name AS referrer_name
+       FROM practitioner_referrals r
+       JOIN practitioners ref ON ref.id = r.referred_id
+       JOIN practitioners rr  ON rr.id  = r.referrer_id
+      ORDER BY r.created_at DESC`
+  );
+  return rows.map((r) => ({
+    ...rowToReferral(r),
+    refereeName: (r.referee_name as string) || (r.referred_email as string),
+    refereeStatus: r.referee_status as string,
+    referrerName: r.referrer_name as string,
+  }));
+}
+
 /** Per-referral bonus in GBP. Env REFERRAL_BONUS_GBP, default 50; empty/NaN/≤0 → 50. */
 export function referralBonusGbp(): number {
   const n = Number(process.env.REFERRAL_BONUS_GBP);
