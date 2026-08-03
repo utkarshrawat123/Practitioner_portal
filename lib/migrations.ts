@@ -343,6 +343,29 @@ CREATE TABLE IF NOT EXISTS patient_cart_items (
 CREATE INDEX IF NOT EXISTS idx_patient_cart_items_cart ON patient_cart_items(cart_id);
 `,
   },
+  {
+    id: '017_practitioner_referrals',
+    sql: `
+CREATE TABLE IF NOT EXISTS practitioner_referrals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  referrer_id INTEGER NOT NULL REFERENCES practitioners(id),
+  referred_id INTEGER NOT NULL REFERENCES practitioners(id),
+  referred_email TEXT NOT NULL,
+  invite_code TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'invited',
+  qualifying_order_id TEXT,
+  bonus_amount REAL NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'GBP',
+  signed_up_at TEXT,
+  first_sale_at TEXT,
+  completed_at TEXT,
+  credited_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON practitioner_referrals(referrer_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_referrals_referred ON practitioner_referrals(referred_id);
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */

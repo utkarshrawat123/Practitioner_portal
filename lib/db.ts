@@ -310,6 +310,49 @@ function rowToPractitioner(row: Row): Practitioner {
   };
 }
 
+// ---- Practitioner-to-practitioner referrals ----
+
+export interface ReferralRow {
+  id: number;
+  referrerId: number;
+  referredId: number;
+  referredEmail: string;
+  inviteCode: string;
+  status: 'invited' | 'signed_up' | 'first_sale' | 'completed' | 'credited';
+  qualifyingOrderId: string | null;
+  bonusAmount: number;
+  currency: string;
+  signedUpAt: string | null;
+  firstSaleAt: string | null;
+  completedAt: string | null;
+  creditedAt: string | null;
+  createdAt: string;
+}
+
+export interface ReferralView extends ReferralRow {
+  refereeName: string;
+  refereeStatus: string;
+}
+
+function rowToReferral(r: Row): ReferralRow {
+  return {
+    id: num(r.id),
+    referrerId: num(r.referrer_id),
+    referredId: num(r.referred_id),
+    referredEmail: r.referred_email as string,
+    inviteCode: r.invite_code as string,
+    status: r.status as ReferralRow['status'],
+    qualifyingOrderId: (r.qualifying_order_id as string | null) ?? null,
+    bonusAmount: num(r.bonus_amount),
+    currency: (r.currency as string) ?? 'GBP',
+    signedUpAt: (r.signed_up_at as string | null) ?? null,
+    firstSaleAt: (r.first_sale_at as string | null) ?? null,
+    completedAt: (r.completed_at as string | null) ?? null,
+    creditedAt: (r.credited_at as string | null) ?? null,
+    createdAt: r.created_at as string,
+  };
+}
+
 export async function insertApplication(input: {
   name: string;
   email: string;
