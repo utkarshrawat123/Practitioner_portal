@@ -353,6 +353,60 @@ function rowToReferral(r: Row): ReferralRow {
   };
 }
 
+export async function createReferral(opts: {
+  referrerId: number; referredId: number; referredEmail: string; inviteCode: string; approved: boolean;
+}): Promise<void> {
+  const status = opts.approved ? 'signed_up' : 'invited';
+  const signedUpAt = opts.approved ? new Date().toISOString() : null;
+  await run(
+    `INSERT OR IGNORE INTO practitioner_referrals
+       (referrer_id, referred_id, referred_email, invite_code, status, signed_up_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [opts.referrerId, opts.referredId, opts.referredEmail, opts.inviteCode, status, signedUpAt]
+  );
+}
+
+export async function getReferralByReferredId(referredId: number): Promise<ReferralRow | null> {
+  const row = await one(`SELECT * FROM practitioner_referrals WHERE referred_id = ?`, [referredId]);
+  return row ? rowToReferral(row) : null;
+}
+
+export async function markReferralSignedUp(referredId: number): Promise<void> {
+  await run(
+    `UPDATE practitioner_referrals
+        SET status = 'signed_up', signed_up_at = datetime('now')
+      WHERE referred_id = ? AND status = 'invited'`,
+    [referredId]
+  );
+}
+
+export async function listReferralsByReferrer(referrerId: number): Promise<ReferralView[]> {
+  const rows = await all(
+    `SELECT r.*, p.name AS referee_name, p.status AS referee_status
+       FROM practitioner_referrals r
+       JOIN practitioners p ON p.id = r.referred_id
+      WHERE r.referrer_id = ?
+      ORDER BY r.created_at DESC`,
+    [referrerId]
+  );
+  return rows.map((r) => ({
+    ...rowToReferral(r),
+    refereeName: (r.referee_name as string) || (r.referred_email as string),
+    refereeStatus: r.referee_status as string,
+  }));
+}
+
+export async function referralEarnings(referrerId: number): Promise<{ creditedTotal: number; pendingCount: number }> {
+  const row = await one(
+    `SELECT
+       COALESCE(SUM(CASE WHEN status = 'credited' THEN bonus_amount ELSE 0 END), 0) AS credited_total,
+       COALESCE(SUM(CASE WHEN status != 'credited' THEN 1 ELSE 0 END), 0) AS pending_count
+     FROM practitioner_referrals WHERE referrer_id = ?`,
+    [referrerId]
+  );
+  return { creditedTotal: num(row?.credited_total), pendingCount: num(row?.pending_count) };
+}
+
 export async function insertApplication(input: {
   name: string;
   email: string;
