@@ -14,7 +14,7 @@ This file is the single source of truth for the next session. Agent guide/archit
 
 ---
 
-# NEWEST SESSION (2026-08-03) — Practitioner-to-practitioner Referral Network — ✅ BUILT + VERIFIED (branch `feat/referral-network`, NOT yet merged/deployed)
+# NEWEST SESSION (2026-08-03) — Practitioner-to-practitioner Referral Network — ✅ BUILT + MERGED TO `main` + DEPLOYED TO PRODUCTION
 
 "Refer a Colleague": an approved practitioner invites a colleague via a unique link and earns a **£50** in-app
 bonus, automatically, when that colleague makes their **first paid sale**. Spec: `docs/superpowers/specs/2026-08-03-practitioner-referral-network-design.md`;
@@ -48,8 +48,10 @@ commerce seam.
   Bob created + paid a cart (£35.55) → referral auto-advanced to `credited`, `bonus_amount 50`, `qualifying_order_id
   cart-1`; Jane's `/referrals` shows "£50.00 credited" + all 4 stages ✓; admin shows "1 referrals · £50.00 credited".
   No console errors, no horizontal overflow at 375px on any surface.
-- **New env:** `REFERRAL_BONUS_GBP` (optional, default 50). Add to Vercel if a non-50 bonus is ever wanted.
-- **NOT deployed** — lives on `feat/referral-network`. Merge to `main` + `npx vercel --prod --yes` when ready.
+- **New env:** `REFERRAL_BONUS_GBP` (optional, default 50). Add to Vercel if a non-50 bonus is ever wanted (default 50 works with no env set).
+- **DEPLOYED:** fast-forward merged into `main` (HEAD `2305db1`) and shipped via `npx vercel --prod --yes` on 2026-08-03.
+  Verified live on `practitioner-portal-rose.vercel.app`: `/referrals` 307 (auth redirect), `/api/{me,admin}/referrals`
+  401 (gated), `/apply?ref=` field renders + pre-fills. Migration 017 runs idempotently on first prod DB connection.
 
 ---
 
