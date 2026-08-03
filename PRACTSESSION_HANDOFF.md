@@ -14,7 +14,46 @@ This file is the single source of truth for the next session. Agent guide/archit
 
 ---
 
-# NEWEST SESSION (2026-08-02) — Mobile-responsive pass + dead-code removal — ✅ DEPLOYED (commit `4b73f86`)
+# NEWEST SESSION (2026-08-03) — Practitioner-to-practitioner Referral Network — ✅ BUILT + VERIFIED (branch `feat/referral-network`, NOT yet merged/deployed)
+
+"Refer a Colleague": an approved practitioner invites a colleague via a unique link and earns a **£50** in-app
+bonus, automatically, when that colleague makes their **first paid sale**. Spec: `docs/superpowers/specs/2026-08-03-practitioner-referral-network-design.md`;
+plan: `docs/superpowers/plans/2026-08-03-practitioner-referral-network.md`. Built TDD, **8 tasks, 8 commits** on
+branch `feat/referral-network` (branched from `main` @ `32d80b2`). **336 tests pass · build clean · full E2E verified
+on the local scratch DB (mobile + desktop).** Additive only — **zero** changes to auth, existing commission, or the
+commerce seam.
+
+- **DB** migration `017_practitioner_referrals` — table `practitioner_referrals` (`referrer_id, referred_id UNIQUE,
+  referred_email, invite_code, status, qualifying_order_id, bonus_amount, currency, signed_up_at, first_sale_at,
+  completed_at, credited_at, created_at`). status ∈ `invited|signed_up|first_sale|completed|credited`. Helpers in
+  `lib/db.ts`: `createReferral, getReferralByReferredId, markReferralSignedUp, listReferralsByReferrer,
+  referralEarnings, listAllReferrals, creditReferral, maybeAwardReferralBonus, referralBonusGbp`.
+- **Award engine** — `recordOrder(o)` now calls `maybeAwardReferralBonus(o.practitionerId, o.orderId)` at the end
+  (single choke-point; covers Patient-Carts pay + future Shopify webhook). Idempotent & one-time via the
+  `status != 'credited'` guard + `UNIQUE(referred_id)`. Bonus = env **`REFERRAL_BONUS_GBP`** (default 50, robust parse).
+- **Attribution** — `/apply?ref=<affiliateCode>` pre-fills an optional "Referred by" box (`ApplyForm.tsx`, read from
+  `window.location` to avoid a Suspense boundary). `processApplication` (`lib/pipeline.ts`) resolves the code via
+  `findByCode`, guards self/unapproved, and creates the referral (`signed_up` if approved on apply, else `invited`).
+  `approvePractitioner` flips `invited → signed_up` on later approval.
+- **Practitioner UI** — `/referrals` (`app/referrals/page.tsx` + `components/ReferralsApp.tsx`): invite link + copy,
+  referral-earnings totals, and a **4-stage tracker** per referral (Signed up → First purchase → Referral completed →
+  Added to earnings) — horizontal on desktop, stacks vertically on mobile. Nav item "Refer & Earn" in `SiteHeader.tsx`
+  + a dashboard quick-link. API `GET /api/me/referrals`.
+- **Admin** — read-only "Referrals" card in `AdminDashboard` (Insights and ops group) → `components/AdminReferrals.tsx`
+  (referrer, referee, status, bonus, date; `overflow-x-auto` table). API `GET /api/admin/referrals`.
+- **Deviations from spec** (documented in the plan): dropped the redundant `practitioners.referred_by_practitioner_id`
+  column (referral `referred_id` suffices); all helpers live in `lib/db.ts` (no separate `lib/referrals.ts`) so the
+  `recordOrder` hook has no import cycle.
+- **E2E proof (local scratch DB):** applied "Bob Referred" via Jane's code (`WN-PRACTI-R8SZ`) → referral `signed_up`;
+  Bob created + paid a cart (£35.55) → referral auto-advanced to `credited`, `bonus_amount 50`, `qualifying_order_id
+  cart-1`; Jane's `/referrals` shows "£50.00 credited" + all 4 stages ✓; admin shows "1 referrals · £50.00 credited".
+  No console errors, no horizontal overflow at 375px on any surface.
+- **New env:** `REFERRAL_BONUS_GBP` (optional, default 50). Add to Vercel if a non-50 bonus is ever wanted.
+- **NOT deployed** — lives on `feat/referral-network`. Merge to `main` + `npx vercel --prod --yes` when ready.
+
+---
+
+# SESSION (2026-08-02) — Mobile-responsive pass + dead-code removal — ✅ DEPLOYED (commit `4b73f86`)
 
 Made both the practitioner and admin sides mobile-friendly, ran a full end-to-end mobile pass, and removed dead
 code. **Presentational-only change** — the commit touches **zero** `lib/`, `app/api/`, auth, `db.ts`, or migration
