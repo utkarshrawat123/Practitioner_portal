@@ -1,6 +1,7 @@
 # CLAUDE.md — Wild Nutrition Practitioner Hub
 
-Agent-facing guide to this repo. For a fuller narrative history see `PROJECT_HANDOFF.md`.
+Agent-facing guide to this repo. **For the complete, self-contained master handover, read `HANDOVER.md` first.**
+For a fuller narrative history see `PROJECT_HANDOFF.md`; per-session detail in `PRACTSESSION_HANDOFF.md`.
 Detailed specs/plans live in `docs/superpowers/{specs,plans}/`.
 
 ## What this is

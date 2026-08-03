@@ -1,3 +1,6 @@
+> **⟹ START WITH [`HANDOVER.md`](HANDOVER.md)** — the complete, self-contained master handover (rewritten
+> 2026-08-03). This file remains for its exhaustive per-session detail blocks (2026-07-19 → 2026-08-03).
+
 # PRACTSESSION_HANDOFF.md
 
 **Wild Nutrition Practitioner Hub — authoritative session handoff.** Rewritten 2026-07-19 (fresh, complete, exhaustive).
