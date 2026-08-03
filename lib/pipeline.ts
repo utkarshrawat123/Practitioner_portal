@@ -1,5 +1,7 @@
 import {
   addEvent,
+  createReferral,
+  findByCode,
   findByEmail,
   flagPractitioner,
   getPractitioner,
@@ -7,6 +9,7 @@ import {
   insertApplication,
   isCodeTaken,
   markApproved,
+  markReferralSignedUp,
   markRejected,
   setPendingSync,
   type Practitioner,
@@ -14,6 +17,7 @@ import {
   type Verification,
 } from '@/lib/db';
 import { decide, type Confidence } from '@/lib/decision';
+import { sendCertificationRequest } from '@/lib/certUpload';
 import { getRegister } from '@/lib/registers';
 import { getAffiliateProvider } from '@/lib/providers/affiliates';
 import { getEmailProvider } from '@/lib/providers/email';
@@ -31,6 +35,7 @@ export interface ApplicationInput {
   registerBody: string;
   registerNumber: string;
   qualificationStatus: QualificationStatus;
+  referredByCode?: string;
 }
 
 export async function processApplication(input: ApplicationInput): Promise<Practitioner> {
@@ -63,6 +68,21 @@ export async function processApplication(input: ApplicationInput): Promise<Pract
     isDuplicate,
   });
 
+  // Practitioner-to-practitioner referral attribution (best-effort; never blocks signup).
+  const refCode = input.referredByCode?.trim();
+  if (refCode) {
+    const referrer = await findByCode(refCode);
+    if (referrer && referrer.status === 'approved' && referrer.id !== record.id && referrer.email !== input.email) {
+      await createReferral({
+        referrerId: referrer.id,
+        referredId: record.id,
+        referredEmail: input.email,
+        inviteCode: referrer.affiliateCode ?? refCode,
+        approved: decision.status === 'approved',
+      });
+    }
+  }
+
   const verification: Verification = {
     reasonCode: decision.reasonCode,
     confidence,
@@ -75,6 +95,18 @@ export async function processApplication(input: ApplicationInput): Promise<Pract
   }
   const flagged = await flagPractitioner(record.id, verification);
   await addEvent(record.id, 'decision', `Flagged for review: ${decision.reasonCode} — ${lookupDetail}`);
+
+  // Students can't verify against a public register — ask them to upload proof of
+  // study. The email carries a secure, self-expiring link (they can't log in yet).
+  if (decision.reasonCode === 'STUDENT_MANUAL') {
+    const sent = await sendCertificationRequest(flagged);
+    await addEvent(
+      record.id,
+      'email',
+      sent.ok ? `Certification request emailed to ${flagged.email}.` : `Certification request email FAILED: ${sent.detail}`
+    );
+  }
+
   return flagged;
 }
 
@@ -82,7 +114,9 @@ export async function approvePractitioner(id: number, decidedBy: string): Promis
   const existing = await getPractitioner(id);
   if (!existing) throw new Error(`No practitioner with id ${id}`);
   if (existing.status === 'approved' && existing.affiliateCode) return existing; // idempotent
-  return finalizeApproval(id, existing.verification, decidedBy);
+  const approved = await finalizeApproval(id, existing.verification, decidedBy);
+  await markReferralSignedUp(id); // no-op unless they were an 'invited' referral
+  return approved;
 }
 
 export async function rejectPractitioner(id: number, decidedBy: string): Promise<Practitioner> {

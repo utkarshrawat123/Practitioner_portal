@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { DuplicateEmailError, processApplication } from '@/lib/pipeline';
 import { sessionCookieHeader } from '@/lib/practitionerAuth';
+import { clearWelcomeCookieHeader } from '@/lib/welcomeGate';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,7 @@ const applySchema = z.object({
   registerBody: z.enum(['BANT', 'CNHC', 'NNA', 'ANP']),
   registerNumber: z.string().trim().min(2, 'Please enter your membership number').max(30),
   qualificationStatus: z.enum(['qualified', 'student']),
+  referredByCode: z.string().trim().max(30).optional(),
 });
 
 export async function POST(req: Request): Promise<NextResponse> {
@@ -40,10 +42,16 @@ export async function POST(req: Request): Promise<NextResponse> {
         link: practitioner.affiliateLink,
       });
       res.headers.set('Set-Cookie', sessionCookieHeader(practitioner.id));
+      // Fresh login → clear the welcome cookie so the takeover plays for them.
+      res.headers.append('Set-Cookie', clearWelcomeCookieHeader());
       return res;
     }
-    // Flagged: never leak verification internals to the applicant.
-    return NextResponse.json({ status: 'flagged' });
+    // Flagged: never leak verification internals to the applicant. Students are
+    // told (only) to expect the certification-upload email — not sensitive.
+    return NextResponse.json({
+      status: 'flagged',
+      certificationRequested: practitioner.qualificationStatus === 'student',
+    });
   } catch (err) {
     if (err instanceof DuplicateEmailError) {
       return NextResponse.json(
