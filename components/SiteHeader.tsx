@@ -11,6 +11,7 @@ const PRACTITIONER_NAV: NavItem[] = [
   { label: 'Resources', href: '/resources' },
   { label: 'Clinical Toolkit', href: '/toolkit' },
   { label: 'Patient Carts', href: '/carts' },
+  { label: 'Refer & Earn', href: '/referrals' },
   { label: 'Community', href: '/community' },
   { label: 'Events', href: '/events' },
 ];

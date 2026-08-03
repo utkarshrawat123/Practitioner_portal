@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 
 interface Profile {
   name: string; email: string; registerBody: string; registerNumber: string;
@@ -22,6 +23,7 @@ interface PathwayCard {
   id: number; title: string; cpdHours: number;
   progress: { percent: number; complete: boolean };
 }
+interface Pearl { id: number; body: string; category: string | null }
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -30,15 +32,16 @@ function greeting(): string {
   return 'Good evening';
 }
 
-const QUICK_LINKS: { label: string; href: string; ready: boolean }[] = [
-  { label: 'Ask Lorna', href: '/assistant', ready: true },
-  { label: 'Book Technical Consultation', href: '/coming-soon', ready: false },
-  { label: 'Clinical Toolkit', href: '/toolkit', ready: false },
+const QUICK_LINKS: { label: string; href: string; ready: boolean; featured?: boolean }[] = [
+  { label: 'Ask the Expert', href: '/assistant', ready: true, featured: true },
+  { label: 'Resource Library', href: '/resources', ready: true },
+  { label: 'Lessons', href: '/library', ready: true },
+  { label: 'Clinical Toolkit', href: '/toolkit', ready: true },
   { label: 'Community', href: '/community', ready: true },
   { label: 'Events', href: '/events', ready: true },
   { label: 'Leaderboard', href: '/leaderboard', ready: true },
-  { label: 'My Downloads', href: '/coming-soon', ready: false },
   { label: 'My CPD', href: '/cpd', ready: true },
+  { label: 'Refer & Earn', href: '/referrals', ready: true },
 ];
 
 const card = 'border border-stone bg-white p-6';
@@ -84,6 +87,7 @@ export default function DashboardApp() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [pathways, setPathways] = useState<PathwayCard[]>([]);
+  const [pearls, setPearls] = useState<Pearl[]>([]);
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [devLink, setDevLink] = useState<string | null>(null);
@@ -103,6 +107,7 @@ export default function DashboardApp() {
       loadStats();
       fetch('/api/me/widgets').then(async (r) => { if (r.ok) setWidgets((await r.json()).widgets); });
       fetch('/api/me/pathways').then(async (r) => { if (r.ok) setPathways((await r.json()).pathways); });
+      fetch('/api/me/pearls').then(async (r) => { if (r.ok) setPearls((await r.json()).pearls); });
     })();
   }, [loadStats]);
 
@@ -191,6 +196,17 @@ export default function DashboardApp() {
         {greeting()}, {p.name.split(' ')[0]}
       </h1>
 
+      {/* Clinical Pearl */}
+      {pearls.length > 0 && (
+        <div className="mt-6 flex items-start gap-3 border-l-4 border-sage bg-white px-5 py-4">
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-forest" aria-hidden />
+          <div>
+            <p className={label}>Clinical pearl{pearls[0].category ? ` · ${pearls[0].category}` : ''}</p>
+            <p className="mt-1 text-sm text-ink2/90">{pearls[0].body}</p>
+          </div>
+        </div>
+      )}
+
       {/* Continue Learning */}
       {(() => {
         const inProgress = pathways.filter((p) => p.progress.percent > 0 && !p.progress.complete).sort((a, b) => b.progress.percent - a.progress.percent);
@@ -259,13 +275,27 @@ export default function DashboardApp() {
       <section className="mt-8">
         <p className={label}>Quick links</p>
         <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {QUICK_LINKS.map((q) => (
-            <a key={q.label} href={q.href}
-              className={`${card} flex items-center justify-between transition-colors hover:border-terracotta`}>
-              <span className="font-heading text-lg text-ink">{q.label}</span>
-              {!q.ready && <span className="text-[10px] uppercase tracking-[0.15em] text-ink2/50">Coming soon</span>}
-            </a>
-          ))}
+          {QUICK_LINKS.map((q) =>
+            q.featured ? (
+              <a key={q.label} href={q.href}
+                className="quick-shine group relative flex items-center justify-between overflow-hidden rounded-sm bg-gradient-to-br from-forest to-terracotta p-6 text-cream shadow-lg ring-1 ring-terracotta/40 transition-transform duration-200 hover:scale-[1.02]">
+                <span className="flex items-center gap-2 font-heading text-lg">
+                  <Sparkles className="h-5 w-5 shrink-0 animate-pulse" aria-hidden />
+                  {q.label}
+                </span>
+                <span className="relative flex items-center gap-1.5 rounded-full bg-cream/20 px-2.5 py-1 text-[10px] uppercase tracking-[0.15em]">
+                  <span className="h-1.5 w-1.5 animate-ping rounded-full bg-cream" />
+                  AI
+                </span>
+              </a>
+            ) : (
+              <a key={q.label} href={q.href}
+                className={`${card} flex items-center justify-between transition-colors hover:border-terracotta`}>
+                <span className="font-heading text-lg text-ink">{q.label}</span>
+                {!q.ready && <span className="text-[10px] uppercase tracking-[0.15em] text-ink2/50">Coming soon</span>}
+              </a>
+            )
+          )}
         </div>
       </section>
 
