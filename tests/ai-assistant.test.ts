@@ -25,9 +25,10 @@ const goodOutput: AssistantOutput = {
       dose: '2 capsules daily with food',
       rationale: 'Sleep and stress support.',
       evidence_notes: 'Contributes to normal psychological function.',
-      kb_source: 'WN Magnesium (Food-Grown®)',
+      sources: ['WN Magnesium (Food-Grown®)', 'General Dosing Notes'],
     },
   ],
+  sources_reviewed: ['WN Magnesium (Food-Grown®)', 'WN Iron Plus', 'General Dosing Notes'],
   general_notes: 'Review at 8-12 weeks.',
   handout: { intro: 'Hello', explanation: 'Plan details', lifestyle_notes: 'Sleep hygiene' },
 };
@@ -55,7 +56,7 @@ describe('generateProtocol', () => {
           dose: '1 daily',
           rationale: 'invented',
           evidence_notes: 'none',
-          kb_source: 'none',
+          sources: ['none'],
         },
       ],
     };
@@ -64,6 +65,32 @@ describe('generateProtocol', () => {
     expect(result.output.protocol[0].product).toContain('Magnesium');
     expect(result.groundingWarnings).toHaveLength(1);
     expect(result.groundingWarnings[0]).toContain('Super Sleep Elixir 9000');
+  });
+
+  it('keeps citations to real documents and preserves multi-source citations', async () => {
+    const result = await generateProtocol('35F, insomnia', kb(), [], fake(goodOutput));
+    expect(result.output.protocol[0].sources).toEqual([
+      'WN Magnesium (Food-Grown®)', 'General Dosing Notes',
+    ]);
+    expect(result.output.sources_reviewed).toContain('General Dosing Notes');
+    expect(result.groundingWarnings).toEqual([]);
+  });
+
+  it('drops fabricated source citations and warns, without removing the product', async () => {
+    const withFakeCite = {
+      ...goodOutput,
+      protocol: [{
+        ...goodOutput.protocol[0],
+        sources: ['WN Magnesium (Food-Grown®)', 'The Big Book of Made-Up Studies'],
+      }],
+      sources_reviewed: ['WN Magnesium (Food-Grown®)', 'Nonexistent Journal 2099'],
+    };
+    const result = await generateProtocol('35F, insomnia', kb(), [], fake(withFakeCite));
+    // Product survives; the invented citation is stripped.
+    expect(result.output.protocol).toHaveLength(1);
+    expect(result.output.protocol[0].sources).toEqual(['WN Magnesium (Food-Grown®)']);
+    expect(result.output.sources_reviewed).toEqual(['WN Magnesium (Food-Grown®)']);
+    expect(result.groundingWarnings.some((w) => w.includes('Made-Up Studies'))).toBe(true);
   });
 
   it('passes out_of_scope responses through untouched', async () => {

@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { upload } from '@vercel/blob/client';
 
 const CATEGORIES = [
   'Women’s Health', 'Hormone Health', 'Gut Health', 'Immune Health',
@@ -25,7 +26,12 @@ export default function AdminPathways() {
   const [modules, setModules] = useState<Module[]>([]);
   const [content, setContent] = useState<{ lessons: ContentItem[]; media: (ContentItem & { type: string })[] }>({ lessons: [], media: [] });
   const [form, setForm] = useState({ title: '', category: CATEGORIES[0], cpdHours: 1, audience: 'all' as const, description: '', published: false });
-  const [mod, setMod] = useState({ kind: 'lesson' as 'lesson' | 'media', contentId: '', title: '', required: true });
+  // Default to "New training video" — the primary way to add a lecture, and the
+  // one that works from a standing start (the "Existing …" options are empty until
+  // standalone lessons/media exist elsewhere).
+  const [mod, setMod] = useState({ kind: 'video' as 'lesson' | 'media' | 'video', contentId: '', title: '', required: true });
+  const [vid, setVid] = useState({ source: 'link' as 'link' | 'file', url: '', file: null as File | null, busy: false, error: '' });
+  const vidFileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -50,8 +56,16 @@ export default function AdminPathways() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: form.title, category: form.category, cpdHours: Number(form.cpdHours), audience: form.audience, description: form.description || null, published: form.published }),
     });
-    if (res.ok) { setForm({ ...form, title: '', description: '' }); load(); }
-    else setError((await res.json()).error ?? 'Could not save');
+    if (res.ok) {
+      const { pathway } = await res.json();
+      setForm({ ...form, title: '', description: '' });
+      await load();
+      // Jump straight into building the new course's modules — no hunting for it
+      // in the list first.
+      if (pathway?.id) openPathway(pathway.id);
+    } else {
+      setError((await res.json()).error ?? 'Could not save');
+    }
   }
 
   async function patchPathway(id: number, body: Record<string, unknown>) {
@@ -77,6 +91,45 @@ export default function AdminPathways() {
     setMod({ ...mod, contentId: '', title: '' });
     openPathway(selected);
   }
+  async function addVideoModule(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selected) return;
+    const title = mod.title.trim();
+    if (!title) { setVid({ ...vid, error: 'Give the video a title.' }); return; }
+    if (vid.source === 'link' && !vid.url.trim()) { setVid({ ...vid, error: 'Paste a video link.' }); return; }
+    if (vid.source === 'file' && !vid.file) { setVid({ ...vid, error: 'Choose a video file to upload.' }); return; }
+    setVid({ ...vid, busy: true, error: '' });
+    try {
+      // 1. Create the underlying media item (uploaded file or pasted link).
+      let url = vid.url.trim();
+      let pathname: string | null = null;
+      let size: number | null = null;
+      if (vid.source === 'file' && vid.file) {
+        const blob = await upload(`media/${Date.now()}-${vid.file.name}`, vid.file, {
+          access: 'public', handleUploadUrl: '/api/admin/media/upload',
+        });
+        url = blob.url; pathname = blob.pathname; size = vid.file.size;
+      }
+      const mediaRes = await fetch('/api/admin/media', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, type: 'video', contentKind: vid.source, url, pathname, size }),
+      });
+      if (!mediaRes.ok) throw new Error((await mediaRes.json()).error ?? 'Could not save the video');
+      const mediaId = (await mediaRes.json()).media.id as number;
+      // 2. Attach it to this pathway as a module.
+      await fetch(`/api/admin/pathways/${selected}/modules`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, contentKind: 'media', contentId: mediaId, position: modules.length, required: mod.required }),
+      });
+      setMod({ ...mod, title: '' });
+      setVid({ source: 'link', url: '', file: null, busy: false, error: '' });
+      if (vidFileRef.current) vidFileRef.current.value = '';
+      openPathway(selected);
+    } catch (err) {
+      setVid({ ...vid, busy: false, error: err instanceof Error ? err.message : 'Upload failed' });
+    }
+  }
+
   async function moveModule(index: number, dir: -1 | 1) {
     if (!selected) return;
     const a = modules[index]; const b = modules[index + dir];
@@ -162,23 +215,61 @@ export default function AdminPathways() {
                 </div>
               ))}
             </div>
-            <form onSubmit={addModule} className="mt-5 grid gap-3 border-t border-stone pt-4">
-              <span className={label}>Add module</span>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block"><span className={label}>From</span>
-                  <select className={input} value={mod.kind} onChange={(e) => setMod({ ...mod, kind: e.target.value as 'lesson' | 'media', contentId: '' })}>
-                    <option value="lesson">Lesson</option><option value="media">Media</option>
-                  </select></label>
-                <label className="block"><span className={label}>Content</span>
-                  <select className={input} required value={mod.contentId} onChange={(e) => setMod({ ...mod, contentId: e.target.value })}>
-                    <option value="">Select…</option>
-                    {(mod.kind === 'lesson' ? content.lessons : content.media).map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
-                  </select></label>
-              </div>
-              <label className="block"><span className={label}>Module title (optional)</span>
-                <input className={input} value={mod.title} onChange={(e) => setMod({ ...mod, title: e.target.value })} placeholder="Defaults to content title" /></label>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={mod.required} onChange={(e) => setMod({ ...mod, required: e.target.checked })} /> Required for completion</label>
-              <button className="bg-forest px-5 py-2 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">Add module</button>
+            <form onSubmit={mod.kind === 'video' ? addVideoModule : addModule} className="mt-5 grid gap-3 border-t border-stone pt-4">
+              <span className={label}>Add session</span>
+              <label className="block"><span className={label}>Type</span>
+                <select className={input} value={mod.kind} onChange={(e) => setMod({ ...mod, kind: e.target.value as 'lesson' | 'media' | 'video', contentId: '' })}>
+                  <option value="video">New training video</option>
+                  <option value="media">Existing media</option>
+                  <option value="lesson">Existing lesson</option>
+                </select></label>
+
+              {mod.kind === 'video' ? (
+                <>
+                  <label className="block"><span className={label}>Video title</span>
+                    <input className={input} required value={mod.title} onChange={(e) => setMod({ ...mod, title: e.target.value })} placeholder="e.g. Session 1 — Gut health foundations" /></label>
+                  <div className="inline-flex rounded-sm border border-stone p-0.5 text-xs">
+                    {(['link', 'file'] as const).map((s) => (
+                      <button key={s} type="button" onClick={() => setVid({ ...vid, source: s, error: '' })}
+                        className={`px-3 py-1.5 uppercase tracking-[0.15em] ${vid.source === s ? 'bg-ink text-cream' : 'text-ink2/70'}`}>
+                        {s === 'link' ? 'Paste link' : 'Upload file'}
+                      </button>
+                    ))}
+                  </div>
+                  {vid.source === 'link' ? (
+                    <label className="block"><span className={label}>Video link (YouTube, Vimeo, Loom…)</span>
+                      <input className={input} value={vid.url} onChange={(e) => setVid({ ...vid, url: e.target.value })} placeholder="https://youtu.be/…" /></label>
+                  ) : (
+                    <label className="block"><span className={label}>Video file (mp4, up to 500 MB)</span>
+                      <input ref={vidFileRef} type="file" accept="video/*" className={`${input} py-1.5`} onChange={(e) => setVid({ ...vid, file: e.target.files?.[0] ?? null })} /></label>
+                  )}
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={mod.required} onChange={(e) => setMod({ ...mod, required: e.target.checked })} /> Required for completion</label>
+                  {vid.error && <p className="text-sm text-terracotta">{vid.error}</p>}
+                  <button disabled={vid.busy} className="bg-forest px-5 py-2 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta disabled:opacity-60">
+                    {vid.busy ? 'Saving…' : 'Add video session'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {(mod.kind === 'lesson' ? content.lessons : content.media).length === 0 ? (
+                    <p className="text-sm text-ink2/70">
+                      No existing {mod.kind === 'lesson' ? 'lessons' : 'media'} yet. Switch Type to
+                      <strong> New training video</strong> to add a lecture directly, or create
+                      {mod.kind === 'lesson' ? ' a lesson in the Lessons tab' : ' media in the Media tab'} first.
+                    </p>
+                  ) : (
+                    <label className="block"><span className={label}>Content</span>
+                      <select className={input} required value={mod.contentId} onChange={(e) => setMod({ ...mod, contentId: e.target.value })}>
+                        <option value="">Select…</option>
+                        {(mod.kind === 'lesson' ? content.lessons : content.media).map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+                      </select></label>
+                  )}
+                  <label className="block"><span className={label}>Session title (optional)</span>
+                    <input className={input} value={mod.title} onChange={(e) => setMod({ ...mod, title: e.target.value })} placeholder="Defaults to content title" /></label>
+                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={mod.required} onChange={(e) => setMod({ ...mod, required: e.target.checked })} /> Required for completion</label>
+                  <button className="bg-forest px-5 py-2 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">Add session</button>
+                </>
+              )}
             </form>
           </>
         )}

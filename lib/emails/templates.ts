@@ -34,6 +34,26 @@ export function welcomeEmail(input: {
   return { subject: 'Welcome to the Wild Nutrition Practitioner Community', html };
 }
 
+/** Sent to a STUDENT applicant — asks them to upload proof of study to complete review. */
+export function certificationRequestEmail(input: { name: string; uploadUrl: string }): RenderedEmail {
+  const firstName = input.name.trim().split(/\s+/)[0] || 'there';
+  const html = `
+<div style="font-family:Georgia,'Times New Roman',serif;max-width:560px;margin:0 auto;color:#191919;line-height:1.6">
+  <h1 style="font-size:24px;margin:0 0 8px">Thanks for applying, ${firstName}</h1>
+  <p>You applied to the Wild Nutrition Practitioner Community as a <strong>student</strong>. To complete
+  your review, please upload your certification — proof of enrolment on a recognised nutrition course, a
+  student ID, or a course confirmation letter (PDF or image).</p>
+  <p style="margin:24px 0">
+    <a href="${input.uploadUrl}" style="background:#191919;color:#f8f6f3;padding:14px 28px;text-decoration:none;font-size:12px;letter-spacing:2px;text-transform:uppercase">Upload your certification</a>
+  </p>
+  <p>Once uploaded, our practitioner team will review it and confirm your account. This secure link is
+  unique to you and expires in 14 days.</p>
+  <p style="font-size:13px;color:#666">If you didn't apply, you can safely ignore this email.</p>
+  <p style="font-size:13px;color:#666">Questions? Reach us at utkarshrawatofficial@gmail.com</p>
+</div>`.trim();
+  return { subject: 'Please upload your certification — Wild Nutrition', html };
+}
+
 /** The one-time magic-link login email. */
 export function magicLinkEmail(input: { url: string }): RenderedEmail {
   const html = `

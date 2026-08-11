@@ -25,7 +25,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!mod || mod.pathwayId !== id) return NextResponse.json({ error: 'Invalid module' }, { status: 400 });
 
   await markModuleComplete(p.id, mod.id);
-  const certificate = await maybeIssueCertificate(p.id, p.name, pathway);
+  // Completion is recorded above and must stick even if certificate generation
+  // (a Vercel Blob write) hiccups — otherwise the practitioner's final click 500s
+  // despite the pathway being complete. Issuance is idempotent and retried on GET.
+  let certificate = null;
+  try {
+    certificate = await maybeIssueCertificate(p.id, p.name, pathway);
+  } catch (err) {
+    console.error('certificate issuance failed (completion still recorded)', err);
+  }
   const progress = await pathwayProgress(p.id, id);
   return NextResponse.json({ progress, certificate });
 }

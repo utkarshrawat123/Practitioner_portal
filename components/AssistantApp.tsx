@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface ProtocolItem {
-  product: string; dose: string; rationale: string; evidence_notes: string; kb_source: string;
+  product: string; dose: string; rationale: string; evidence_notes: string; sources: string[];
 }
 interface Output {
   status: 'ok' | 'out_of_scope';
   out_of_scope_reason: string;
   safety_flags: { type: string; detail: string; recommendation: string }[];
   protocol: ProtocolItem[];
+  sources_reviewed: string[];
   general_notes: string;
 }
 interface Result { output: Output; groundingWarnings: string[]; handoutHtml: string | null }
@@ -63,7 +64,7 @@ export default function AssistantApp() {
   if (authed === false) {
     return (
       <div className="mx-auto max-w-md px-6 py-16 text-center">
-        <h1 className="font-heading text-3xl text-ink">Protocol Assistant</h1>
+        <h1 className="font-heading text-3xl text-ink">Ask the Expert</h1>
         <p className="mt-4 text-ink2/80">
           This tool is available to approved practitioners. Please{' '}
           <a href="/dashboard" className="text-terracotta underline">log in to your dashboard</a>{' '}
@@ -76,11 +77,12 @@ export default function AssistantApp() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
       <p className={label}>Practitioner tools</p>
-      <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">Protocol Assistant</h1>
+      <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">Ask the Expert</h1>
       <p className="mt-3 max-w-2xl text-sm text-ink2/80">
-        Describe your client in plain language and receive a suggested Wild Nutrition protocol,
-        grounded only in our practitioner knowledge base, plus a printable client handout with
-        your referral code. Suggestions are for your clinical review — they are not advice.
+        Your AI protocol assistant, trained on Wild Nutrition&apos;s practitioner knowledge base.
+        Describe your client in plain language and it suggests a Wild Nutrition protocol —
+        grounded only in our dossiers — plus a printable client handout with your referral code.
+        Suggestions are for your clinical review; they are not advice.
       </p>
 
       <form onSubmit={generate} className={`${card} mt-8`}>
@@ -101,10 +103,10 @@ export default function AssistantApp() {
 
       {notConfigured && (
         <div className={`${card} mt-6 border-terracotta`}>
-          <p className="font-heading text-xl text-ink">Assistant not configured yet</p>
+          <p className="font-heading text-xl text-ink">Ask the Expert isn&apos;t configured yet</p>
           <p className="mt-2 text-sm text-ink2/80">
-            An Anthropic API key hasn&apos;t been added. Add <code>ANTHROPIC_API_KEY</code> to the
-            server environment and restart — no other setup is needed.
+            An AI API key hasn&apos;t been added. Add <code>GEMINI_API_KEY</code> to the
+            server environment and redeploy — no other setup is needed.
           </p>
         </div>
       )}
@@ -151,13 +153,23 @@ export default function AssistantApp() {
                   <p className="mt-1 text-sm font-semibold">{item.dose}</p>
                   <p className="mt-2 text-sm text-ink2/90">{item.rationale}</p>
                   <p className="mt-1 text-xs text-ink2/70">{item.evidence_notes}</p>
-                  <p className="mt-1 text-xs text-forest">Source: {item.kb_source}</p>
+                  {item.sources.length > 0 && (
+                    <p className="mt-1 text-xs text-forest">
+                      {item.sources.length > 1 ? 'Sources' : 'Source'}: {item.sources.join(' · ')}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
             {result.output.general_notes && (
               <p className="mt-4 border-t border-stone pt-4 text-sm text-ink2/80">
                 {result.output.general_notes}
+              </p>
+            )}
+            {result.output.sources_reviewed?.length > 0 && (
+              <p className="mt-3 border-t border-stone pt-3 text-xs text-ink2/60">
+                <span className="uppercase tracking-[0.12em]">Resources analysed:</span>{' '}
+                {result.output.sources_reviewed.join(' · ')}
               </p>
             )}
           </div>

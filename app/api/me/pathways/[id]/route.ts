@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionPractitioner } from '@/lib/practitionerAuth';
 import { getPathway, listPathwayModules, pathwayProgress, getLesson, getMedia, getCertificate } from '@/lib/db';
+import { maybeIssueCertificate } from '@/lib/certificates';
 import { hasAccess } from '@/lib/access';
 
 export const dynamic = 'force-dynamic';
@@ -16,13 +17,38 @@ export async function GET(req: Request, { params }: { params: { id: string } }):
   const modules = await listPathwayModules(id);
   const resolved = await Promise.all(
     modules.map(async (m) => {
-      let contentTitle = m.title;
-      if (m.contentKind === 'lesson') contentTitle = (await getLesson(m.contentId))?.title ?? m.title;
-      else contentTitle = (await getMedia(m.contentId))?.title ?? m.title;
-      return { ...m, contentTitle };
+      if (m.contentKind === 'lesson') {
+        const lesson = await getLesson(m.contentId);
+        return {
+          ...m,
+          contentTitle: lesson?.title ?? m.title,
+          mediaType: null as string | null,
+          fileKind: null as 'file' | 'link' | null,
+          url: null as string | null,
+          description: lesson?.summary ?? null,
+        };
+      }
+      const media = await getMedia(m.contentId);
+      return {
+        ...m,
+        contentTitle: media?.title ?? m.title,
+        mediaType: media?.type ?? null,
+        fileKind: media?.contentKind ?? null,
+        url: media?.url ?? null,
+        description: media?.description ?? null,
+      };
     })
   );
   const progress = await pathwayProgress(p.id, id);
-  const certificate = await getCertificate(p.id, id);
+  let certificate = await getCertificate(p.id, id);
+  // Self-heal: if the pathway is complete but the certificate wasn't issued
+  // (e.g. a Blob write failed during the completing request), retry now.
+  if (progress.complete && !certificate?.pdfUrl) {
+    try {
+      certificate = (await maybeIssueCertificate(p.id, p.name, pathway)) ?? certificate;
+    } catch (err) {
+      console.error('deferred certificate issuance failed', err);
+    }
+  }
   return NextResponse.json({ pathway, modules: resolved, progress, certificate });
 }

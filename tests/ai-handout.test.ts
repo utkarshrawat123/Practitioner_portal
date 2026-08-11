@@ -12,9 +12,10 @@ const output: AssistantOutput = {
       dose: '2 capsules daily',
       rationale: 'Sleep support',
       evidence_notes: 'EFSA claim',
-      kb_source: 'Magnesium (Food-Grown®)',
+      sources: ['Magnesium (Food-Grown®)', 'Dosing Principles'],
     },
   ],
+  sources_reviewed: ['Magnesium (Food-Grown®)', 'Dosing Principles'],
   general_notes: 'Review in 8 weeks.',
   handout: {
     intro: 'Your practitioner has put together this plan.',

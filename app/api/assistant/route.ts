@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { getSessionPractitioner } from '@/lib/practitionerAuth';
 import { loadKnowledgeBase } from '@/lib/ai/kb';
 import { screenForRisks } from '@/lib/ai/safety';
-import { AssistantError, generateProtocol, isConfigured, MODEL } from '@/lib/ai/assistant';
+import { AssistantError, generateProtocol, isConfigured, selectProvider } from '@/lib/ai/assistant';
 import { renderHandout } from '@/lib/ai/handout';
-import { recordAiQuery } from '@/lib/db';
+import { recordAiQuery, recentAiQueryCount } from '@/lib/db';
 import { referralLink } from '@/lib/codes';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +21,16 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
   if (!isConfigured()) {
     return NextResponse.json({ error: 'not_configured' }, { status: 503 });
+  }
+
+  // Basic per-practitioner rate limit: 30 queries per rolling hour.
+  const HOURLY_LIMIT = 30;
+  const sinceSqlUtc = new Date(Date.now() - 3600_000).toISOString().slice(0, 19).replace('T', ' ');
+  if ((await recentAiQueryCount(practitioner.id, sinceSqlUtc)) >= HOURLY_LIMIT) {
+    return NextResponse.json(
+      { error: 'You’ve reached the hourly limit for Ask the Expert. Please try again later.' },
+      { status: 429 }
+    );
   }
 
   let profile = '';
@@ -39,9 +49,10 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   const flags = screenForRisks(profile);
   const kb = loadKnowledgeBase();
+  const { complete, model } = selectProvider();
 
   try {
-    const result = await generateProtocol(profile, kb, flags);
+    const result = await generateProtocol(profile, kb, flags, complete);
     await recordAiQuery({
       practitionerId: practitioner.id,
       profileInput: profile,
@@ -49,7 +60,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       safetyFlags: flags,
       output: result.output,
       groundingWarnings: result.groundingWarnings,
-      model: MODEL,
+      model,
       inputTokens: result.usage?.inputTokens,
       outputTokens: result.usage?.outputTokens,
     });
@@ -74,8 +85,16 @@ export async function POST(req: Request): Promise<NextResponse> {
       status: 'error',
       safetyFlags: flags,
       output: { error: (err as Error).message },
-      model: MODEL,
+      model,
     });
+    const raw = (err as Error).message ?? '';
+    // Provider rate-limit / quota (e.g. Gemini 429) — a capacity issue, not a bug.
+    if (/\b429\b|quota|rate limit|resource_exhausted/i.test(raw)) {
+      return NextResponse.json(
+        { error: 'Ask the Expert has reached its usage limit for now. Please try again in a little while.' },
+        { status: 429 }
+      );
+    }
     const message =
       err instanceof AssistantError && err.code === 'malformed_output'
         ? 'The assistant returned an unexpected response. Please try again.'

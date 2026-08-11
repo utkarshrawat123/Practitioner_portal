@@ -10,6 +10,8 @@ beforeEach(async () => {
   process.env.DB_PATH = path.join(dir, 'test.db');
   process.env.KB_DIR = path.join(__dirname, 'fixtures', 'kb');
   delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_API_KEY2;
   (await import('@/lib/ai/kb')).clearKbCacheForTests();
 });
 
@@ -18,6 +20,9 @@ afterEach(async () => {
   fs.rmSync(dir, { recursive: true, force: true });
   delete process.env.KB_DIR;
   delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_API_KEY2;
+  delete process.env.GEMINI_MODEL;
   vi.unstubAllGlobals();
 });
 
@@ -51,8 +56,9 @@ const modelOutput = {
   protocol: [{
     product: 'WN Magnesium (Food-Grown®)', dose: '2 capsules daily with food',
     rationale: 'Sleep support', evidence_notes: 'Psych function claim',
-    kb_source: 'WN Magnesium (Food-Grown®)',
+    sources: ['WN Magnesium (Food-Grown®)', 'Dosing Principles'],
   }],
+  sources_reviewed: ['WN Magnesium (Food-Grown®)', 'Dosing Principles', 'Contraindication & Referral Guide'],
   general_notes: 'Review in 8 weeks.',
   handout: { intro: 'Hi', explanation: 'Take with food', lifestyle_notes: 'Sleep hygiene' },
 };
@@ -66,6 +72,17 @@ function stubAnthropicFetch() {
       usage: { input_tokens: 500, output_tokens: 200 },
     }), { status: 200, headers: { 'content-type': 'application/json' } })
   ));
+}
+
+function stubGeminiFetch() {
+  const spy = vi.fn(async () =>
+    new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: JSON.stringify(modelOutput) }] } }],
+      usageMetadata: { promptTokenCount: 700, candidatesTokenCount: 150 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } })
+  );
+  vi.stubGlobal('fetch', spy);
+  return spy;
 }
 
 describe('POST /api/assistant', () => {
@@ -102,6 +119,50 @@ describe('POST /api/assistant', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('ok');
     expect(rows[0].inputTokens).toBe(500);
+  });
+
+  it('uses Gemini (Ask Lorna) when GEMINI_API_KEY is set, logging the Gemini model', async () => {
+    process.env.GEMINI_API_KEY = 'gm-test';
+    process.env.GEMINI_MODEL = 'gemini-2.0-flash';
+    const spy = stubGeminiFetch();
+    const p = await seedApproved();
+    const { POST } = await import('@/app/api/assistant/route');
+    const res = await POST(
+      post({ profile: '42F, low energy, vegetarian, no medications' }, await sessionHeaders(p.id))
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.output.status).toBe('ok');
+    // The request went to Google's endpoint, not Anthropic's.
+    expect(String(spy.mock.calls[0][0])).toContain('generativelanguage.googleapis.com');
+    const { listAiQueries } = await import('@/lib/db');
+    const rows = await listAiQueries();
+    expect(rows[0].model).toBe('gemini-2.0-flash');
+    expect(rows[0].inputTokens).toBe(700);
+  });
+
+  it('falls back to GEMINI_API_KEY2 when the primary key is quota-exhausted (429)', async () => {
+    process.env.GEMINI_API_KEY = 'gm-primary';
+    process.env.GEMINI_API_KEY2 = 'gm-secondary';
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      calls.push(String(url));
+      if (String(url).includes('gm-primary')) {
+        return new Response(JSON.stringify({ error: { code: 429, message: 'quota' } }), { status: 429 });
+      }
+      return new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: JSON.stringify(modelOutput) }] } }],
+        usageMetadata: { promptTokenCount: 400, candidatesTokenCount: 100 },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }));
+    const p = await seedApproved();
+    const { POST } = await import('@/app/api/assistant/route');
+    const res = await POST(post({ profile: '55F, joint aches, no meds, not pregnant' }, await sessionHeaders(p.id)));
+    expect(res.status).toBe(200);
+    expect((await res.json()).output.status).toBe('ok');
+    // Primary key tried first, then fell back to the secondary key.
+    expect(calls[0]).toContain('gm-primary');
+    expect(calls[1]).toContain('gm-secondary');
   });
 
   it('rejects too-short profiles', async () => {

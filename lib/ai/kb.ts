@@ -83,3 +83,19 @@ export function isKnownProduct(name: string, kb: KnowledgeBase): boolean {
     return t.includes(n) || n.includes(t);
   });
 }
+
+/**
+ * Loose match against ANY knowledge-base document — products AND clinical
+ * materials (dosing principles, contraindications, research). Used to verify
+ * the assistant's citations point at real documents, not fabricated sources.
+ * Also matches on the document id (filename) so "contraindications" resolves.
+ */
+export function isKnownDocument(name: string, kb: KnowledgeBase): boolean {
+  const n = normalise(name);
+  if (n.length < 4) return false;
+  return kb.documents.some((doc) => {
+    const t = normalise(doc.title);
+    const id = normalise(doc.id);
+    return t.includes(n) || n.includes(t) || id.includes(n) || n.includes(id);
+  });
+}
