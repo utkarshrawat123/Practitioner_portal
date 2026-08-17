@@ -92,8 +92,10 @@ Admin: `/admin`, password = `ADMIN_PASSWORD`.
 - Register verification is **name-based** (registers expose no number/API lookup); auto-approve only on
   qualified + high-confidence match, else flag.
 - Approved-on-apply practitioners are **auto-logged-in** (session cookie set in `app/api/apply/route.ts`).
-- **Windows:** `npm run preview:cf` does not run there (`Could not resolve "@libsql/client"`; OpenNext is
-  not fully Windows-compatible). Use macOS/Linux/WSL for Cloudflare-runtime checks.
+- **Windows:** `npm run preview:cf` works, but only because of `outputFileTracingIncludes` in
+  `next.config.mjs` (forces the `@libsql` family's workerd-condition files into the output trace, which
+  OpenNext's Windows copy step needs). Do not remove that block. OpenNext's "not fully compatible with
+  Windows" warning is benign here.
 
 ## Build status
 **Parts 1–8 + Presence + Patient Carts + Referral Network are built; the Cloudflare migration is done and

@@ -21,5 +21,16 @@ const nextConfig = {
     '@libsql/isomorphic-ws',
     'nodemailer',
   ],
+  // Next's output tracing follows only the `node` export condition, so files
+  // reachable solely via other conditions (workerd/browser: @libsql/client
+  // lib-{esm,cjs}/web.js, @libsql/hrana-client */proto.js) are never traced.
+  // On Windows OpenNext materialises server-function node_modules from those
+  // traces, and its esbuild pass — which DOES use the workerd condition —
+  // then fails with "Could not resolve @libsql/client" (97×). Force the whole
+  // family into the trace so the copy is complete. No-op where builds already
+  // worked. See HANDOVER.md §10.
+  outputFileTracingIncludes: {
+    '*': ['./node_modules/@libsql/**/*'],
+  },
 };
 export default nextConfig;

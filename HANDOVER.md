@@ -327,10 +327,13 @@ Full detail in **`docs/CLOUDFLARE_DEV.md`**. Two ways to run:
 - **Tests:** `npm test` — 381 tests. Harness: `beforeEach` sets `process.env.DB_PATH` to a temp file;
   `afterEach` calls `resetDbForTests()`; raw SQL via `execForTests()`.
 - **`npm run build` corrupts `.next` if a dev server is running** — stop it first.
-- **Known limitation — Windows:** `npm run preview:cf` does **not** run on Windows.
-  `opennextjs-cloudflare build` fails with `Could not resolve "@libsql/client"` (×97) and OpenNext itself
-  warns it is not fully Windows-compatible and recommends WSL. Verified pre-existing, not a regression.
-  Use macOS/Linux/WSL for Cloudflare-runtime verification.
+- **Windows note:** `npm run preview:cf` works on Windows, but only because of the
+  `outputFileTracingIncludes` block in `next.config.mjs` — do not remove it. Next's output tracing follows
+  only the `node` export condition, so the workerd-condition files of the `@libsql` family
+  (`lib-{esm,cjs}/web.js`, hrana-client `*/proto.js`) are never traced; on Windows OpenNext materialises
+  the server-function `node_modules` from those traces and its workerd-condition esbuild pass then failed
+  with `Could not resolve "@libsql/client"` (×97). Forcing the family into the trace completes the copy.
+  (OpenNext still prints a "not fully compatible with Windows" warning — benign here.)
 
 ---
 
