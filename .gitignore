@@ -9,3 +9,8 @@ tsconfig.tsbuildinfo
 .superpowers/
 .open-next/
 .wrangler/
+
+# Cloudflare local dev secrets (wrangler reads this for `wrangler dev`).
+# NEVER commit: it holds the same values as production secrets.
+.dev.vars
+.dev.vars.*

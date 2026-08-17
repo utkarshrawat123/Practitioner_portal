@@ -366,6 +366,18 @@ CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON practitioner_referrals(refe
 CREATE UNIQUE INDEX IF NOT EXISTS idx_referrals_referred ON practitioner_referrals(referred_id);
 `,
   },
+  {
+    // Referral v2: refund clawback + optional admin approval.
+    // `status` gains two values (no constraint to alter, it is plain TEXT):
+    //   awaiting_approval — qualified, held for an admin when REFERRAL_REQUIRE_APPROVAL=true
+    //   clawed_back       — credit reversed after the qualifying order was refunded/voided
+    id: '018_referral_v2',
+    sql: `
+ALTER TABLE practitioner_referrals ADD COLUMN clawed_back_at TEXT;
+ALTER TABLE practitioner_referrals ADD COLUMN approved_by TEXT;
+CREATE INDEX IF NOT EXISTS idx_referrals_qualifying_order ON practitioner_referrals(qualifying_order_id);
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */

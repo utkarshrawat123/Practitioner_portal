@@ -279,8 +279,17 @@ automatically when that colleague makes their first paid sale.** Spec/plan:
 |---|---|---|
 | Signed up | `signed_up` | referee applies via the link AND is approved |
 | First purchase completed | `first_sale` | referee's first qualifying order recorded |
-| Referral completed | `completed` | referral qualifies (same txn as first_sale) |
+| Referral completed | `completed` | referral qualifies (same txn as first_sale), **or qualifies but is blocked by the per-referrer cap** |
+| — (admin queue) | `awaiting_approval` | qualified while `REFERRAL_REQUIRE_APPROVAL=true` — held for admin sign-off |
 | Added to earnings | `credited` | £50 stamped on the row |
+| Refunded — reversed | `clawed_back` | the qualifying order was refunded/voided. **Terminal**: later sales do not re-credit |
+
+**v2 award rules** (`maybeAwardReferralBonus(referredId, orderId, financialStatus)`):
+credit requires `financialStatus === 'paid'` (real Shopify fires `orders/create` for pending/unpaid
+orders — v1 would have paid out on those); the per-referrer cap sends the referral to `completed`
+uncredited; `REFERRAL_REQUIRE_APPROVAL` sends it to `awaiting_approval` for
+`POST /api/admin/referrals/[id]/approve`. `recordOrder()` routes refunded/voided/partially-refunded
+statuses to `clawbackReferral(orderId)` instead, keyed on the order id so unrelated refunds are inert.
 
 Internal-only `invited` = referee applied but not yet approved. On the automatic path
 `first_sale → completed → credited` happen in one transaction.
@@ -350,6 +359,10 @@ Nothing below is required to run locally — **the app boots and is fully exerci
 
 **Read by code, optional (feature runs mock/degraded until set):**
 - `REFERRAL_BONUS_GBP` — referral bonus £ (default **50**).
+- `REFERRAL_MAX_PER_REFERRER` — max referrals one practitioner may be **credited** for
+  (default **unlimited**). Beyond the cap a referral still reaches `completed` but is never paid out.
+- `REFERRAL_REQUIRE_APPROVAL` — `'true'` holds every qualifying referral at `awaiting_approval`
+  for admin sign-off instead of auto-crediting (default **off** = v1 behaviour).
 - `AFFILIATE_DISCOUNT_PERCENT` — patient discount % on Patient Carts (default **10**).
 - `COMMISSION_PERCENT` — commission % (=20; set in `[vars]`).
 - `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_TOKEN` — both present flips `commerceProvider()` to `'shopify'`.
@@ -402,8 +415,10 @@ certification link 401s unless admin-authed; a magic-link email sends via Resend
    longer applies — Cloudflare Cron has no such restriction. Add a `*/5 * * * *` trigger to **both**
    `wrangler.toml [triggers]` **and** `lib/cron/map.ts`. In-app popup is unaffected.
 6. **Sentry / error monitoring NOT wired** — errors are `console.error` + `ai_queries`/`automation_runs`.
-7. **Referral v1** credits on any recorded order (not gated on `financialStatus`); no refund clawback, no
-   per-practitioner cap, no email invites, no admin approval gate. All deferred by design.
+7. **Referral v2 is in** — credit is gated on `financialStatus === 'paid'`, refunds/voids claw the credit
+   back (terminal), an optional per-referrer cap and an optional admin approval gate exist (§9).
+   **Still not built: email invites** — the invite *link* flow covers the use case, and emailing a
+   colleague because a practitioner typed their address is a consent/GDPR decision for the business.
 8. **No DB transactions anywhere** (codebase-wide convention) — e.g. `createPatientCart` inserts cart +
    items without one. Fine at current scale.
 9. **`dbUrl()` still guards on `process.env.VERCEL` / `AWS_LAMBDA_FUNCTION_NAME`** (`lib/db.ts`) — dead on

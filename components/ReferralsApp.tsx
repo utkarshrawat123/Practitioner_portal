@@ -1,13 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatMoney } from '@/lib/format';
 
 interface ReferralView {
   id: number;
   refereeName: string;
   refereeStatus: string;
-  status: 'invited' | 'signed_up' | 'first_sale' | 'completed' | 'credited';
+  status:
+    | 'invited'
+    | 'signed_up'
+    | 'first_sale'
+    | 'completed'
+    | 'awaiting_approval'
+    | 'credited'
+    | 'clawed_back';
   bonusAmount: number;
+  currency?: string;
 }
 interface Data {
   inviteLink: string;
@@ -21,10 +30,23 @@ const STAGES: { key: string; label: string }[] = [
   { key: 'completed', label: 'Referral completed' },
   { key: 'credited', label: 'Added to earnings' },
 ];
-const ORDER = ['invited', 'signed_up', 'first_sale', 'completed', 'credited'];
+// awaiting_approval sits between "completed" and "credited": the referral has
+// qualified but an admin has not signed the payout off yet.
+const ORDER = ['invited', 'signed_up', 'first_sale', 'completed', 'awaiting_approval', 'credited'];
 
 function reached(status: string, stageKey: string): boolean {
+  // clawed_back is not on the ladder — the credit was reversed after a refund,
+  // so no stage reads as achieved and the row is labelled separately below.
+  if (status === 'clawed_back') return false;
   return ORDER.indexOf(status) >= ORDER.indexOf(stageKey);
+}
+
+/** Right-hand status label for a referral row. */
+function statusLabel(status: string, bonusAmount: number, currency: string): string {
+  if (status === 'credited') return `${formatMoney(bonusAmount, currency)} ✓`;
+  if (status === 'awaiting_approval') return 'awaiting approval';
+  if (status === 'clawed_back') return 'refunded — reversed';
+  return 'pending';
 }
 
 export default function ReferralsApp() {
@@ -64,8 +86,8 @@ export default function ReferralsApp() {
               <li key={r.id} className="border border-stone bg-white p-4">
                 <div className="flex items-center justify-between gap-3">
                   <span className="min-w-0 truncate font-medium text-ink">{r.refereeName}</span>
-                  <span className={`shrink-0 text-sm ${r.status === 'credited' ? 'text-forest' : 'text-ink2/60'}`}>
-                    {r.status === 'credited' ? `£${r.bonusAmount.toFixed(0)} ✓` : 'pending'}
+                  <span className={`shrink-0 text-sm ${r.status === 'credited' ? 'text-forest' : r.status === 'clawed_back' ? 'text-terracotta' : 'text-ink2/60'}`}>
+                    {statusLabel(r.status, r.bonusAmount, r.currency ?? 'GBP')}
                   </span>
                 </div>
                 <ol className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-0">

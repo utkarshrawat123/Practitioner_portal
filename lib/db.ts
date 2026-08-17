@@ -331,13 +331,28 @@ function rowToPractitioner(row: Row): Practitioner {
 
 // ---- Practitioner-to-practitioner referrals ----
 
+/**
+ * `completed` means "qualified but not paid out" — reached when a per-referrer
+ * cap is hit. `awaiting_approval` holds a qualifying referral for an admin when
+ * REFERRAL_REQUIRE_APPROVAL is on. `clawed_back` is terminal: the qualifying
+ * order was refunded/voided and the credit reversed.
+ */
+export type ReferralStatus =
+  | 'invited'
+  | 'signed_up'
+  | 'first_sale'
+  | 'completed'
+  | 'awaiting_approval'
+  | 'credited'
+  | 'clawed_back';
+
 export interface ReferralRow {
   id: number;
   referrerId: number;
   referredId: number;
   referredEmail: string;
   inviteCode: string;
-  status: 'invited' | 'signed_up' | 'first_sale' | 'completed' | 'credited';
+  status: ReferralStatus;
   qualifyingOrderId: string | null;
   bonusAmount: number;
   currency: string;
@@ -345,6 +360,8 @@ export interface ReferralRow {
   firstSaleAt: string | null;
   completedAt: string | null;
   creditedAt: string | null;
+  clawedBackAt: string | null;
+  approvedBy: string | null;
   createdAt: string;
 }
 
@@ -368,6 +385,8 @@ function rowToReferral(r: Row): ReferralRow {
     firstSaleAt: (r.first_sale_at as string | null) ?? null,
     completedAt: (r.completed_at as string | null) ?? null,
     creditedAt: (r.credited_at as string | null) ?? null,
+    clawedBackAt: (r.clawed_back_at as string | null) ?? null,
+    approvedBy: (r.approved_by as string | null) ?? null,
     createdAt: r.created_at as string,
   };
 }
@@ -467,11 +486,142 @@ export async function creditReferral(referralId: number, orderId: string, bonus:
  * bonus. Called from recordOrder, so every recorded (paid) order is a qualifying sale.
  * Idempotent: the `status != 'credited'` guard makes it strictly first-sale, once.
  */
-export async function maybeAwardReferralBonus(referredPractitionerId: number | null, orderId: string): Promise<void> {
+/** Referral v2: max referrals a single practitioner may be CREDITED for. Unlimited by default. */
+export function referralMaxPerReferrer(): number {
+  const n = Number(process.env.REFERRAL_MAX_PER_REFERRER);
+  return Number.isFinite(n) && n >= 0 && process.env.REFERRAL_MAX_PER_REFERRER !== ''
+    ? n
+    : Infinity;
+}
+
+/** Referral v2: hold qualifying referrals for admin sign-off. Off by default (v1 behaviour). */
+export function referralRequiresApproval(): boolean {
+  return process.env.REFERRAL_REQUIRE_APPROVAL === 'true';
+}
+
+async function countCreditedForReferrer(referrerId: number): Promise<number> {
+  const row = await one(
+    `SELECT COUNT(*) AS n FROM practitioner_referrals WHERE referrer_id = ? AND status = 'credited'`,
+    [referrerId]
+  );
+  return num(row?.n);
+}
+
+/** Qualified but NOT paid out — used when a per-referrer cap blocks the credit. */
+async function markReferralCompletedUncredited(referralId: number, orderId: string): Promise<void> {
+  await run(
+    `UPDATE practitioner_referrals
+        SET status = 'completed',
+            first_sale_at = COALESCE(first_sale_at, datetime('now')),
+            completed_at  = datetime('now'),
+            qualifying_order_id = ?
+      WHERE id = ? AND status NOT IN ('credited', 'clawed_back')`,
+    [orderId, referralId]
+  );
+}
+
+/** Qualified and held for an admin (REFERRAL_REQUIRE_APPROVAL=true). */
+async function markReferralAwaitingApproval(referralId: number, orderId: string): Promise<void> {
+  await run(
+    `UPDATE practitioner_referrals
+        SET status = 'awaiting_approval',
+            first_sale_at = COALESCE(first_sale_at, datetime('now')),
+            completed_at  = datetime('now'),
+            qualifying_order_id = ?
+      WHERE id = ? AND status NOT IN ('credited', 'clawed_back')`,
+    [orderId, referralId]
+  );
+}
+
+/**
+ * Award the referrer when their referee makes a qualifying sale.
+ *
+ * v2 gates on `financialStatus === 'paid'`: real Shopify fires orders/create for
+ * pending and unpaid orders, and v1 would have paid out £50 for a sale that
+ * never completed. `clawed_back` is terminal so a refunded referral cannot be
+ * re-credited by a later order.
+ */
+export async function maybeAwardReferralBonus(
+  referredPractitionerId: number | null,
+  orderId: string,
+  financialStatus: string | null = 'paid'
+): Promise<void> {
   if (!referredPractitionerId) return;
+  if (financialStatus !== 'paid') return;
   const ref = await getReferralByReferredId(referredPractitionerId);
-  if (!ref || ref.status === 'credited') return;
+  if (!ref || ref.status === 'credited' || ref.status === 'clawed_back') return;
+
+  if ((await countCreditedForReferrer(ref.referrerId)) >= referralMaxPerReferrer()) {
+    await markReferralCompletedUncredited(ref.id, orderId);
+    return;
+  }
+  if (referralRequiresApproval()) {
+    await markReferralAwaitingApproval(ref.id, orderId);
+    return;
+  }
   await creditReferral(ref.id, orderId, referralBonusGbp());
+}
+
+/** Financial statuses that mean the money went back. */
+const REFUNDED_STATUSES = new Set(['refunded', 'partially_refunded', 'voided']);
+
+/**
+ * Reverse a credit whose qualifying order was refunded or voided. Terminal:
+ * the referral is not re-credited by later sales. Keyed on the order id, so a
+ * refund for an unrelated order touches nothing.
+ */
+export async function clawbackReferral(orderId: string): Promise<void> {
+  await run(
+    `UPDATE practitioner_referrals
+        SET status = 'clawed_back',
+            bonus_amount = 0,
+            credited_at = NULL,
+            clawed_back_at = datetime('now')
+      WHERE qualifying_order_id = ? AND status IN ('credited', 'awaiting_approval', 'completed')`,
+    [orderId]
+  );
+}
+
+/** Admin sign-off for a referral held at awaiting_approval. Idempotent; respects the cap. */
+export async function approveReferralCredit(referralId: number, approvedBy: string): Promise<void> {
+  const row = await one(`SELECT * FROM practitioner_referrals WHERE id = ?`, [referralId]);
+  if (!row) return;
+  const ref = rowToReferral(row);
+  if (ref.status !== 'awaiting_approval') return; // already credited/clawed back → no-op
+  if ((await countCreditedForReferrer(ref.referrerId)) >= referralMaxPerReferrer()) return;
+
+  await run(
+    `UPDATE practitioner_referrals
+        SET status = 'credited',
+            credited_at = datetime('now'),
+            bonus_amount = ?,
+            approved_by = ?
+      WHERE id = ? AND status = 'awaiting_approval'`,
+    [referralBonusGbp(), approvedBy, referralId]
+  );
+}
+
+export async function getReferralById(id: number): Promise<ReferralRow | null> {
+  const row = await one(`SELECT * FROM practitioner_referrals WHERE id = ?`, [id]);
+  return row ? rowToReferral(row) : null;
+}
+
+/** Referrals held for admin sign-off, newest first. */
+export async function listReferralsAwaitingApproval(): Promise<Array<ReferralView & { referrerName: string }>> {
+  const rows = await all(
+    `SELECT r.*, ref.name AS referrer_name, red.name AS referee_name, red.status AS referee_status
+       FROM practitioner_referrals r
+       JOIN practitioners ref ON ref.id = r.referrer_id
+       JOIN practitioners red ON red.id = r.referred_id
+      WHERE r.status = 'awaiting_approval'
+      ORDER BY r.completed_at DESC, r.id DESC`
+  );
+  return rows.map((r) => ({
+    ...rowToReferral(r),
+    refereeName: r.referee_name as string,
+    refereeStatus: r.referee_status as string,
+    referrerName: r.referrer_name as string,
+  }));
 }
 
 export async function insertApplication(input: {
@@ -1686,8 +1836,13 @@ export async function recordOrder(o: OrderInput): Promise<void> {
        created_at = excluded.created_at`,
     [o.orderId, o.practitionerId, o.code, o.total, o.currency, o.financialStatus, o.createdAt]
   );
-  // P2P referral: a recorded (paid) sale by a referred practitioner awards their referrer.
-  await maybeAwardReferralBonus(o.practitionerId, o.orderId);
+  // P2P referral single choke-point (covers the Patient-Carts pay API and the
+  // Shopify webhook). v2: refunds reverse the credit; only paid orders award it.
+  if (o.financialStatus && REFUNDED_STATUSES.has(o.financialStatus)) {
+    await clawbackReferral(o.orderId);
+  } else {
+    await maybeAwardReferralBonus(o.practitionerId, o.orderId, o.financialStatus);
+  }
 }
 
 /** Dashboard order figures for one referral code, from the local orders table. */
