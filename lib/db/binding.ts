@@ -25,6 +25,22 @@ function cfEnv(): CfEnv | null {
   }
 }
 
+/**
+ * True when executing inside the Cloudflare Workers runtime. workerd sets
+ * navigator.userAgent to exactly "Cloudflare-Workers"; Node sets its own value,
+ * so this is false in dev, tests and any plain Node runtime.
+ *
+ * Used to tell "no D1 binding because we're in Node" (fine — use a file DB)
+ * apart from "no D1 binding on Workers" (a misconfiguration that must fail loudly).
+ */
+export function isWorkersRuntime(): boolean {
+  try {
+    return typeof navigator !== 'undefined' && navigator.userAgent === 'Cloudflare-Workers';
+  } catch {
+    return false;
+  }
+}
+
 export function getD1Binding(): D1Database | null {
   return cfEnv()?.DB ?? null;
 }

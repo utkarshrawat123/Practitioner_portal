@@ -398,33 +398,49 @@ certification link 401s unless admin-authed; a magic-link email sends via Resend
 
 ## 13. KNOWN GAPS / FOLLOW-UPS
 
-1. **Real Shopify NOT connected** — tiers stay Standard, real revenue £0, Patient Carts uses the mock
-   catalog. Implement the `shopify` branch of `getCatalog()`/`createDraftOrder()` in
-   `lib/commerce/index.ts` (**they currently return mock even when the provider is `'shopify'` — a
-   half-activated state to guard**) and extend `/api/webhooks/shopify` to reconcile `patient_carts` by
-   `external_id`. **The biggest functional gap.**
-2. **KB is 5 unapproved draft dossiers** (`knowledge/`) — structurally valid and gated, but awaiting
-   Wild Nutrition clinical sign-off. See §16 and `docs/KB_AUTHORING.md`.
-3. **Gemini 429 quota-exhausted (blocks 3 features)** — Ask the Expert, Content Factory, Chat FAQ
-   clustering reach Google but 429 on both keys. Fix: enable billing / raise quota / add a key on another
-   project, or set `ANTHROPIC_API_KEY` for the dormant Claude path. **Config only, no code change.**
-4. **Polish:** `CartsApp` swallows non-OK create responses (no error surfaced); `PayPage money()`
-   hardcodes `£`; coming-soon stubs remain in some copy (Book Technical Consultation, Student Mentoring,
-   My Downloads); **`FB_GROUP_URL` in `CommunityApp.tsx` is a placeholder**.
-5. **Chat alerts run daily, not every 5 minutes.** The old daily cap was a *Vercel Hobby* limit that no
-   longer applies — Cloudflare Cron has no such restriction. Add a `*/5 * * * *` trigger to **both**
-   `wrangler.toml [triggers]` **and** `lib/cron/map.ts`. In-app popup is unaffected.
-6. **Sentry / error monitoring NOT wired** — errors are `console.error` + `ai_queries`/`automation_runs`.
-7. **Referral v2 is in** — credit is gated on `financialStatus === 'paid'`, refunds/voids claw the credit
-   back (terminal), an optional per-referrer cap and an optional admin approval gate exist (§9).
-   **Still not built: email invites** — the invite *link* flow covers the use case, and emailing a
-   colleague because a practitioner typed their address is a consent/GDPR decision for the business.
+**All feature code is built and merged.** Everything below is either waiting on someone else, or a
+deliberate non-goal. Check live status any time with `GET /api/admin/readiness` (§12).
+
+### Waiting on credentials or people — no code required
+
+1. **Go-live secrets not set** — the app runs entirely in mock mode. Follow `docs/CLOUDFLARE_GO_LIVE.md`;
+   ~30 minutes, config only. Until then: no D1/R2 bindings, email returns on-screen `devLink`s, AI is
+   dormant, commerce uses the mock catalog.
+2. **KB is 12 unapproved draft dossiers** (`knowledge/`) — structurally valid and gated, but awaiting
+   Wild Nutrition clinical sign-off. `docsAwaitingClinicalApproval()` must be empty before the assistant
+   is used with real practitioners. See §15 and `docs/KB_AUTHORING.md`.
+3. **Gemini 429 quota-exhausted** — Ask the Expert, Content Factory and Chat FAQ clustering reach Google
+   but 429 on both keys. Fix: enable billing / raise quota / add a key on another project, or set
+   `ANTHROPIC_API_KEY` for the Claude path. **Config only.**
+4. **Shopify paths are unit-tested, not store-tested** — `getCatalog()`/`createDraftOrder()` are covered
+   with stubbed fetch. First thing to do once any store exists (a **Shopify partner dev store is free and
+   self-serve**): create one real draft order and pay it, confirming `wn_cart_token` round-trips through
+   `note_attributes` into cart reconciliation.
+5. **Real-device mobile pass** — only spot-checked at 375px in dev. Do a pass on real handsets before
+   launch (`LAUNCH_CHECKLIST.md` §5).
+6. **`FB_GROUP_URL` is a placeholder** (`CommunityApp.tsx`) — override with `NEXT_PUBLIC_FB_GROUP_URL`
+   once the business supplies the real group URL. No code change.
+
+### Deliberate non-goals — decide before building
+
+7. **Referral email invites.** The invite *link* flow already covers the use case. Emailing a colleague
+   because a practitioner typed their address is a consent/GDPR decision for the business, not a default.
+   Everything else in Referral v2 is built (§9).
 8. **No DB transactions anywhere** (codebase-wide convention) — e.g. `createPatientCart` inserts cart +
-   items without one. Fine at current scale.
-9. **`dbUrl()` still guards on `process.env.VERCEL` / `AWS_LAMBDA_FUNCTION_NAME`** (`lib/db.ts`) — dead on
-   Cloudflare, since the D1 binding is taken first. The modern equivalent risk is a **missing D1 binding
-   on Workers** falling through to a local file path; worth replacing the guard with a Workers-aware one,
-   but that is a DB-layer change and must be verified on `preview:cf`.
+   items without one. Fine at current scale; revisit if volume grows.
+
+### Done — recorded so nobody "re-fixes" them
+
+- **Shopify connect** — `shopify` branch of `getCatalog()`/`createDraftOrder()` implemented; cart
+  reconciliation by `wn_cart_token`; failures surface as a 502 rather than a dead mock pay link.
+- **Referral v2** — paid-only credit, refund clawback, per-referrer cap, optional admin approval (§9).
+- **Polish** — `CartsApp` surfaces create errors; all money renders through `lib/format.ts formatMoney()`
+  (no hardcoded `£`); the coming-soon quick-link stubs are gone.
+- **Chat alerts** — `*/5 * * * *`, in both `wrangler.toml` and `lib/cron/map.ts`.
+- **Error monitoring** — `lib/monitoring.ts` Sentry seam, wired into `worker.ts` fetch + scheduled;
+  no-ops until `SENTRY_DSN` is set.
+- **Missing-D1 guard** — a missing binding on Workers now throws a message naming the fix, instead of
+  falling through to a filesystem that does not exist. (Replaced the dead `process.env.VERCEL` check.)
 
 ---
 

@@ -47,6 +47,12 @@ Set these via `npx wrangler secret put <NAME>` or the dashboard. Full walkthroug
 `BLOB_READ_WRITE_TOKEN`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, all `VERCEL_*`.
 
 ## 3. Shopify (final step)
+
+> Code is **done** — `getCatalog()`/`createDraftOrder()` implement the real Shopify branch and
+> `/api/webhooks/shopify` reconciles patient carts via `wn_cart_token`. What remains is credentials and
+> one real end-to-end order. Admin API scopes needed: `write_discounts`, `read_orders`, `read_products`,
+> `write_draft_orders`.
+
 - [ ] Set the four Shopify env vars in production.
 - [ ] Register `orders/create` + `orders/paid` webhooks against the **production** store → `/api/webhooks/shopify` with `SHOPIFY_WEBHOOK_SECRET`.
 - [ ] Confirm a real order carrying a `WN-…` discount code appears in the `orders` table and lights up the dashboard/reporting.
@@ -55,19 +61,20 @@ Set these via `npx wrangler secret put <NAME>` or the dashboard. Full walkthroug
 - [ ] **Cloudflare Cron Triggers** (`wrangler.toml [triggers]`) activate on deploy: `0 6 * * *` →
   `/api/cron/run` (tiering, lifecycle emails), `0 7 * * *` → `/api/cron/chat-alerts`. `worker.ts`
   `scheduled()` dispatches via `lib/cron/map.ts` with `CRON_SECRET`. Confirm both fire after the first deploy.
-- [ ] Consider moving chat alerts to `*/5 * * * *` — the old daily cap was a **Vercel Hobby** limit that no
-  longer applies. Requires editing **both** `wrangler.toml` and `lib/cron/map.ts`.
+- [x] Chat alerts now run `*/5 * * * *` (the old daily cap was a **Vercel Hobby** limit that no longer
+  applies). Set in **both** `wrangler.toml` and `lib/cron/map.ts`; verified via
+  `wrangler dev --test-scheduled`.
 
 ## 5. QA sign-off (Part 7)
 - [x] **Permission audit** — every audience-gated practitioner route filters through `hasAccess`: pathways, events, toolkit, pearls, homepage widgets. Media/community/leaderboard have no audience dimension. No gaps found.
 - [x] **Empty states** — a zero-activity practitioner sees sensible empty states on learning, cpd, toolkit, resources, community, events, leaderboard (no broken pages).
 - [x] **Rate limiting** — Ask the Expert capped at 30 queries/practitioner/hour (429 beyond). Consultation booking form is still a coming-soon stub (no form to rate-limit yet).
 - [ ] **Mobile** — spot-checked at 375px in dev; do a final pass on real devices before go-live.
-- [ ] **Error monitoring** — not wired. Errors are logged (`console.error`) and recorded in `ai_queries` /
-  `automation_runs`. On Workers, `console.error` goes to `wrangler tail` / the dashboard's Workers Logs,
-  which is the zero-setup baseline. For durable alerting, provide a `SENTRY_DSN` and wire Sentry — note
-  that on Workers this needs the Cloudflare-compatible setup (`@sentry/cloudflare`), **not** the
-  `@sentry/nextjs` Node integration the Vercel-era note assumed.
+- [x] **Error monitoring** — wired as a keyless seam (`lib/monitoring.ts`), reporting from `worker.ts`
+  fetch + scheduled. **Set `SENTRY_DSN` to activate it**; until then errors go to `console.error`, visible
+  via `wrangler tail` / the dashboard's Workers Logs, and are recorded in `ai_queries` / `automation_runs`.
+  Implemented as a raw-fetch envelope post (matching the other integrations) rather than an SDK —
+  `lib/monitoring.ts` is the single swap point if `@sentry/cloudflare` is preferred later.
 
 ## 6. Test data to clean up before launch
 - **Nothing to clean.** There is no live deployment: the Cloudflare D1 database will be created empty and

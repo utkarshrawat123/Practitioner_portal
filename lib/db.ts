@@ -6,7 +6,7 @@ import { runMigrations } from '@/lib/migrations';
 import { hasAccess, type Audience } from '@/lib/access';
 import { PRESENCE_WINDOW_SECONDS } from '@/lib/presence/config';
 import { createD1Client } from '@/lib/db/d1-adapter';
-import { getD1Binding } from '@/lib/db/binding';
+import { getD1Binding, isWorkersRuntime } from '@/lib/db/binding';
 
 export type QualificationStatus = 'qualified' | 'student';
 export type Status = 'pending' | 'approved' | 'flagged' | 'rejected';
@@ -193,25 +193,12 @@ let schemaReady: Promise<unknown> | null = null;
  * ever called — so this serves local dev (a libSQL `file:` DB) and tests (`DB_PATH`).
  * A hosted libSQL/Turso URL is still honoured if `TURSO_DATABASE_URL` is set.
  *
- * We deliberately do NOT fall back to ephemeral per-instance storage on a serverless
- * host: that silently splits reads/writes across instances and shows stale/empty
- * data, so we fail loudly instead.
- *
- * NOTE: the VERCEL / AWS_LAMBDA_FUNCTION_NAME check below is a leftover from the
- * pre-Cloudflare platform and is dead on Workers. The modern equivalent risk is a
- * MISSING D1 binding on Workers falling through to this local-file path; replacing
- * it with a Workers-aware guard needs verifying on `npm run preview:cf`.
- * See HANDOVER.md §13 item 9.
+ * Reaching here ON Workers means the D1 binding is missing; `rawClient()` throws
+ * before that rather than falling back to a filesystem that does not exist.
  */
 function dbUrl(): string {
   if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
   if (process.env.DB_PATH) return `file:${process.env.DB_PATH}`;
-  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    throw new Error(
-      'TURSO_DATABASE_URL is not set. Refusing to use ephemeral /tmp storage in a ' +
-        'serverless environment — configure Turso so data is durable and consistent.'
-    );
-  }
   return `file:${path.join(process.cwd(), 'data', 'practitioners.db')}`;
 }
 
@@ -224,6 +211,17 @@ async function rawClient(): Promise<Client> {
   if (d1) {
     client = createD1Client(d1) as unknown as Client;
     return client;
+  }
+
+  // On Workers with no D1 binding there is nothing to fall back to: the libSQL
+  // path below wants a filesystem that does not exist. Fail with a message that
+  // names the actual fix instead of an obscure fs error deep in a dependency.
+  if (isWorkersRuntime()) {
+    throw new Error(
+      'D1 binding "DB" is not available in the Worker. Check [[d1_databases]] in ' +
+        'wrangler.toml — database_id must be the real ID from the Cloudflare ' +
+        'dashboard (the repo ships PLACEHOLDER_D1_ID). See docs/CLOUDFLARE_GO_LIVE.md.'
+    );
   }
 
   // Plain Node (local dev / tests): libSQL over a local file, or Turso if set. Imported

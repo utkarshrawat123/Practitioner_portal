@@ -71,6 +71,18 @@ Also register **`orders/create` + `orders/paid` webhooks** on the store pointing
   chat alerts) activate on deploy; `worker.ts`'s `scheduled()` calls the routes
   with `CRON_SECRET`.
 
+## 5b. Confirm the secrets actually took effect
+
+Log in at `/admin`, then open **`/api/admin/readiness`**. It lists every integration as
+`live` / `mock` / `missing` and returns `ready: true` only when all required items are
+set — so you can tell at a glance whether a secret landed, without guessing from
+behaviour. It never returns secret values.
+
+Anything still `mock` is safe (the app degrades by design); anything `missing` and
+required will keep `ready: false`. It also warns on the two combinations that fail
+silently: Shopify configured without `SHOPIFY_WEBHOOK_SECRET` (orders would never
+reconcile), and a leftover `TURSO_DATABASE_URL`.
+
 ## 6. Smoke test
 1. Open the site → `/apply` submits and a practitioner appears in `/admin`.
 2. `/admin` login with `ADMIN_PASSWORD`.
