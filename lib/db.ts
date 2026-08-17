@@ -1,10 +1,12 @@
-import { createClient, type Client, type InValue, type Row } from '@libsql/client';
+import type { Client, InValue, Row } from '@libsql/client';
 import { randomBytes } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { runMigrations } from '@/lib/migrations';
 import { hasAccess, type Audience } from '@/lib/access';
 import { PRESENCE_WINDOW_SECONDS } from '@/lib/presence/config';
+import { createD1Client } from '@/lib/db/d1-adapter';
+import { getD1Binding } from '@/lib/db/binding';
 
 export type QualificationStatus = 'qualified' | 'student';
 export type Status = 'pending' | 'approved' | 'flagged' | 'rejected';
@@ -207,30 +209,41 @@ function dbUrl(): string {
   return `file:${path.join(process.cwd(), 'data', 'practitioners.db')}`;
 }
 
-function rawClient(): Client {
-  if (!client) {
-    const url = dbUrl();
-    if (url.startsWith('file:')) {
-      fs.mkdirSync(path.dirname(url.slice('file:'.length)), { recursive: true });
-    }
-    client = createClient({
-      url,
-      authToken: process.env.TURSO_AUTH_TOKEN,
-      intMode: 'number',
-      // libSQL talks to Turso over fetch, and Next.js patches global fetch to
-      // cache responses by default — which caches query RESULTS and serves stale
-      // data (e.g. the admin list showing long-deleted rows). Force no-store so
-      // every query hits the live database.
-      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-        fetch(input, { ...init, cache: 'no-store' }),
-    });
+async function rawClient(): Promise<Client> {
+  if (client) return client;
+
+  // Cloudflare Workers: use D1 through the libSQL-shaped adapter. Taken before
+  // dbUrl()/@libsql/client so neither is referenced on the Worker.
+  const d1 = getD1Binding();
+  if (d1) {
+    client = createD1Client(d1) as unknown as Client;
+    return client;
   }
+
+  // Node / Vercel / local / tests: libSQL over Turso or a local file. Imported
+  // dynamically so @libsql/client (a Node package) never bundles into the Worker.
+  const { createClient } = await import('@libsql/client');
+  const url = dbUrl();
+  if (url.startsWith('file:')) {
+    fs.mkdirSync(path.dirname(url.slice('file:'.length)), { recursive: true });
+  }
+  client = createClient({
+    url,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+    intMode: 'number',
+    // libSQL talks to Turso over fetch, and Next.js patches global fetch to
+    // cache responses by default — which caches query RESULTS and serves stale
+    // data (e.g. the admin list showing long-deleted rows). Force no-store so
+    // every query hits the live database.
+    fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+      fetch(input, { ...init, cache: 'no-store' }),
+  });
   return client;
 }
 
 /** Returns a ready client, ensuring the schema + migrations run exactly once per process. */
 async function getClient(): Promise<Client> {
-  const c = rawClient();
+  const c = await rawClient();
   if (!schemaReady) {
     schemaReady = c.executeMultiple(SCHEMA).then(() => runMigrations(c));
   }

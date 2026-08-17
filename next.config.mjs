@@ -11,6 +11,16 @@ const nextConfig = {
   // traced into the serverless function bundle instead of being (incorrectly)
   // webpacked. Renamed from experimental.serverComponentsExternalPackages in
   // Next 15.
-  serverExternalPackages: ['better-sqlite3'],
+  // Node-only packages that must never be webpacked/bundled into the Cloudflare
+  // Worker (nor Vercel's function). On Workers these code paths are unreachable
+  // (D1 + Resend are used instead); keeping them external stops esbuild from
+  // trying to resolve them at bundle time.
+  serverExternalPackages: [
+    'better-sqlite3',
+    '@libsql/client',
+    '@libsql/hrana-client',
+    '@libsql/isomorphic-ws',
+    'nodemailer',
+  ],
 };
 export default nextConfig;
