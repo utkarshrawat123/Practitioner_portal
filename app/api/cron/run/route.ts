@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /**
- * Daily scheduled entrypoint (Vercel Cron). Runs the due automation jobs:
+ * Daily scheduled entrypoint (Cloudflare Cron Trigger). Runs the due automation jobs:
  * tier recalculation, re-engagement emails, and — in the first days of a
  * quarter — the quarterly impact report. Bearer-guarded by CRON_SECRET.
  */

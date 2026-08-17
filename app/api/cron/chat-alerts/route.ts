@@ -4,7 +4,8 @@ import { sendChatAlerts } from '@/lib/chat/alerts';
 export const dynamic = 'force-dynamic';
 
 /**
- * Missed-message backstop. Vercel Cron hits this frequently (see vercel.json);
+ * Missed-message backstop. A Cloudflare Cron Trigger hits this (schedules live in
+ * `wrangler.toml [triggers]`, routed by `lib/cron/map.ts` via `worker.ts scheduled()`);
  * Bearer-guarded by CRON_SECRET so it can't be triggered publicly. Emails the
  * admin once per conversation that has waited past the threshold unanswered.
  */

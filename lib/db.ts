@@ -188,14 +188,20 @@ let client: Client | null = null;
 let schemaReady: Promise<unknown> | null = null;
 
 /**
- * Resolve the database URL. In production, TURSO_DATABASE_URL points at a hosted
- * libSQL/Turso database (durable, shared across all serverless instances). Locally
- * and in tests we use a libSQL file: URL.
+ * Resolve the database URL for the NON-Cloudflare path only. In production the app
+ * runs on Workers and uses the D1 binding, which `rawClient()` takes before this is
+ * ever called — so this serves local dev (a libSQL `file:` DB) and tests (`DB_PATH`).
+ * A hosted libSQL/Turso URL is still honoured if `TURSO_DATABASE_URL` is set.
  *
- * We deliberately do NOT fall back to /tmp on serverless: that storage is
- * per-instance and ephemeral, which silently splits reads/writes across instances
- * (some see Turso, some a throwaway file) and shows stale/empty data. If we're on
- * a serverless platform without Turso configured, fail loudly instead.
+ * We deliberately do NOT fall back to ephemeral per-instance storage on a serverless
+ * host: that silently splits reads/writes across instances and shows stale/empty
+ * data, so we fail loudly instead.
+ *
+ * NOTE: the VERCEL / AWS_LAMBDA_FUNCTION_NAME check below is a leftover from the
+ * pre-Cloudflare platform and is dead on Workers. The modern equivalent risk is a
+ * MISSING D1 binding on Workers falling through to this local-file path; replacing
+ * it with a Workers-aware guard needs verifying on `npm run preview:cf`.
+ * See HANDOVER.md §13 item 9.
  */
 function dbUrl(): string {
   if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
@@ -220,7 +226,7 @@ async function rawClient(): Promise<Client> {
     return client;
   }
 
-  // Node / Vercel / local / tests: libSQL over Turso or a local file. Imported
+  // Plain Node (local dev / tests): libSQL over a local file, or Turso if set. Imported
   // dynamically so @libsql/client (a Node package) never bundles into the Worker.
   const { createClient } = await import('@libsql/client');
   const url = dbUrl();

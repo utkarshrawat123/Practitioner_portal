@@ -1,3 +1,10 @@
+> **⚠️ HISTORICAL — PRE-CLOUDFLARE, AND THE OLDEST DOC HERE. DO NOT TRUST THE STACK OR DEPLOY DETAILS.**
+>
+> **⟹ START WITH [`HANDOVER.md`](HANDOVER.md)** — the current master handover.
+>
+> This is the earliest history (2026-07-10), from when the app ran on **Vercel + Turso + Vercel Blob**.
+> Since **2026-08-17** it runs on **Cloudflare Workers + D1 + R2 + Resend**. See `HANDOVER.md` §17.
+
 # Wild Nutrition Practitioner Portal — Full Project Handoff
 
 _Last updated: 2026-07-10. Self-contained reference for continuing this project in a new chat._

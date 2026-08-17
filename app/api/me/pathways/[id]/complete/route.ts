@@ -27,7 +27,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 
   await markModuleComplete(p.id, mod.id);
   // Completion is recorded above and must stick even if certificate generation
-  // (a Vercel Blob write) hiccups — otherwise the practitioner's final click 500s
+  // (an R2 write) hiccups — otherwise the practitioner's final click 500s
   // despite the pathway being complete. Issuance is idempotent and retried on GET.
   let certificate = null;
   try {

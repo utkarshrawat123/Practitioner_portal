@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Dummy scheduled job proving the cron mechanism works before Part 6 adds real
- * jobs (tier recalculation, lifecycle emails). Vercel Cron invokes this on the
- * schedule in vercel.json and, when CRON_SECRET is set, sends it as a Bearer
+ * jobs (tier recalculation, lifecycle emails). A Cloudflare Cron Trigger invokes
+ * this and, when CRON_SECRET is set, sends it as a Bearer
  * token — we reject anything else so the endpoint can't be triggered publicly.
  */
 export async function GET(req: Request): Promise<NextResponse> {

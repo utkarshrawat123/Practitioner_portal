@@ -1,5 +1,6 @@
 import { conversationsAwaitingAlert, markConversationAlerted } from '@/lib/db';
 import { smtpConfigured, sendSmtpEmail } from '@/lib/providers/smtp';
+import { portalUrl as basePortalUrl } from '@/lib/codes';
 
 /** Where missed-message alerts go. Contact inbox by default; overridable. */
 export function alertRecipient(): string {
@@ -35,7 +36,9 @@ export async function sendChatAlerts(now = new Date()): Promise<{
   void now;
   const due = await conversationsAwaitingAlert(alertThresholdMinutes());
   const smtp = smtpConfigured();
-  const portalUrl = (process.env.PORTAL_URL || 'https://practitioner-portal-rose.vercel.app').replace(/\/$/, '');
+  // Use the canonical PORTAL_URL helper rather than a second hardcoded default —
+  // the old fallback pointed at the retired Vercel deployment.
+  const portalUrl = basePortalUrl().replace(/\/$/, '');
   let alerted = 0;
   for (const convo of due) {
     if (smtp) {

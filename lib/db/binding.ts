@@ -8,7 +8,7 @@ interface CfEnv {
 
 /**
  * Returns the Cloudflare request context's env, or null when not running on
- * Workers (local `next dev`, Vitest, or the Node/Vercel runtime). Never throws.
+ * Workers (local `next dev`, Vitest, or any plain Node runtime). Never throws.
  *
  * `@opennextjs/cloudflare` is imported lazily and behind try/catch so that Node
  * builds and tests — where the package's Worker-only context is absent — simply

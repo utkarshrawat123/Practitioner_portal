@@ -1,5 +1,13 @@
-> **⟹ START WITH [`HANDOVER.md`](HANDOVER.md)** — the complete, self-contained master handover (rewritten
-> 2026-08-03). This file remains for its exhaustive per-session detail blocks (2026-07-19 → 2026-08-03).
+> **⚠️ HISTORICAL — PRE-CLOUDFLARE. DO NOT TRUST THE STACK, ENV OR DEPLOY DETAILS BELOW.**
+>
+> **⟹ START WITH [`HANDOVER.md`](HANDOVER.md)** — the current, self-contained master handover.
+>
+> This file is a dated record of sessions **2026-07-19 → 2026-08-03**, when the app ran on
+> **Vercel + Turso + Vercel Blob + Gmail SMTP + Vercel Cron**. On **2026-08-17** it was re-platformed onto
+> **Cloudflare Workers + D1 + R2 + Resend + Cron Triggers** (Next 14 → 15). Everything here about hosting,
+> the database, file storage, email, cron limits (e.g. "Vercel Hobby caps cron at once/day") and env vars
+> is **obsolete**. Kept for the *why* behind feature decisions and its exhaustive per-feature detail —
+> see `HANDOVER.md` §17.
 
 # PRACTSESSION_HANDOFF.md
 

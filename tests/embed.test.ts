@@ -3,9 +3,9 @@ import { videoEmbed } from '@/lib/embed';
 
 describe('videoEmbed', () => {
   it('uploaded files play as native video regardless of extension', () => {
-    expect(videoEmbed('https://blob.vercel-storage.com/x/session.bin', 'file')).toEqual({
+    expect(videoEmbed('https://pub-example.r2.dev/x/session.bin', 'file')).toEqual({
       kind: 'video',
-      src: 'https://blob.vercel-storage.com/x/session.bin',
+      src: 'https://pub-example.r2.dev/x/session.bin',
     });
   });
 

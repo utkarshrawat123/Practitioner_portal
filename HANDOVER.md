@@ -1,57 +1,73 @@
 # Wild Nutrition Practitioner Hub — MASTER HANDOVER
 
-**This is the single, self-contained, exhaustive entry point for a new session.** Read this first; it
-supersedes the older `PRACTSESSION_HANDOFF.md` (kept for its per-session detail) and `PROJECT_HANDOFF.md`
-(earliest history). `CLAUDE.md` is the terse agent guide. Last rewritten **2026-08-03**.
+**This is the single, self-contained, exhaustive entry point for a new session.** Read this first.
+`CLAUDE.md` is the terse agent guide. `docs/CLOUDFLARE_DEV.md` covers running locally and
+`docs/CLOUDFLARE_GO_LIVE.md` covers deploying. Last rewritten **2026-08-17**.
 
-- **Repo root:** `/Users/utkarshrawat/Wild Dash/practitioner-portal` — this dir holds `.git`. The parent
-  `Wild Dash/` is **NOT** a git repo. Branch **`main`**, HEAD **`ee09440`**.
-- **Live:** https://practitioner-portal-rose.vercel.app · **Admin:** `/admin`, prod password **`wild-admin-2026`**.
-- **State:** **336 tests pass · production build clean · everything below is deployed to production.**
+> **Platform:** this app deploys to **Cloudflare Workers**. It is **not** on Vercel any more.
+> Anything you read about Vercel, Turso or Vercel Blob is history — see §17.
+
+- **Repo:** `https://github.com/utkarshrawat123/Practitioner_portal` — branch **`cloudflare-migration`**
+  (the default; all work branches from it). Never touch `Utkarshraw123/practitioner-portal`, which is a
+  separate personal portfolio repo.
+- **State:** **381 tests pass · production build clean · runs fully in MOCK MODE with no API keys.**
+- **Not deployed yet.** Go-live needs company Cloudflare account access — see §12.
 
 ---
 
 ## 0. TL;DR / QUICK START
 
 ```bash
-npm run dev       # local dev → http://localhost:3100 (use the 'portal-dev' launch config, NOT 'portal')
-npm test          # Vitest — 336 tests, keep green
-npm run build     # production build + type-check gate (STOP the dev server first — it corrupts .next)
-npx vercel --prod --yes   # deploy to production (CLI authed as utkarshrawatofficial-2811, team utkarsh-projects12)
-npm run generate-lessons  # offline lesson pipeline (needs ANTHROPIC_API_KEY)
+npm install
+npm test            # Vitest — 381 tests, keep green
+npm run dev         # local dev → http://localhost:3100 (Node path, mock mode, no keys needed)
+npm run preview:cf  # REAL Cloudflare runtime locally: workerd + local D1/R2 → http://localhost:8787
+npm run build       # production build + type-check gate (stop the dev server first — it corrupts .next)
+npm run bundle-kb   # re-bundle the AI knowledge base after ANY edit under knowledge/
 ```
 
-- **What it is:** a Next.js 14 (App Router) practitioner community platform for Wild Nutrition — onboarding +
-  register verification, a passwordless practitioner dashboard, an AI protocol assistant, education/lessons,
-  media/resources, clinical toolkit, community + events, live chat, patient carts (curated cart → pay link),
-  a practitioner-to-practitioner referral network, and a password-gated admin console with reporting.
-- **Single Next.js app** deployed to Vercel (serverless). **Turso (libSQL)** database, **raw parameterised SQL,
-  no ORM.** External integrations run in **mock/degraded mode without keys** so the whole app is exercisable.
-- **Deploys ship the ENTIRE working tree** (uncommitted files included), not git-based. ~70 pre-existing
-  deployed-but-uncommitted files sit on `main` — do NOT assume `git status` clean == what's deployed, and do
-  NOT blind-commit everything.
+- **What it is:** a Next.js 15 (App Router) practitioner community platform for Wild Nutrition —
+  onboarding + register verification, a passwordless practitioner dashboard, an AI protocol assistant,
+  education/lessons, media/resources, clinical toolkit, community + events, live chat + presence,
+  patient carts (curated cart → pay link), a practitioner-to-practitioner referral network, and a
+  password-gated admin console with reporting.
+- **Single Next.js app on Cloudflare Workers** via OpenNext. **D1** database (libSQL-shaped adapter),
+  **R2** file storage, **Resend** email, **Gemini** AI. Raw parameterised SQL, no ORM.
+- **Every integration runs in mock/degraded mode without keys** and lights up when its key appears.
+  This is a hard rule — never make a feature require a key to boot.
 
 ---
 
-## 1. TECH STACK (real, confirmed)
+## 1. TECH STACK (verified 2026-08-17)
 
-- **Next.js 14 App Router** on **Vercel (Hobby plan)**. Hobby ⇒ **cron limited to once/day** — a sub-daily
-  schedule fails the deploy.
-- **Turso (libSQL)** via `@libsql/client` — raw parameterised SQL. Every `lib/db.ts` fn is `async`. Schema =
-  base `SCHEMA` string + append-only `lib/migrations.ts` (001–017), run on first client connection. The libSQL
-  client is wrapped with a `cache:'no-store'` fetch (Next.js otherwise caches query RESULTS → stale admin data).
-  **Do NOT** reintroduce a `/tmp` DB fallback or default fetch caching.
-- **AI = Google Gemini via raw REST fetch (no SDK).** `selectProvider()` in `lib/ai/assistant.ts` prefers Gemini
-  (`GEMINI_API_KEY` → `GEMINI_API_KEY2`), falls back to a dormant Anthropic path. Model `gemini-2.0-flash`.
-  **Both Gemini keys are currently 429 quota-exhausted** → Ask the Expert, Content Factory, Chat FAQ clustering
-  are dormant (they degrade gracefully).
+- **Next.js 15.5.23 App Router** on **Cloudflare Workers**, built by
+  **`@opennextjs/cloudflare` 1.20.2**. Entry is **`worker.ts`** (per `wrangler.toml` `main`), which wraps
+  OpenNext's generated `.open-next/worker.js` and adds a `scheduled()` handler for Cron Triggers.
+- **Database = Cloudflare D1**, reached through a libSQL-shaped adapter behind `getClient()` in
+  `lib/db.ts`. `lib/db/binding.ts` `getD1Binding()` returns the request context's `DB` binding, or null
+  off-Workers. Off-Workers (dev, tests) the same code path uses **`@libsql/client`** against a local
+  `file:` DB. Schema = base `SCHEMA` string + append-only `lib/migrations.ts` (**001–017**), applied
+  idempotently on first connection — **the app self-migrates, there is no manual migration step.**
+- **File storage = R2** via `lib/storage/index.ts`; binding `BUCKET` (`getR2Binding()`). Off-Workers it
+  falls back to local disk under `data/uploads/`. Auth-gated reads go through `/api/files/[...key]`.
+  Public media URLs are built from `R2_PUBLIC_BASE`.
+- **Email = Resend** (`lib/providers/resend.ts`). Preference order in `lib/providers/email.ts`:
+  **Resend → SMTP → mock**. `smtp.ts` lazy-loads `nodemailer` so it never bundles into the Worker.
+- **AI = Google Gemini via raw REST fetch (no SDK).** `selectProvider()` in `lib/ai/assistant.ts` prefers
+  Gemini (`GEMINI_API_KEY` → `GEMINI_API_KEY2`) and falls back to a dormant Anthropic path. Model
+  `gemini-2.0-flash`. **Both Gemini keys are 429 quota-exhausted** → Ask the Expert, Content Factory and
+  Chat FAQ clustering are dormant but degrade gracefully.
+- **Knowledge base is BUNDLED.** Workers has no filesystem, so `lib/ai/kb.ts` reads `knowledge/*.md` from
+  disk in Node and falls back to the build-time bundle `lib/ai/kb.bundle.json` on Workers. **If you edit
+  anything under `knowledge/`, run `npm run bundle-kb` and commit the bundle** — see §16 and
+  `docs/KB_AUTHORING.md`.
 - **Commerce = a mock provider seam** (`lib/commerce/`). `commerceProvider()` returns `'shopify'` when
   `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_ADMIN_TOKEN` are set, else `'mock'`. **Shopify is NOT connected.**
-- **Email = Gmail SMTP via nodemailer** (`lib/providers/smtp.ts`). Resend + Mailchimp exist but dormant.
-  Order of preference: Resend > Gmail SMTP > Mailchimp/mock.
-- **File storage = Vercel Blob** (`@vercel/blob`) — media, certificates.
-- **UI:** Tailwind (brand tokens below), **`lucide-react`** icons, **framer-motion** (welcome takeover),
-  **zod** validation, **Vitest** tests. **`pdf-lib`** for certificates. `better-sqlite3` is a test/local dep.
+- **Cron = Cloudflare Cron Triggers.** `wrangler.toml [triggers]` declares the schedules;
+  `lib/cron/map.ts` maps each cron expression to its internal route; `worker.ts scheduled()` calls it
+  through the Worker's own fetch with `CRON_SECRET`. **Adding a schedule means editing BOTH files.**
+- **UI:** Tailwind (brand tokens below), `lucide-react` icons, `framer-motion` (welcome takeover), `zod`
+  validation, **Vitest** tests, `pdf-lib` for certificates. `better-sqlite3` is a local/test dep only.
 - **Brand tokens:** `ink #191919`, `ink2`, `terracotta #a45248`, `cream #f8f6f3`, `sage #d0d1ab`,
   `stone #e6e3df`, `forest #3a4f41`; heading font Gestura (`font-heading`). Practitioner containers
   `mx-auto max-w-5xl px-6 py-10`; admin `max-w-7xl`.
@@ -61,185 +77,174 @@ npm run generate-lessons  # offline lesson pipeline (needs ANTHROPIC_API_KEY)
 ## 2. REPO LAYOUT
 
 ```
-app/            Next.js routes (pages + api). See §4.
-components/     42 React components (client + a few server). See §5.
-lib/            Domain logic + data layer (db.ts is the whole data layer). See §6.
-tests/          79 Vitest files, 336 tests. Harness: DB_PATH temp file + resetDbForTests() + execForTests().
-docs/superpowers/{specs,plans}/   Design specs + implementation plans, one per feature.
-knowledge/      5 SAMPLE KB docs for Ask the Expert (replace with real WN dossiers).
-content-sources/, data/, scripts/, next.config.mjs, tailwind.config.ts, vercel.json
-CLAUDE.md               Terse agent guide.
-HANDOVER.md             THIS FILE — master handover.
-PRACTSESSION_HANDOFF.md Per-session detail blocks (2026-07-19 → 2026-08-03).
-PROJECT_HANDOFF.md      Earliest history.
+app/                  Next.js routes (pages + api). See §4.
+components/           React components (client + a few server). See §5.
+lib/                  Domain logic + data layer (db.ts is the whole data layer). See §6.
+knowledge/            AI knowledge base — 5 product dossiers + 2 clinical guides. See §16.
+tests/                Vitest suites. Harness: temp DB_PATH + resetDbForTests() + execForTests().
+docs/CLOUDFLARE_DEV.md       How to run locally (Node + the Cloudflare runtime).
+docs/CLOUDFLARE_GO_LIVE.md   Deploy checklist for when account access lands.
+docs/KB_AUTHORING.md         Knowledge-base contract, template and go-live gate.
+docs/superpowers/{specs,plans}/  Dated design specs + implementation plans, one per feature (history).
+worker.ts             Cloudflare Worker entry (wraps OpenNext + adds scheduled()).
+wrangler.toml         Bindings (D1 `DB`, R2 `BUCKET`), cron triggers, vars.
+open-next.config.ts   OpenNext adapter config.
+scripts/bundle-kb.mjs Bundles knowledge/ into lib/ai/kb.bundle.json.
+CLAUDE.md             Terse agent guide.
+HANDOVER.md           THIS FILE — master handover.
+PRACTSESSION_HANDOFF.md / PROJECT_HANDOFF.md   HISTORICAL logs (pre-Cloudflare). See §17.
 ```
 
 ---
 
 ## 3. COMPLETE FEATURE INVENTORY
 
-Parts 1–8 + Presence + Patient Carts + Mobile pass + Referral Network are all **built and deployed.**
+Parts 1–8 + Presence + Patient Carts + Mobile pass + Referral Network are all **built**.
 
 1. **Onboarding + register verification** — `/apply` (`ApplyForm`) → `POST /api/apply` → `lib/pipeline.ts`
-   `processApplication`. Name-based register verification (`lib/registers/*` — registers expose no number/API
-   lookup). Auto-approve only on qualified + high-confidence match, else **flagged**. Approved-on-apply
-   practitioners are **auto-logged-in** (session cookie set in the apply route). Decision logic in
-   `lib/decision.ts`. Register bodies: BANT, CNHC, NNA, ANP.
+   `processApplication`. Name-based register verification (`lib/registers/*` — registers expose no
+   number/API lookup). Auto-approve only on qualified + high-confidence match, else **flagged**.
+   Approved-on-apply practitioners are **auto-logged-in**. Decision logic in `lib/decision.ts`.
+   Register bodies: BANT, CNHC, NNA, ANP.
 2. **Student certification** — a **student** applicant is flagged (`STUDENT_MANUAL`) AND emailed a secure,
-   self-expiring upload link (`lib/certUpload.ts`, HMAC `cert:`-prefixed token — never a login session). They
-   upload proof at `/upload-certification?token=…` → `POST /api/certification` → Vercel Blob under
-   `certifications/` (migration `014` adds `certification_*` columns). Admin Flagged detail shows a
-   "Student certification" block.
-3. **Practitioner dashboard** — `/dashboard` (server shell → redirects first-login to `/onboarding/welcome`,
-   else renders `DashboardApp`). Shows referral/affiliate stats (clicks, orders, revenue, commission via
-   `lib/stats.ts computeStats`), continue-learning, quick links, referral earnings.
-4. **Welcome takeover** — `/onboarding/welcome` (`WelcomeExperience`, framer-motion cinematic scroll). Plays on
-   **every login** via the per-login `wn_welcome` session cookie (`lib/welcomeGate.ts`), dismissed by
+   self-expiring upload link (`lib/certUpload.ts`, HMAC `cert:`-prefixed token — never a login session).
+   They upload proof at `/upload-certification?token=…` → `POST /api/certification` → **R2** under
+   `certifications/` (migration `014`). Admin Flagged detail shows a "Student certification" block.
+3. **Practitioner dashboard** — `/dashboard` (server shell → redirects first-login to
+   `/onboarding/welcome`, else renders `DashboardApp`). Referral/affiliate stats via `lib/stats.ts`
+   `computeStats`, continue-learning, quick links, referral earnings.
+4. **Welcome takeover** — `/onboarding/welcome` (`WelcomeExperience`, framer-motion cinematic scroll).
+   Plays on **every login** via the per-login `wn_welcome` cookie (`lib/welcomeGate.ts`), dismissed by
    `POST /api/me/seen-welcome`. Fonts Fraunces/Inter scoped to this route only.
-5. **Ask the Expert (AI)** — `/assistant` (`AssistantApp`) → `POST /api/assistant` → `lib/ai/*` (KB/RAG in
-   `lib/ai/kb.ts`, safety in `lib/ai/safety.ts`, assistant in `lib/ai/assistant.ts`). Cites all supporting KB
-   docs, drops fabricated citations. **Dormant on Gemini 429.** Rate-limited via `ai_queries` table.
-6. **Learning / Pathways** — `/learning` + `/learning/[id]` (`LearningCatalogue`, `PathwayDetail`), CPD hours,
-   module completions, certificates (`lib/certificates.ts`, migration `003`/`009`). `/cpd` (`CpdApp`) tracks CPD.
-7. **Lessons / Library** — `/library` (`LibraryApp`) education lessons (migration base `lessons`), completions.
-   Offline generation: `npm run generate-lessons` (`lib/lessons/*`, needs `ANTHROPIC_API_KEY`).
-8. **Media / Resources** — `/resources` (`ResourcesApp`, `MediaCard`) media library; admin uploads via Vercel
-   Blob + thumbnails (`lib/media/thumbnail.ts`).
-9. **Clinical Toolkit** — `/toolkit` (`ToolkitApp`) handouts/protocols/decision-trees/recipes/faqs/email-
-   templates (migration `004`).
-10. **Clinical Pearls** — surfaced content (migration `012`), admin-curated.
-11. **Community** — `/community` (`CommunityApp`) posts/replies/upvotes (migration `010`). **Facebook Group URL
-    is a PLACEHOLDER** (`FB_GROUP_URL` in `CommunityApp.tsx`).
-12. **Events** — `/events` (`EventsApp`) hub events + registrations (migration `005`/`010`), ICS export
-    (`lib/events/ics.ts`).
-13. **Leaderboard** — `/leaderboard` (`LeaderboardApp`) opt-in leaderboard (migration `006`).
-14. **Automation** — scheduled jobs (migration `011`, `lib/automation/*`) — tiering, lifecycle, engagement
-    emails. Cron endpoints under `/api/cron/*` guarded by `CRON_SECRET`. Hobby ⇒ once/day.
-15. **Live Chat (Part 8)** — fast-polling (~2.5s) practitioner↔admin support chat (`ChatWidget` via `ChatGate`
-    in layout; admin side `AdminChat`). Migration `013`. Daily email backstop `cron/chat-alerts` (Hobby cron).
-    Insights/FAQ clustering `ChatInsights` (`lib/ai/chatInsights.ts`, degrades on 429).
-16. **Presence "Live Now"** — admin sees which practitioners are online. Heartbeat `PresenceBeat` →
-    `POST /api/me/presence` every 30s while tab focused (pauses when hidden) → `practitioners.last_seen_at`
-    (migration `015`). Online = seen within `PRESENCE_WINDOW_SECONDS` (=90). Admin "Online now (N)" strip +
-    dots in `AdminChat`. Admin-initiated chat via `POST /api/admin/chat {practitionerId}`.
-17. **Patient Carts** — practitioner builds a cart for a patient → tokenised login-free pay link → patient pays
-    on a branded **mock** checkout → sale attributed to the practitioner via `recordOrder` → shows in
-    dashboard/Reporting. `/carts` (`CartsApp`), `/pay/[token]` (`PayPage`, chrome hidden via `ChromeGate`).
-    Provider seam `lib/commerce/`, migration `016`. Pricing: 10% patient discount, 20% commission. **Mock
-    catalog = 8 real WN products** with real `cdn.shopify.com` images (`lib/commerce/catalog.mock.ts`).
-18. **Admin console** — `/admin` (`AdminDashboard`), a **card home** of grouped section cards (Applications /
-    Content / Community and events / Communication / Insights and ops). Logo returns to card home
-    (`AdminLogoLink` + `admin:home` event). 16 sections. See §4 for the section list.
-19. **Mobile-responsive pass (2026-08-02)** — see §10.
-20. **Practitioner-to-practitioner Referral Network (2026-08-03)** — see §9. THE NEWEST FEATURE.
+5. **Ask the Expert (AI)** — `/assistant` → `POST /api/assistant` → `lib/ai/*` (KB in `lib/ai/kb.ts`,
+   safety in `lib/ai/safety.ts`, assistant in `lib/ai/assistant.ts`). Cites all supporting KB docs and
+   drops fabricated citations. **Dormant on Gemini 429.** Rate-limited via `ai_queries` (30/practitioner/hour).
+6. **Learning / Pathways** — `/learning` + `/learning/[id]`, CPD hours, module completions, certificates
+   (`lib/certificates.ts`). `/cpd` tracks CPD.
+7. **Lessons / Library** — `/library` education lessons + completions. Offline generation
+   `npm run generate-lessons` (needs `ANTHROPIC_API_KEY`).
+8. **Media / Resources** — `/resources` media library; admin uploads to **R2** + thumbnails
+   (`lib/media/thumbnail.ts`).
+9. **Clinical Toolkit** — `/toolkit` handouts/protocols/decision-trees/recipes/faqs/email-templates.
+10. **Clinical Pearls** — admin-curated surfaced content (migration `012`).
+11. **Community** — `/community` posts/replies/upvotes (migration `010`). **Facebook Group URL is a
+    PLACEHOLDER** (`FB_GROUP_URL` in `CommunityApp.tsx`).
+12. **Events** — `/events` hub events + registrations, ICS export (`lib/events/ics.ts`).
+13. **Leaderboard** — `/leaderboard` opt-in leaderboard (migration `006`).
+14. **Automation** — scheduled jobs (migration `011`, `lib/automation/*`) — tiering, lifecycle,
+    engagement emails. Cron endpoints under `/api/cron/*` guarded by `CRON_SECRET`.
+15. **Live Chat** — fast-polling (~2.5s) practitioner↔admin support chat (`ChatWidget` via `ChatGate`;
+    admin side `AdminChat`). Migration `013`. Email backstop `cron/chat-alerts`. Insights/FAQ clustering
+    `ChatInsights` (degrades on 429).
+16. **Presence "Live Now"** — `PresenceBeat` → `POST /api/me/presence` every 30s while the tab is focused
+    → `practitioners.last_seen_at` (migration `015`). Online = seen within `PRESENCE_WINDOW_SECONDS` (90).
+    Admin "Online now (N)" strip + dots in `AdminChat`; admin-initiated chat via `POST /api/admin/chat`.
+17. **Patient Carts** — practitioner builds a cart → tokenised login-free pay link → patient pays on a
+    branded **mock** checkout → sale attributed via `recordOrder` → shows in dashboard/Reporting.
+    `/carts` (`CartsApp`), `/pay/[token]` (`PayPage`, chrome hidden via `ChromeGate`). Provider seam
+    `lib/commerce/`, migration `016`. 10% patient discount, 20% commission. **Mock catalog = 8 real WN
+    products** with real `cdn.shopify.com` images (`lib/commerce/catalog.mock.ts`).
+18. **Admin console** — `/admin` (`AdminDashboard`), a card home of grouped section cards. **16 sections:**
+    Applications · Lessons · Media · Pathways · Toolkit · Homepage · Factory · Pearls · Calendar ·
+    Community · Events · Live Chat · AI queries · Reporting · Referrals · Automation.
+19. **Mobile-responsive pass** — hamburger nav (`HeaderNav`), Patient-Carts overflow fix, 5 admin tables
+    wrapped in `overflow-x-auto`. **Pattern for new UI:** `min-w-0` on wide grid/flex items;
+    `overflow-x-auto` wrapper on wide tables.
+20. **Practitioner-to-practitioner Referral Network** — see §9.
 
 ---
 
-## 4. ROUTES — pages, APIs, admin sections
+## 4. ROUTES
 
-**Pages (`app/**/page.tsx`):** `/` (→ redirects to `/apply`), `/apply`, `/dashboard`, `/onboarding/welcome`,
-`/assistant`, `/learning`, `/learning/[id]`, `/library`, `/resources`, `/toolkit`, `/community`, `/events`,
-`/leaderboard`, `/cpd`, `/carts`, `/pay/[token]`, `/referrals`, `/upload-certification`, `/admin`.
+**Pages:** `/` (→ `/apply`), `/apply`, `/dashboard`, `/onboarding/welcome`, `/assistant`, `/learning`,
+`/learning/[id]`, `/library`, `/resources`, `/toolkit`, `/community`, `/events`, `/leaderboard`, `/cpd`,
+`/carts`, `/pay/[token]`, `/referrals`, `/upload-certification`, `/admin`.
 
 **Practitioner/public APIs:** `/api/apply`, `/api/me` (+ `/me/stats`, `/me/widgets`, `/me/seen-welcome`,
-`/me/presence`, `/me/catalog`, `/me/carts` (+`/[id]/send`), `/me/chat`, `/me/cpd`, `/me/community` (+`/[id]`,
-`/reply`, `/upvote`), `/me/events` (+`/[id]/register`), `/me/pathways` (+`/[id]`, `/complete`), `/me/pearls`,
-`/me/leaderboard`, `/me/toolkit`, `/me/referrals`), `/api/auth/{request-link,verify,logout}`,
+`/me/presence`, `/me/catalog`, `/me/carts` (+`/[id]/send`), `/me/chat`, `/me/cpd`, `/me/community`
+(+`/[id]`, `/reply`, `/upvote`), `/me/events` (+`/[id]/register`), `/me/pathways` (+`/[id]`, `/complete`),
+`/me/pearls`, `/me/leaderboard`, `/me/toolkit`, `/me/referrals`), `/api/auth/{request-link,verify,logout}`,
 `/api/library` (+`/[id]/complete`), `/api/resources`, `/api/assistant`, `/api/certification`,
-`/api/pay/[token]`, `/api/r/[code]` (referral click → redirect), `/api/webhooks/shopify`,
-`/api/cron/{heartbeat,run,chat-alerts}`.
+`/api/pay/[token]`, `/api/r/[code]` (referral click → redirect), **`/api/files/[...key]`** (auth-gated R2
+reads), `/api/webhooks/shopify`, `/api/cron/{heartbeat,run,chat-alerts}`.
 
 **Admin APIs (all `isAuthed`-gated):** `/api/admin/{login,logout,practitioners (+/[id]),ai-queries,lessons
 (+/[id]),reporting (+/export),media (+/[id],/upload,/thumbnail,/cleanup),widgets (+/[id]),pathways (+/[id],
 /modules,/content),toolkit (+/[id]),events (+/[id]),community (+/[id]),pearls (+/[id]),factory,automation
 (+/run),calendar,presence,chat (+/[id],/close,/insights,/insights/faqs),referrals}`.
 
-**Admin console sections (cards in `AdminDashboard`):** Applications · Lessons · Media · Pathways · Toolkit ·
-Homepage · Factory · Pearls · Calendar · Community · Events · Live Chat · AI queries · Reporting · **Referrals** ·
-Automation. Each renders its `Admin*` component.
-
 ---
 
-## 5. COMPONENTS (42)
+## 5. COMPONENTS
 
 **Chrome:** `SiteHeader` (server, context-aware nav), `HeaderNav` (client, desktop nav + mobile hamburger),
 `LogoutButton`, `ChromeGate` (hides header/footer on `/onboarding/*`, `/pay`), `ChatGate`, `PresenceBeat`,
 `AdminLogoLink`.
-**Practitioner apps:** `ApplyForm`, `DashboardApp`, `WelcomeExperience`, `AssistantApp`, `LearningCatalogue`,
-`PathwayDetail`, `LibraryApp`, `ResourcesApp`, `MediaCard`, `ToolkitApp`, `CommunityApp`, `EventsApp`,
-`LeaderboardApp`, `CpdApp`, `CartsApp`, `PayPage`, `ChatWidget`, `ReferralsApp`, `CertificationUpload`.
+**Practitioner apps:** `ApplyForm`, `DashboardApp`, `WelcomeExperience`, `AssistantApp`,
+`LearningCatalogue`, `PathwayDetail`, `LibraryApp`, `ResourcesApp`, `MediaCard`, `ToolkitApp`,
+`CommunityApp`, `EventsApp`, `LeaderboardApp`, `CpdApp`, `CartsApp`, `PayPage`, `ChatWidget`,
+`ReferralsApp`, `CertificationUpload`.
 **Admin:** `AdminDashboard` (+ `AdminAiQueries`, `AdminAutomation`, `AdminCalendar`, `AdminChat`,
-`AdminCommunity`, `AdminEvents`, `AdminFactory`, `AdminLessons`, `AdminMedia`, `AdminPathways`, `AdminPearls`,
-`AdminReferrals`, `AdminReporting`, `AdminToolkit`, `AdminWidgets`, `ChatInsights`).
+`AdminCommunity`, `AdminEvents`, `AdminFactory`, `AdminLessons`, `AdminMedia`, `AdminPathways`,
+`AdminPearls`, `AdminReferrals`, `AdminReporting`, `AdminToolkit`, `AdminWidgets`, `ChatInsights`).
 
 ---
 
 ## 6. DATA LAYER + LIB
 
-- **`lib/db.ts`** — the ENTIRE data layer, all `async`, uses private `run`/`one`/`all`/`num` helpers +
-  `rowToPractitioner`/`rowToReferral` mappers. `SCHEMA` exported for tests. Connection selection: line ~199
-  `TURSO_DATABASE_URL` wins; else `DB_PATH` (as `file:`); else throws in serverless / falls to
-  `data/practitioners.db` locally. **`resetDbForTests()`** + **`execForTests()`** for tests.
-- **`lib/migrations.ts`** — append-only `{id, sql}[]`, 001–017 (§7). `runMigrations(client)` applies once each.
-- **Domain libs:** `pipeline.ts` (application processing + referral attribution), `decision.ts` (auto-approve/
-  flag), `registers/*` (name-based verification), `codes.ts` (`portalUrl`, `referralLink`, `generateCode`),
-  `access.ts` (`hasAccess` audience gate), `stats.ts` (`computeStats`), `reporting/*`, `ai/*`, `lessons/*`,
-  `automation/*`, `chat/*`, `commerce/*`, `events/*`, `media/*`, `certUpload.ts`, `certificates.ts`,
-  `magicLink.ts`, `welcomeGate.ts`, `serverSession.ts`, `presence/config.ts`, `providers/*`, `emails/templates.ts`.
+- **`lib/db.ts`** — the ENTIRE data layer, all `async`, private `run`/`one`/`all`/`num` helpers +
+  `rowToPractitioner`/`rowToReferral` mappers. `SCHEMA` exported for tests. **Connection selection in
+  `rawClient()`:** the **D1 binding wins** (taken before `dbUrl()` so `@libsql/client` is never
+  referenced on the Worker); otherwise `@libsql/client` is imported dynamically against `dbUrl()`.
+  `resetDbForTests()` + `execForTests()` for tests.
+- **`lib/db/binding.ts`** — `getD1Binding()` / `getR2Binding()`. Lazily requires
+  `@opennextjs/cloudflare` behind try/catch so Node builds and Vitest get `null` instead of an error.
+- **`lib/migrations.ts`** — append-only `{id, sql}[]`, `001_orders` … `017_practitioner_referrals`.
+  `runMigrations(client)` applies each once, tracked in `schema_migrations`.
+- **`lib/storage/index.ts`** — R2 put/get/delete with a local-disk fallback off-Workers.
+- **Domain libs:** `pipeline.ts` (application processing + referral attribution), `decision.ts`,
+  `registers/*`, `codes.ts` (`portalUrl`, `referralLink`, `generateCode`), `access.ts` (`hasAccess`),
+  `stats.ts`, `reporting/*`, `ai/*`, `lessons/*`, `automation/*`, `chat/*`, `commerce/*`, `events/*`,
+  `media/*`, `cron/map.ts`, `certUpload.ts`, `certificates.ts`, `magicLink.ts`, `welcomeGate.ts`,
+  `serverSession.ts`, `presence/config.ts`, `providers/*`, `uploadClient.ts`, `emails/templates.ts`.
 - **Auth libs:** `adminAuth.ts` (`isAuthed(req)`), `practitionerAuth.ts` (`getSessionPractitioner(req)`,
   `sessionCookieHeader(id)`), `serverSession.ts` (`getServerSessionPractitioner()`).
 
 ---
 
-## 7. COMPLETE DB SCHEMA (base + migrations 001–017)
-
-To dump live: `SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%';`
+## 7. DB SCHEMA (base + migrations 001–017)
 
 **Base tables (`SCHEMA` in `lib/db.ts`):**
 - `practitioners(id PK, name, email UNIQUE, register_body, register_number, qualification_status,
-  tier DEFAULT 'standard', status DEFAULT 'pending', verification_json, affiliate_code UNIQUE, affiliate_link,
-  pending_sync DEFAULT 0, created_at, decided_at, decided_by,` **+008** `has_seen_welcome DEFAULT 0,`
-  **+014** `certification_url, certification_pathname, certification_filename, certification_uploaded_at,`
-  **+015** `last_seen_at)`
+  tier DEFAULT 'standard', status DEFAULT 'pending', verification_json, affiliate_code UNIQUE,
+  affiliate_link, pending_sync DEFAULT 0, created_at, decided_at, decided_by,` **+008**
+  `has_seen_welcome,` **+014** `certification_url/pathname/filename/uploaded_at,` **+015** `last_seen_at)`
 - `events(id PK, practitioner_id, type, detail, created_at)` — audit trail (NOT the events hub).
 - `auth_tokens(token PK, practitioner_id, expires_at, used_at)` — magic-link tokens.
 - `clicks(id PK, practitioner_id, code, created_at)` — referral click log.
-- `ai_queries(id PK, practitioner_id, profile_input, status, safety_flags, output_json, grounding_warnings,
-  model, input_tokens, output_tokens, created_at)` — Ask-the-Expert log + rate-limit source.
-- `lessons(id PK, source_file, title, summary, takeaways_json, quiz_json, topics_json, claim_flags_json,
-  status DEFAULT 'draft', model, input_tokens, output_tokens, created_at, decided_at)`
-- `lesson_completions(id PK, practitioner_id, lesson_id, completed_at, UNIQUE(practitioner_id, lesson_id))`
-- `login_events(id PK, practitioner_id, created_at)`
-- `media(id PK, title, type, description, content_kind, url, pathname, thumbnail_url, thumbnail_pathname,
-  size, published DEFAULT 1, created_at)`
+- `ai_queries(...)` — Ask-the-Expert log + rate-limit source.
+- `lessons(...)`, `lesson_completions(... UNIQUE(practitioner_id, lesson_id))`, `login_events(...)`,
+  `media(...)`.
 
 **Migrations:**
 - **001** `orders(id PK, order_id UNIQUE, practitioner_id, code, total REAL, currency DEFAULT 'GBP',
-  financial_status, created_at, received_at)` + idx(practitioner_id), idx(code). **Shopify order revenue AND
-  Patient-Carts mock-pay AND referral qualifying sales all write here** (`recordOrder`, ON CONFLICT upsert).
-- **002** `pathways(...)` **+009** `+ category, cpd_hours`; `pathway_modules(...)`. content_kind ∈ lesson|media.
+  financial_status, created_at, received_at)`. **Shopify order revenue, Patient-Carts mock-pay AND
+  referral qualifying sales all write here** (`recordOrder`, ON CONFLICT upsert).
+- **002** `pathways`, `pathway_modules` — **009** adds `category`, `cpd_hours`, `module_completions`.
 - **003** `certificates(... UNIQUE(practitioner_id, pathway_id))`.
-- **004** `toolkit_resources(...)`. type ∈ handout|protocol|decision_tree|recipe|faq|email_template.
-- **005** `hub_events(...)` **+010** `+ event_type, capacity`; `hub_event_registrations(... UNIQUE(event_id, practitioner_id))`.
-- **006** `tier_history(...)`; `leaderboard_optins(practitioner_id PK, opted_in, display_name, updated_at)`.
-- **007** `homepage_widgets(...)`.
-- **008** ALTER practitioners ADD `has_seen_welcome`.
-- **009** ALTER pathways ADD `category`, `cpd_hours`; `module_completions(... UNIQUE(practitioner_id, module_id))`.
-- **010** ALTER hub_events ADD `event_type`, `capacity`; `community_posts(...)`, `community_replies(...)`,
-  `community_upvotes(post_id, practitioner_id, PRIMARY KEY(post_id, practitioner_id))`.
-- **011** `email_log(... UNIQUE(practitioner_id, job, period))`; `automation_runs(...)`.
-- **012** `clinical_pearls(...)`.
-- **013** `chat_conversations(...)`, `chat_messages(...)`. sender ∈ practitioner|admin.
-- **014** ALTER practitioners ADD `certification_url/pathname/filename/uploaded_at`.
-- **015** ALTER practitioners ADD `last_seen_at` (presence heartbeat).
-- **016** `patient_carts(id PK, practitioner_id, patient_name, patient_email, token UNIQUE,
-  status DEFAULT 'draft', currency, subtotal, discount_amount, total, commission_amount, provider DEFAULT 'mock',
-  external_id, pay_url, created_at, sent_at, paid_at)` + idx; `patient_cart_items(id PK, cart_id, product_ref,
-  title, image_url, unit_price, qty)` + idx. status ∈ draft|sent|paid.
-- **017 (NEWEST)** `practitioner_referrals(id PK, referrer_id → practitioners, referred_id → practitioners,
-  referred_email, invite_code, status DEFAULT 'invited', qualifying_order_id, bonus_amount REAL DEFAULT 0,
-  currency DEFAULT 'GBP', signed_up_at, first_sale_at, completed_at, credited_at, created_at)` +
-  idx(referrer_id) + **UNIQUE(referred_id)**. status ∈ invited|signed_up|first_sale|completed|credited.
+- **004** `toolkit_resources` — type ∈ handout|protocol|decision_tree|recipe|faq|email_template.
+- **005** `hub_events`, `hub_event_registrations` — **010** adds `event_type`, `capacity`.
+- **006** `tier_history`, `leaderboard_optins`.
+- **007** `homepage_widgets`. **008** `has_seen_welcome`.
+- **010** `community_posts`, `community_replies`, `community_upvotes`.
+- **011** `email_log(... UNIQUE(practitioner_id, job, period))`, `automation_runs`.
+- **012** `clinical_pearls`. **013** `chat_conversations`, `chat_messages` (sender ∈ practitioner|admin).
+- **014** certification columns. **015** `last_seen_at`.
+- **016** `patient_carts(... token UNIQUE, status DEFAULT 'draft', provider DEFAULT 'mock', external_id,
+  pay_url, ...)` + `patient_cart_items`. status ∈ draft|sent|paid.
+- **017** `practitioner_referrals(... referrer_id, referred_id, invite_code, status DEFAULT 'invited',
+  qualifying_order_id, bonus_amount, ...)` + **UNIQUE(referred_id)**.
+  status ∈ invited|signed_up|first_sale|completed|credited.
 - Bookkeeping: `schema_migrations(id PK, applied_at)`.
 
 `audience` (all|qualified|student) on content tables gates via `lib/access.ts hasAccess()`.
@@ -248,32 +253,28 @@ To dump live: `SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT 
 
 ## 8. AUTH MODEL
 
-- **Admin** — `lib/adminAuth.ts`. Cookie `wn_admin` = `SHA-256(ADMIN_PASSWORD)` hex (64 chars), 12h. `isAuthed(req)`
-  checks it. Login `POST /api/admin/login`. **Prod password `wild-admin-2026`; local dev `preview-admin`.**
+- **Admin** — `lib/adminAuth.ts`. Cookie `wn_admin` = `SHA-256(ADMIN_PASSWORD)` hex, 12h. `isAuthed(req)`
+  checks it. Login `POST /api/admin/login`.
 - **Practitioner** — `lib/practitionerAuth.ts`. HMAC-signed `wn_session` cookie (30d) via `SESSION_SECRET`.
   `getSessionPractitioner(req)` verifies + loads; require `status === 'approved'`. Server components use
-  `lib/serverSession.ts getServerSessionPractitioner()`. Approved-on-apply sets the cookie directly (auto-login).
-- **Magic links** — `lib/magicLink.ts`, 15-min tokens in `auth_tokens`. `POST /api/auth/request-link` emails a
-  link (**locally, GMAIL is blanked so it returns an on-screen `devLink` instead of emailing**);
-  `GET /api/auth/verify?token=…` sets the session cookie. **On prod GMAIL is set → it emails, no devLink.**
-- **Certification upload tokens** — `lib/certUpload.ts`, HMAC `cert:`-prefixed (via `SESSION_SECRET`), never a
-  login session, self-expiring.
-- **Welcome gate** — per-login session cookie `wn_welcome` (`lib/welcomeGate.ts`), separate from the permanent
-  `has_seen_welcome` column.
+  `lib/serverSession.ts`. Approved-on-apply sets the cookie directly (auto-login).
+- **Magic links** — `lib/magicLink.ts`, 15-min tokens in `auth_tokens`. `POST /api/auth/request-link`
+  emails a link; **with no email provider configured it returns an on-screen `devLink` instead** —
+  which is exactly how you get a local session. `GET /api/auth/verify?token=…` sets the cookie.
+- **Certification upload tokens** — `lib/certUpload.ts`, HMAC `cert:`-prefixed, never a login session.
+- **Welcome gate** — per-login cookie `wn_welcome`, separate from the permanent `has_seen_welcome` column.
 
 ---
 
-## 9. THE REFERRAL NETWORK (newest, 2026-08-03) — full detail
+## 9. THE REFERRAL NETWORK — full detail
 
-**"Refer a Colleague": an approved practitioner invites a colleague via a unique link and earns £50 (in-app,
-tracked) automatically when that colleague makes their first paid sale.** Spec:
-`docs/superpowers/specs/2026-08-03-practitioner-referral-network-design.md`; plan:
-`docs/superpowers/plans/2026-08-03-practitioner-referral-network.md`. Built TDD, 8 tasks, merged to `main`, deployed.
+**An approved practitioner invites a colleague via a unique link and earns £50 (in-app, tracked)
+automatically when that colleague makes their first paid sale.** Spec/plan:
+`docs/superpowers/{specs,plans}/2026-08-03-practitioner-referral-network*`.
 
-**Locked decisions:** invite link (`/apply?ref=<affiliateCode>`) + optional manual code box; **automatic** award
-on first paid sale (no admin approval); tracked **in-app** as referral earnings (no real payout).
+**Locked decisions:** invite link (`/apply?ref=<affiliateCode>`) + optional manual code box;
+**automatic** award on first paid sale (no admin approval); tracked **in-app** (no real payout).
 
-**The four stages** (`practitioner_referrals.status` drives the UI tracker):
 | UI label | status | set when |
 |---|---|---|
 | Signed up | `signed_up` | referee applies via the link AND is approved |
@@ -281,215 +282,219 @@ on first paid sale (no admin approval); tracked **in-app** as referral earnings 
 | Referral completed | `completed` | referral qualifies (same txn as first_sale) |
 | Added to earnings | `credited` | £50 stamped on the row |
 
-Internal-only `invited` = referee applied but not yet approved (flagged/pending). On the automatic path
-`first_sale → completed → credited` happen in one transaction; a referral dwells at `signed_up` until the
-colleague's first paid sale, then completes fully.
+Internal-only `invited` = referee applied but not yet approved. On the automatic path
+`first_sale → completed → credited` happen in one transaction.
 
-**Data model:** migration `017_practitioner_referrals` (§7). **The spec's `practitioners.referred_by_practitioner_id`
-column was intentionally dropped** — `referred_id` fully captures the relationship (the applicant always has a
-practitioner row, so it's never NULL; `UNIQUE(referred_id)` cleanly enforces one referral per referee).
+**`lib/db.ts` helpers:** `createReferral`, `getReferralByReferredId`, `markReferralSignedUp`,
+`listReferralsByReferrer` (→ `ReferralView`), `referralEarnings`, `listAllReferrals`, `creditReferral`,
+`maybeAwardReferralBonus(referredPractitionerId, orderId)`, `referralBonusGbp()` (env
+`REFERRAL_BONUS_GBP`, default 50).
 
-**`lib/db.ts` helpers:** `createReferral({referrerId, referredId, referredEmail, inviteCode, approved})`
-(INSERT OR IGNORE, status signed_up|invited), `getReferralByReferredId`, `markReferralSignedUp` (invited→signed_up),
-`listReferralsByReferrer` (→ `ReferralView` with refereeName/refereeStatus), `referralEarnings`
-(→ `{creditedTotal, pendingCount}`), `listAllReferrals` (admin, + referrerName), `creditReferral`
-(one-shot → credited), `maybeAwardReferralBonus(referredPractitionerId, orderId)`, `referralBonusGbp()`
-(env `REFERRAL_BONUS_GBP`, default 50, empty/NaN/≤0 → 50). Types `ReferralRow`, `ReferralView`.
+**Award engine:** `recordOrder(o)` calls `maybeAwardReferralBonus(...)` at its END — a **single
+choke-point** covering the Patient-Carts pay API and the Shopify webhook. Idempotent via
+`status != 'credited'` + `UNIQUE(referred_id)`. **v1 credits on ANY recorded order** for a referred
+practitioner; if real Shopify later sends unpaid/pending orders, gate on `financialStatus === 'paid'`.
 
-**Award engine:** `recordOrder(o)` (in `lib/db.ts`) calls `maybeAwardReferralBonus(o.practitionerId, o.orderId)`
-at its END — a **single choke-point** covering the Patient-Carts pay API and the Shopify webhook. Idempotent &
-one-time via `status != 'credited'` guard + `UNIQUE(referred_id)`. **v1 credits on ANY recorded order for a
-referred practitioner** (all current sale sources are paid; if real Shopify later sends unpaid/pending orders,
-gate on `financialStatus === 'paid'`).
+**Attribution:** `ApplyForm.tsx` reads `?ref=` from `window.location` (deliberately NOT
+`useSearchParams`, to avoid a Suspense boundary at build) into an optional `referredByCode` field.
+`lib/pipeline.ts` resolves it via `findByCode` and guards self-referral / unapproved referrer — never
+blocks signup. `approvePractitioner` calls `markReferralSignedUp(id)`.
 
-**Attribution:** `ApplyForm.tsx` reads `?ref=` from `window.location` (deliberately NOT `useSearchParams`, to
-avoid a Suspense boundary requirement at build) into an optional "Referred by" field named `referredByCode`.
-`app/api/apply/route.ts` zod schema accepts optional `referredByCode` (max 30). `lib/pipeline.ts`
-`processApplication` resolves it via `findByCode`, guards (self-email/self-id/unapproved-referrer → ignored,
-never blocks signup), and `createReferral` (signed_up if approved on apply, else invited). `approvePractitioner`
-calls `markReferralSignedUp(id)` so a later-approved flagged referee flips invited→signed_up.
+**UI:** `/referrals` (`ReferralsApp`) — invite link + copy, "£X credited · N pending", 4-stage stepper per
+referral. Nav item "Refer & Earn". Admin read-only "Referrals" card (`AdminReferrals`).
 
-**Practitioner UI:** `/referrals` (`app/referrals/page.tsx` server shell → redirects non-approved to
-`/dashboard`; `components/ReferralsApp.tsx`): invite link + copy button, "£X credited · N pending", and a
-**4-stage stepper per referral** (horizontal on desktop, stacks vertically on mobile via `min-w-0` + `sm:` prefixes).
-Nav item **"Refer & Earn"** in `SiteHeader.tsx PRACTITIONER_NAV` + a dashboard quick-link (`DashboardApp` `QUICK_LINKS`).
-API `GET /api/me/referrals` → `{inviteLink, earnings:{creditedTotal,pendingCount}, referrals: ReferralView[]}`
-(inviteLink = `${portalUrl()}/apply?ref=<affiliateCode>`).
-
-**Admin:** read-only "Referrals" card in `AdminDashboard` (Insights and ops group, `Gift` icon) →
-`components/AdminReferrals.tsx` (referrer, referee, status, bonus, date; `overflow-x-auto` table). API
-`GET /api/admin/referrals` → `{referrals, totalCredited}`.
-
-**Tests:** `tests/referrals-db.test.ts` (6), `tests/referral-award.test.ts` (4), `tests/referral-apply.test.ts` (4),
-`tests/api-referrals.test.ts` (2), `tests/api-admin-referrals.test.ts` (2).
-
-**New env:** `REFERRAL_BONUS_GBP` (optional, default 50 — works with nothing set). Add to Vercel only for a
-different amount.
-
-**Live E2E proof (done on prod 2026-08-03):** created Demo Referrer (id 14, code `WN-REFERR-G9QP`) → Demo
-Referred (id 15) applied via that code → referral signed_up → Demo Referred paid a mock cart (£35.55, order
-`cart-4`) → referral auto-advanced to **credited, £50** → admin shows "1 referrals · £50.00 credited". **These are
-demo rows on PROD — see §14 for cleanup.**
+**Tests:** `referrals-db` (6), `referral-award` (4), `referral-apply` (4), `api-referrals` (2),
+`api-admin-referrals` (2).
 
 ---
 
-## 10. MOBILE-RESPONSIVE PASS (2026-08-02, deployed `4b73f86`)
+## 10. LOCAL DEV & TESTING
 
-Presentational-only (no `lib/`/`api/`/auth/`db.ts` touched). Verified live.
-- **Mobile hamburger nav** — new `components/HeaderNav.tsx` (client): desktop nav unchanged (`hidden md:flex`),
-  mobile hamburger drop-down (`md:hidden`, auto-closes on route change via `usePathname`). `SiteHeader.tsx`
-  (server) still computes audience-filtered nav items and passes them as props — no auth logic moved.
-- **Patient Carts overflow fix** — `min-w-0` on the grid column + product-row flex items in `CartsApp.tsx`
-  (CSS grid/flex items default to `min-width:auto`, which forced the page ~456px wide at 375px).
-- **5 admin tables wrapped** in `overflow-x-auto` (grid-child tables also get `min-w-0`): `AdminDashboard`
-  (Applications), `AdminCalendar`, `AdminLessons`, `AdminAiQueries`, `ChatInsights`. Tables scroll within their
-  card instead of blowing out the viewport.
-- **Dead code removed:** `/coming-soon` route + `ComingSoon.tsx` (orphan, nothing linked); stale untracked
-  `data/practitioners.db`.
-- **Mobile pattern for new UI:** wide content in a grid/flex item needs `min-w-0`; wide tables need an
-  `overflow-x-auto` wrapper.
+Full detail in **`docs/CLOUDFLARE_DEV.md`**. Two ways to run:
+
+| Command | Runtime | Bindings |
+|---|---|---|
+| `npm run dev` | Node (Next dev, port 3100) | none → DB falls back to a local SQLite `file:`, storage to `data/uploads/`, email to mock. **The everyday loop.** |
+| `npm run preview:cf` | Cloudflare Workers (Wrangler, port 8787) | local **D1** + **R2** emulation. Exercises the real Cloudflare code paths. No account needed. |
+
+- **`npm run preview:cf` is the gate that catches D1-specific bugs.** Unit tests run on the libSQL/file
+  path and will NOT catch them — one bug slipped past every unit test during the migration and was only
+  caught here. Run it for anything touching DB, storage, cron or routes.
+- Reset local D1/R2 state by deleting `.wrangler/state/`.
+- **Get a local practitioner session:** apply a qualified BANT applicant via `POST /api/apply`
+  (auto-approves + sets the session cookie), OR `POST /api/auth/request-link` → open the returned
+  `devLink`. Dismiss the welcome takeover via `POST /api/me/seen-welcome`.
+- **Tests:** `npm test` — 381 tests. Harness: `beforeEach` sets `process.env.DB_PATH` to a temp file;
+  `afterEach` calls `resetDbForTests()`; raw SQL via `execForTests()`.
+- **`npm run build` corrupts `.next` if a dev server is running** — stop it first.
+- **Known limitation — Windows:** `npm run preview:cf` does **not** run on Windows.
+  `opennextjs-cloudflare build` fails with `Could not resolve "@libsql/client"` (×97) and OpenNext itself
+  warns it is not fully Windows-compatible and recommends WSL. Verified pre-existing, not a regression.
+  Use macOS/Linux/WSL for Cloudflare-runtime verification.
 
 ---
 
 ## 11. ENVIRONMENT VARIABLES
 
-**Set in Vercel production (live):** `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `ADMIN_PASSWORD`
-(**`wild-admin-2026`**), `SESSION_SECRET` (practitioner sessions + cert-upload HMAC), `PORTAL_URL` (the rose URL,
-builds magic-link + invite + cert URLs), `COMMISSION_PERCENT` (=20, reporting + cart + referral display),
-`GMAIL_USER` (=utkarshrawatofficial@gmail.com), `GMAIL_APP_PASSWORD`, `BLOB_READ_WRITE_TOKEN` (auto), `CRON_SECRET`,
-`GEMINI_API_KEY` + `GEMINI_API_KEY2` (**both 429-exhausted**).
+Nothing below is required to run locally — **the app boots and is fully exercisable with no keys.**
 
-**Read by code, optional / currently UNSET (feature runs mock/degraded until set):**
-- `REFERRAL_BONUS_GBP` — referral bonus £ (default **50**). NEW this session.
+**Cloudflare bindings (`wrangler.toml`):** D1 `DB`, R2 `BUCKET`, assets `ASSETS`.
+
+**Secrets to set at go-live** (`wrangler secret put` or the dashboard — see
+`docs/CLOUDFLARE_GO_LIVE.md`): `RESEND_API_KEY`, `EMAIL_FROM`, `GEMINI_API_KEY`, `GEMINI_API_KEY2`,
+`ANTHROPIC_API_KEY` (optional), `ADMIN_PASSWORD`, `SESSION_SECRET`, `CRON_SECRET`, `R2_PUBLIC_BASE`,
+`PORTAL_URL`.
+
+**Read by code, optional (feature runs mock/degraded until set):**
+- `REFERRAL_BONUS_GBP` — referral bonus £ (default **50**).
 - `AFFILIATE_DISCOUNT_PERCENT` — patient discount % on Patient Carts (default **10**).
-- `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_TOKEN` — both present flips `commerceProvider()` to `'shopify'` AND
-  (originally) enables real Shopify orders/revenue/tiers. Unset → mock catalog + mock pay + £0 real revenue.
+- `COMMISSION_PERCENT` — commission % (=20; set in `[vars]`).
+- `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_TOKEN` — both present flips `commerceProvider()` to `'shopify'`.
+  Unset → mock catalog + mock pay + £0 real revenue.
 - `SHOPIFY_WEBHOOK_SECRET` — HMAC for `/api/webhooks/shopify`. `STATS_SOURCE=shopify-live` switches
   dashboard/reporting to a live Shopify query.
-- `GEMINI_MODEL` (default `gemini-2.0-flash`), `ANTHROPIC_API_KEY` (dormant AI fallback + `generate-lessons`),
-  `EMAIL_FROM`, `RESEND_API_KEY`, `MAILCHIMP_API_KEY`, `MAILCHIMP_AUDIENCE_ID`, `ADMIN_ALERT_EMAIL`,
-  `CHAT_ALERT_MINUTES` (default 5), `KB_DIR` (default `knowledge/`).
-- `DB_PATH` — test/local file-DB path (set by tests + `.env.development.local`). Not a prod var.
-- `VERCEL`, `AWS_LAMBDA_FUNCTION_NAME` — runtime-provided; do not set.
+- `GEMINI_MODEL` (default `gemini-2.0-flash`), `PRESENCE_WINDOW_SECONDS` (90), `CHAT_ALERT_MINUTES` (5),
+  `ADMIN_ALERT_EMAIL`, `KB_DIR` (default `knowledge/`).
+- `DB_PATH` — test/local file-DB path. Not a production var.
 
-**Local `.env.local` gotcha:** contains `COMMISSION_PERCENT=""` (empty). Harmless (robust parser falls back), but
-don't rely on local commission matching prod.
+**No longer used (removed with the Vercel platform):** `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`,
+`BLOB_READ_WRITE_TOKEN`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, all `VERCEL_*`.
 
 ---
 
-## 12. DEPLOY PROCESS
+## 12. DEPLOY
 
-- **`npx vercel --prod --yes`** from the repo root. CLI authed as `utkarshrawatofficial-2811`, team
-  `utkarsh-projects12`. **Check `vercel whoami` before claiming you can't deploy.**
-- **Deploys the WHOLE working tree** (uncommitted changes ship), builds on Vercel, then aliases to
-  `practitioner-portal-rose.vercel.app`. Migrations run idempotently on first prod DB connection.
-- **Some sandboxes block the deploy command via an auto-classifier.** If blocked, the user runs it in their
-  terminal. (It succeeded from here on 2026-08-03.)
-- **Post-deploy verification (read-only):** probe `curl -s -o /dev/null -w "%{http_code}"` for routes — new
-  routes returning their gated codes (401/307) instead of 404 proves the build landed. Public pages render clean.
-- **Recommended hygiene:** commit only your changed files with a surgical `git add <files>` (never `git add -A`),
-  since ~70 unrelated files are dirty. Work on a feature branch for isolation, fast-forward merge to `main`, deploy.
+Full checklist: **`docs/CLOUDFLARE_GO_LIVE.md`**. Summary — ~30 minutes once company Cloudflare access
+lands, and **no code changes are needed**:
 
----
+1. Create the **D1 database** (`practitioner-portal`) and **R2 bucket** (`practitioner-portal-media`,
+   public access) in the Cloudflare dashboard.
+2. Put the real D1 `database_id` into `wrangler.toml` (replaces `PLACEHOLDER_D1_ID`).
+3. Set the secrets from §11.
+4. Connect the repo for **git-based deploys**: Workers & Pages → Create → Workers → Connect to Git.
+   Build `npx opennextjs-cloudflare build`, deploy `npx wrangler deploy`. Nothing to install locally.
+5. **Schema self-migrates on the first request.** Cron triggers activate on deploy.
 
-## 13. LOCAL DEV & TESTING
-
-- **Launch configs** in ROOT `Wild Dash/.claude/launch.json` (port 3100): use **`portal-dev`** (`next dev`), NOT
-  `portal` (`next start` = prod mode → would hit prod Turso).
-- **`.env.development.local` (gitignored)** forces an isolated scratch **file DB** (`DB_PATH` in the session
-  scratchpad), BLANKS `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` (so line ~199 falls through to the file DB),
-  blanks `GMAIL_*` (so magic-link returns on-screen `devLink`), blanks `BLOB_READ_WRITE_TOKEN`, sets
-  `ADMIN_PASSWORD=preview-admin`. **This is why dev never touches prod** — verify by an admin read returning `[]`.
-- **Get a local practitioner session:** apply a qualified BANT applicant via `POST /api/apply` (auto-approves +
-  sets session cookie in the response), OR `POST /api/auth/request-link` → open the returned `devLink` →
-  session cookie set. Dismiss the welcome takeover via `POST /api/me/seen-welcome`.
-- **Local admin cookie:** `wn_admin = SHA-256('preview-admin')`.
-- **Tests:** `npm test` (79 files, 336 tests). Harness: `beforeEach` sets `process.env.DB_PATH` to a temp file;
-  `afterEach` calls `(await import('@/lib/db')).resetDbForTests()`; raw SQL via `execForTests()` (returns
-  `{rows, lastInsertRowid, rowsAffected}`). Seed helper pattern: `insertApplication(...)` + `markApproved(id,
-  {affiliateCode, affiliateLink, pendingSync, decidedBy})`.
-- **`npm run build` corrupts `.next` if a dev server is running** — stop the preview server first.
-- **Browser-testing quirk:** the in-app browser's screenshot is ~2× the click coordinate space (DPR). Prefer
-  clicking by `ref`, or drive SPA buttons via `javascript_tool` (`[...document.querySelectorAll('button')]
-  .find(x=>/^Label/.test(x.textContent)).click()`). Detect real horizontal overflow with
-  `document.documentElement.scrollWidth > document.documentElement.clientWidth` (NOT `innerWidth`).
+Then smoke-test: apply → appears in `/admin`; admin login; media upload lands in R2 and renders;
+certification link 401s unless admin-authed; a magic-link email sends via Resend.
 
 ---
 
-## 14. KNOWN GAPS / STUBBED / FOLLOW-UPS
+## 13. KNOWN GAPS / FOLLOW-UPS
 
-1. **Gemini 429 quota-exhausted (blocks 3 features)** — Ask the Expert, Content Factory, Chat FAQ clustering
-   reach Google but 429 on both keys. Fix: enable billing/raise quota, add a key on another Google project, or
-   set `ANTHROPIC_API_KEY` for the dormant Claude path. No code change.
-2. **Real Shopify NOT connected** — tiers stay Standard, real revenue £0, Patient-Carts uses the mock catalog.
-   Set `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_ADMIN_TOKEN` (+ `SHOPIFY_WEBHOOK_SECRET`) and implement the `shopify`
-   branch of `getCatalog()`/`createDraftOrder()` in `lib/commerce/index.ts` (currently they return mock even when
-   the provider is 'shopify' — a half-activated state to guard). Extend `/api/webhooks/shopify` to reconcile
-   `patient_carts` by `external_id`.
-3. **KB is 5 SAMPLE docs** (`knowledge/`) — replace with real WN dossiers.
-4. **Chat missed-message email is DAILY** not 5-min (Vercel Hobby cron cap). In-app popup unaffected. Fix:
-   Vercel Pro + change `vercel.json` cron `/api/cron/chat-alerts` to `*/5 * * * *`.
-5. **Sentry / error monitoring NOT wired** — errors are `console.error` + `ai_queries`/`automation_runs` logs.
-6. **Coming-soon stubs** remain in some copy (Book Technical Consultation, Student Mentoring, My Downloads).
-   **Facebook Group URL is a PLACEHOLDER** (`FB_GROUP_URL` in `CommunityApp.tsx`).
-7. **Referral v1** credits on any recorded order (not gated on `financialStatus`); no refund clawback; no
-   multi-tier/chain; no email invites; no admin approval gate; no per-practitioner cap. All deferred by design.
-8. **`CartsApp` swallows non-OK create responses** (no error surfaced). `PayPage money()` hardcodes `£`.
-9. **No DB transactions anywhere** (codebase-wide convention) — e.g. `createPatientCart` inserts cart+items
-   without a transaction. Fine for the demo scale.
-
----
-
-## 15. TEST DATA ON PRODUCTION (clean before real launch)
-
-The prod Turso DB (`libsql://utkarsh-utkarshraw123.aws-eu-west-1.turso.io`) holds test/demo rows. There is **no
-delete-practitioner button** in the admin UI — remove via the **Turso web console** (the sandbox blocks prod DB
-writes from here).
-- **Referral demo (2026-08-03):** practitioner `Demo Referrer` (id 14, demo-referrer@example.com, code
-  `WN-REFERR-G9QP`), `Demo Referred` (id 15, demo-referred@example.com), `practitioner_referrals` id 1 (credited
-  £50), patient cart id 4 + order `cart-4` (£35.55, mock-paid).
-- **Earlier sessions:** possible henrietta/lucy + assorted `*@example.com` test practitioners.
+1. **Real Shopify NOT connected** — tiers stay Standard, real revenue £0, Patient Carts uses the mock
+   catalog. Implement the `shopify` branch of `getCatalog()`/`createDraftOrder()` in
+   `lib/commerce/index.ts` (**they currently return mock even when the provider is `'shopify'` — a
+   half-activated state to guard**) and extend `/api/webhooks/shopify` to reconcile `patient_carts` by
+   `external_id`. **The biggest functional gap.**
+2. **KB is 5 unapproved draft dossiers** (`knowledge/`) — structurally valid and gated, but awaiting
+   Wild Nutrition clinical sign-off. See §16 and `docs/KB_AUTHORING.md`.
+3. **Gemini 429 quota-exhausted (blocks 3 features)** — Ask the Expert, Content Factory, Chat FAQ
+   clustering reach Google but 429 on both keys. Fix: enable billing / raise quota / add a key on another
+   project, or set `ANTHROPIC_API_KEY` for the dormant Claude path. **Config only, no code change.**
+4. **Polish:** `CartsApp` swallows non-OK create responses (no error surfaced); `PayPage money()`
+   hardcodes `£`; coming-soon stubs remain in some copy (Book Technical Consultation, Student Mentoring,
+   My Downloads); **`FB_GROUP_URL` in `CommunityApp.tsx` is a placeholder**.
+5. **Chat alerts run daily, not every 5 minutes.** The old daily cap was a *Vercel Hobby* limit that no
+   longer applies — Cloudflare Cron has no such restriction. Add a `*/5 * * * *` trigger to **both**
+   `wrangler.toml [triggers]` **and** `lib/cron/map.ts`. In-app popup is unaffected.
+6. **Sentry / error monitoring NOT wired** — errors are `console.error` + `ai_queries`/`automation_runs`.
+7. **Referral v1** credits on any recorded order (not gated on `financialStatus`); no refund clawback, no
+   per-practitioner cap, no email invites, no admin approval gate. All deferred by design.
+8. **No DB transactions anywhere** (codebase-wide convention) — e.g. `createPatientCart` inserts cart +
+   items without one. Fine at current scale.
+9. **`dbUrl()` still guards on `process.env.VERCEL` / `AWS_LAMBDA_FUNCTION_NAME`** (`lib/db.ts`) — dead on
+   Cloudflare, since the D1 binding is taken first. The modern equivalent risk is a **missing D1 binding
+   on Workers** falling through to a local file path; worth replacing the guard with a Workers-aware one,
+   but that is a DB-layer change and must be verified on `preview:cf`.
 
 ---
 
-## 16. CRITICAL GOTCHAS (do not violate)
+## 14. CRITICAL GOTCHAS (do not violate)
 
-- **DB must be Turso in prod.** `lib/db.ts` throws (no `/tmp` fallback) on serverless without
-  `TURSO_DATABASE_URL`, and wraps the client with `cache:'no-store'`. Don't reintroduce a `/tmp` fallback or
-  default fetch caching.
+- **Mock-until-keyed is sacred.** Every integration must run with no secrets and light up when its key
+  appears. Never make a feature hard-require a key to boot.
+- **Edited `knowledge/`? Run `npm run bundle-kb` and commit `lib/ai/kb.bundle.json`.** Workers has no
+  filesystem and reads only the bundle, so a stale bundle serves outdated clinical content in production
+  while `npm run dev` looks correct. `tests/kb-sync.test.ts` catches this.
+- **`preview:cf` is a required gate** for anything touching D1, R2, cron or routes. Unit tests use the
+  libSQL/file path and will not catch D1-specific bugs.
+- **Adding a cron schedule means editing BOTH `wrangler.toml [triggers]` and `lib/cron/map.ts`.**
 - **Never reference `care@wildnutrition.com`** anywhere. Contact is `utkarshrawatofficial@gmail.com`.
-- **Register verification is name-based** (no number/API lookup). Auto-approve only on qualified + high-confidence.
-- **Deploys ship the whole working tree** — uncommitted files ship. Use surgical `git add`, never `git add -A`.
+- **Register verification is name-based** (no number/API lookup). Auto-approve only on qualified +
+  high-confidence.
 - **API routes** export `const dynamic = 'force-dynamic'`. Admin: `if(!isAuthed(req)) 401`. Practitioner:
-  `getSessionPractitioner` + `status==='approved'`. Validate bodies with **zod** (try/catch `req.json()` → 400).
-- **TDD** — failing test first; keep `npm test` green. **YAGNI / DRY / frequent surgical commits.**
+  `getSessionPractitioner` + `status==='approved'`. Validate bodies with **zod** (try/catch
+  `req.json()` → 400).
+- **TDD** — failing test first; keep `npm test` green at every commit. Two gates before "done":
+  `npm test` and `npm run build`. YAGNI / DRY / small surgical commits.
 - **Mobile:** `min-w-0` on wide grid/flex items; `overflow-x-auto` wrapper on wide tables.
 
 ---
 
-## 17. SESSION HISTORY (chronological milestones)
+## 15. KNOWLEDGE BASE (§16 pointer)
 
-- **…→2026-07-19** — Parts 1–8 built; Presence "Live Now"; card-based admin nav; admin logo→home; Patient Carts
-  (mock commerce). See `PRACTSESSION_HANDOFF.md` for exhaustive per-feature detail. (Commit `f72f332` era.)
-- **2026-08-02** (`4b73f86`, deployed) — Mobile-responsive pass (hamburger nav, Patient-Carts + 5 admin tables
-  overflow fixes) + dead-code removal (`/coming-soon`, stale `data/practitioners.db`). 319 tests.
-- **2026-08-03** (`ee09440`, deployed) — Practitioner-to-practitioner **Referral Network** (migration 017,
-  automatic £50 award, `/referrals` page, admin view). 336 tests. Live E2E demo verified on prod.
+See **`docs/KB_AUTHORING.md`** for the authoritative contract. In short:
+
+- `knowledge/products/*.md` are product dossiers (`isProduct: true`); `knowledge/*.md` are clinical
+  guides. **Only those two levels are read** — deeper subdirectories are silently ignored.
+- Product dossiers **require** four non-empty sections: `## Key ingredients`, `## Label dosing`,
+  `## Mechanism & evidence notes`, `## Cautions & interactions`. Each backs a specific `SYSTEM_RULES`
+  instruction (dosing is quoted **verbatim**; claims may come only from the dossiers).
+- Every document carries a **positive review marker**:
+  `> **Clinical review:** AWAITING APPROVAL | APPROVED <date> — <who>`. A missing marker fails
+  validation, so content cannot become silently unapproved.
+- **Go-live gate:** `docsAwaitingClinicalApproval()` must be empty before the assistant is used with real
+  practitioners. All 7 documents are currently AWAITING APPROVAL.
+- The assistant sends the **entire** KB with every query (no retrieval), so size is per-query token cost.
+  `KB_SIZE_WARN_CHARS` (300k) is both the loader warning and a test assertion.
+
+---
+
+## 16. TEST DATA / PRODUCTION HYGIENE
+
+There is no live deployment yet, so there is no production data to clean. The old Turso database from the
+Vercel era is out of the picture. When the Cloudflare D1 database is created it starts **empty** and
+self-migrates — so launch from a clean slate and avoid creating demo practitioners on it.
+
+If demo rows are needed for a presentation, create them, note them here, and delete them afterwards
+(there is still **no delete-practitioner button** in the admin UI — use `wrangler d1 execute`).
+
+---
+
+## 17. HISTORY — and which docs to trust
+
+This app was originally built on **Vercel + Turso + Vercel Blob + Gmail SMTP** and was re-platformed onto
+Cloudflare in the **2026-08-17** migration (Next 14 → 15, Turso → D1, Vercel Blob → R2, Gmail SMTP →
+Resend, Vercel Cron → Cloudflare Cron Triggers, KB bundled for a filesystem-less runtime).
+
+**Trust these (current):** this file, `CLAUDE.md`, `docs/CLOUDFLARE_DEV.md`,
+`docs/CLOUDFLARE_GO_LIVE.md`, `docs/KB_AUTHORING.md`, `wrangler.toml`, `worker.ts`.
+
+**Treat as history (pre-Cloudflare, deliberately not rewritten):** `PRACTSESSION_HANDOFF.md`,
+`PROJECT_HANDOFF.md`, `LAUNCH_CHECKLIST.md` items about Vercel, and everything under
+`docs/superpowers/{specs,plans}/`. They are dated records of what was true when written — useful for
+*why* a decision was made, misleading about *how the app runs today*. The migration's own spec and plan
+(`docs/superpowers/*/2026-08-17-cloudflare-migration*`) are the exception: they describe the current
+architecture.
+
+**Milestones:**
+- **…→2026-07-19** — Parts 1–8; Presence; card-based admin nav; Patient Carts (mock commerce).
+- **2026-08-02** — mobile-responsive pass + dead-code removal. 319 tests.
+- **2026-08-03** — Practitioner Referral Network (migration 017, automatic £50 award). 336 tests.
+- **2026-08-17** — **Cloudflare migration** (Workers/D1/R2/Resend/Cron, KB bundling). 359 tests.
 
 ---
 
 ## 18. READ-FIRST ORDER FOR A NEW SESSION
 
-1. **THIS FILE** (`HANDOVER.md`) — the complete picture.
-2. `CLAUDE.md` — terse conventions.
-3. `lib/db.ts` (whole data layer) + `lib/migrations.ts` (001–017).
-4. For the **referral network**: §9 here → `lib/db.ts` referral helpers + `recordOrder` hook →
-   `lib/pipeline.ts` (attribution) → `app/api/{me,admin}/referrals/route.ts` → `components/{ReferralsApp,
-   AdminReferrals}.tsx` → spec/plan in `docs/superpowers/{specs,plans}/2026-08-03-practitioner-referral-network*`.
-5. For **onboarding/approval**: `lib/pipeline.ts` + `lib/decision.ts` + `lib/registers/*` + `lib/certUpload.ts`.
-6. For **commerce/carts**: `lib/commerce/*` + `app/api/pay/[token]/route.ts` + `components/{CartsApp,PayPage}.tsx`.
-7. For **auth**: `lib/{adminAuth,practitionerAuth,serverSession,magicLink,welcomeGate}.ts`.
-8. Env + deploy facts in §11/§12 before touching prod. Cleanup list in §15 before real launch.
-
-**Commands recap:** `npm run dev` (→ :3100, `portal-dev`), `npm test` (336), `npm run build` (stop dev first),
-`npx vercel --prod --yes`. Admin prod pw `wild-admin-2026` / local `preview-admin`.
+1. **THIS FILE** — the complete picture.
+2. `CLAUDE.md` — terse conventions + architecture map.
+3. `docs/CLOUDFLARE_DEV.md` — how to run it; `docs/CLOUDFLARE_GO_LIVE.md` — how to ship it.
+4. `lib/db.ts` (whole data layer) + `lib/migrations.ts` (001–017) + `lib/db/binding.ts` (D1/R2 bindings).
+5. For **commerce/carts** (the biggest gap): `lib/commerce/*` + `app/api/pay/[token]/route.ts` +
+   `components/{CartsApp,PayPage}.tsx`.
+6. For the **AI assistant / KB**: `docs/KB_AUTHORING.md` → `lib/ai/{kb,kbValidate,assistant,safety}.ts`.
+7. For **onboarding/approval**: `lib/pipeline.ts` + `lib/decision.ts` + `lib/registers/*`.
+8. For **auth**: `lib/{adminAuth,practitionerAuth,serverSession,magicLink,welcomeGate}.ts`.
+9. For **cron**: `wrangler.toml [triggers]` + `lib/cron/map.ts` + `worker.ts`.

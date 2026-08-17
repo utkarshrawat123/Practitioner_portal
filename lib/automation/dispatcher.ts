@@ -3,7 +3,7 @@ import { recalculateTiers } from './tiering';
 import { runReEngagement, runQuarterlyImpact } from './lifecycle';
 
 /**
- * Runs the due scheduled jobs (Vercel Hobby fires this daily). Tiering +
+ * Runs the due scheduled jobs (a Cloudflare Cron Trigger fires this daily). Tiering +
  * re-engagement run every day; the quarterly impact report runs only in the
  * first days of a quarter (or when forced). Every job is idempotent and its
  * outcome is written to automation_runs. Never throws.
