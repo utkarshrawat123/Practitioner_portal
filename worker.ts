@@ -17,6 +17,7 @@ import openNextWorker from './.open-next/worker.js';
 // @ts-expect-error - resolved by Wrangler after the OpenNext build
 export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from './.open-next/worker.js';
 import { cronPathFor } from './lib/cron/map';
+import { captureException } from './lib/monitoring';
 
 interface Env {
   PORTAL_URL?: string;
@@ -25,7 +26,16 @@ interface Env {
 }
 
 export default {
-  fetch: openNextWorker.fetch,
+  // Top-level error monitoring: report, then rethrow so normal error handling
+  // (Next's 500 page) is unchanged. No-ops without SENTRY_DSN.
+  async fetch(req: Request, env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
+    try {
+      return await openNextWorker.fetch(req, env, ctx);
+    } catch (err) {
+      ctx.waitUntil(captureException(err, { where: 'worker.fetch', path: new URL(req.url).pathname }));
+      throw err;
+    }
+  },
 
   async scheduled(
     event: { cron: string },
@@ -38,6 +48,13 @@ export default {
     const req = new Request(`${base}${path}`, {
       headers: { authorization: `Bearer ${env.CRON_SECRET ?? ''}` },
     });
-    ctx.waitUntil(openNextWorker.fetch(req, env, ctx).then(() => undefined));
+    ctx.waitUntil(
+      openNextWorker.fetch(req, env, ctx).then(
+        () => undefined,
+        // A crashed cron is invisible without this — report and swallow
+        // (Cloudflare retries on its own schedule).
+        (err: unknown) => captureException(err, { where: 'worker.scheduled', cron: event.cron })
+      )
+    );
   },
 };
