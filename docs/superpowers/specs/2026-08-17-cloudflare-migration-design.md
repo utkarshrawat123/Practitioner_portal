@@ -101,8 +101,9 @@ rewritten on go-live day.
 
 - New `lib/storage/index.ts` exposing `put`, `get`, `delete`, `publicUrl` with two
   implementations:
-  - **R2**: `env.BUCKET.put/get/delete`; object serving via an R2 public bucket
-    **or** a `/api/files/[...key]` Worker route (decision in §11).
+  - **R2**: `env.BUCKET.put/get/delete`. **Certificates** served via a gated
+    `/api/files/[...key]` route (auth-checked); **media** via a public bucket
+    (see §11).
   - **Local/mock**: writes under `data/uploads` (dev) so uploads work offline.
 - Replace the 5 `@vercel/blob` call sites
   (`lib/certificates.ts`, `app/api/admin/media/upload`, `.../media/[id]`,
@@ -190,17 +191,17 @@ Delivered as `docs/CLOUDFLARE_GO_LIVE.md`:
 - Full existing suite green on every step (TDD; change one layer at a time).
 - Manual: `wrangler dev` local smoke test of upload + DB read/write.
 
-## 11. Open questions / decisions to confirm
+## 11. Confirmed decisions
 
-1. **R2 object serving:** public R2 bucket (simple, public URLs) vs a
-   `/api/files/[...key]` Worker route (access-controlled). Certificates are
-   sensitive → likely the gated route; media can be public. *Proposed: gated
-   route for certificates, public bucket for media.*
-2. **Deploy trigger:** Git-connected Cloudflare CI (auto-deploy on push, fully
-   browser — good for the locked-down office laptop) vs manual `wrangler deploy`.
-   *Proposed: Git-connected CI.*
-3. **D1 size limits:** confirm current data volume fits D1 limits (fine for this
-   app's scale).
+1. **R2 object serving — DECIDED:** **Certificates** (sensitive) are served through
+   a **login-gated `/api/files/[...key]` route** that checks auth before streaming
+   the R2 object. **Marketing media** goes in a **public R2 bucket** with direct
+   public URLs.
+2. **Deploy trigger — DECIDED:** **Git-connected Cloudflare CI** — auto-deploy on
+   push to the work repo. Fully browser-based, so the locked-down office laptop can
+   ship without installing anything.
+3. **Data — DECIDED:** Work copy starts with an **empty D1** (schema only, no data
+   copy). A data-copy step is explicitly out of scope for now.
 
 ## 12. Out of scope (YAGNI)
 
