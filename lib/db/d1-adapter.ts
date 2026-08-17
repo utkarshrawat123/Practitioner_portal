@@ -31,8 +31,18 @@ export function createD1Client(db: D1Database) {
   }
 
   async function executeMultiple(sql: string): Promise<void> {
-    // D1's exec() runs multiple statements; it wants each on its own line.
-    await db.exec(sql.replace(/\n\s*\n/g, '\n').trim());
+    // D1's exec() is line-based (each newline is treated as a statement
+    // boundary), so it chokes on multi-line CREATE TABLE. Split on ';' into
+    // whole statements and run each with prepare().run() instead. Safe here
+    // because the schema/migrations contain no triggers or semicolons inside
+    // string literals.
+    const statements = sql
+      .split(';')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    for (const stmt of statements) {
+      await db.prepare(stmt).run();
+    }
   }
 
   async function batch(stmts: D1Stmt[]): Promise<void> {

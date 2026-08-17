@@ -17,6 +17,13 @@ function fakeD1() {
       const info = s.run(...(args as []));
       return { results: [], meta: { changes: info.changes, last_row_id: Number(info.lastInsertRowid) } };
     },
+    // D1 prepared statements expose run(); executeMultiple uses it per-statement.
+    // Unlike D1's line-based exec(), better-sqlite3.prepare() requires exactly one
+    // statement — so this fake also guards that executeMultiple splits correctly.
+    run: async () => {
+      const info = sqlite.prepare(sql).run(...(args as []));
+      return { success: true, meta: { changes: info.changes, last_row_id: Number(info.lastInsertRowid) } };
+    },
   });
   return {
     prepare: (sql: string) => makeStmt(sql),
@@ -51,6 +58,23 @@ describe('createD1Client', () => {
     await client.execute("INSERT INTO t (name) VALUES ('carol')");
     const res = await client.execute('SELECT COUNT(*) AS n FROM t');
     expect(res.rows[0].n).toBe(1);
+  });
+
+  it('executeMultiple runs multi-line CREATE TABLE + multiple statements', async () => {
+    // Regression for D1's line-based exec(): a multi-line CREATE TABLE followed
+    // by an index must both apply. prepare() requires one statement each, so this
+    // fails unless executeMultiple splits on ';' correctly.
+    const c = createD1Client(fakeD1());
+    await c.executeMultiple(`
+      CREATE TABLE IF NOT EXISTS people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_people_name ON people(name);
+    `);
+    await c.execute({ sql: 'INSERT INTO people (name) VALUES (?)', args: ['zoe'] });
+    const res = await c.execute('SELECT name FROM people');
+    expect(res.rows).toEqual([{ name: 'zoe' }]);
   });
 
   it('runs a batch of parameterised statements', async () => {
