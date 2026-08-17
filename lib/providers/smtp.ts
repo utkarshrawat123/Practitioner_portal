@@ -1,4 +1,3 @@
-import nodemailer from 'nodemailer';
 import type { SyncResult } from './types';
 
 /**
@@ -17,7 +16,12 @@ function fromHeader(): string {
   return process.env.EMAIL_FROM || `Wild Nutrition Practitioner Community <${user}>`;
 }
 
-function transport() {
+// nodemailer is Node-only and cannot run on the Cloudflare Workers runtime.
+// Import it lazily so it is never pulled into the Worker module graph — this
+// file is statically imported by many callers, but nodemailer only loads when
+// an email is actually sent (which on Cloudflare never happens: Resend is used).
+async function transport() {
+  const { default: nodemailer } = await import('nodemailer');
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -35,7 +39,7 @@ export async function sendSmtpEmail(input: {
   attachments?: { filename: string; content: string; contentType?: string }[];
 }): Promise<SyncResult> {
   try {
-    const info = await transport().sendMail({
+    const info = await (await transport()).sendMail({
       from: fromHeader(),
       to: input.to,
       replyTo: 'utkarshrawatofficial@gmail.com',
