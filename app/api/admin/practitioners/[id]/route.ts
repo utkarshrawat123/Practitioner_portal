@@ -5,10 +5,8 @@ import { approvePractitioner, rejectPractitioner, retrySync } from '@/lib/pipeli
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
   if (!(await getPractitioner(id))) {
@@ -31,10 +29,8 @@ export async function POST(
   }
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
   const practitioner = await getPractitioner(id);

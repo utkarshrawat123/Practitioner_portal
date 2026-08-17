@@ -5,7 +5,8 @@ import { getMedia, setMediaPublished, deleteMedia } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -15,7 +16,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json({ media: await setMediaPublished(id, body.published) });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });

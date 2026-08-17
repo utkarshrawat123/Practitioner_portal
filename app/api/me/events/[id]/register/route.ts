@@ -6,7 +6,8 @@ import { sendEventConfirmation } from '@/lib/events/notify';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   const p = await getSessionPractitioner(req);
   if (!p || p.status !== 'approved') return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const event = await getHubEvent(Number(params.id));
@@ -21,7 +22,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   return NextResponse.json({ ok: true, emailed: email.ok });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   const p = await getSessionPractitioner(req);
   if (!p || p.status !== 'approved') return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   await unregisterFromEvent(p.id, Number(params.id));

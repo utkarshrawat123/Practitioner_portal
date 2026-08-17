@@ -8,7 +8,7 @@ import { getPractitioner, type Practitioner } from '@/lib/db';
  * Used by the layout header and the dashboard/welcome page shells.
  */
 export async function getServerSessionPractitioner(): Promise<Practitioner | null> {
-  const value = cookies().get('wn_session')?.value;
+  const value = (await cookies()).get('wn_session')?.value;
   if (!value) return null;
   const id = verifySessionValue(value);
   return id ? getPractitioner(id) : null;

@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 const schema = z.object({ status: z.enum(['open', 'closed']) });
 
 /** Close or reopen a conversation. */
-export async function POST(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   if (!(await getConversation(Number(params.id)))) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });

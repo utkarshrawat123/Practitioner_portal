@@ -3,7 +3,8 @@ import { getCartByToken, markCartPaid, getPractitioner, recordOrder } from '@/li
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: { token: string } }): Promise<NextResponse> {
+export async function GET(_req: Request, props: { params: Promise<{ token: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   const cart = await getCartByToken(params.token);
   if (!cart) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   const practitioner = await getPractitioner(cart.practitionerId);
@@ -17,7 +18,8 @@ export async function GET(_req: Request, { params }: { params: { token: string }
 }
 
 /** Mock payment: mark paid + attribute to the practitioner via the existing orders pipeline. */
-export async function POST(_req: Request, { params }: { params: { token: string } }): Promise<NextResponse> {
+export async function POST(_req: Request, props: { params: Promise<{ token: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   const cart = await getCartByToken(params.token);
   if (!cart) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (cart.status !== 'paid') {

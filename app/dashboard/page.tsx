@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   // Every login shows the Welcome takeover: gate on the per-login session
   // cookie (set on dismiss, cleared by the login routes), not the permanent
   // has_seen_welcome flag — so existing practitioners see it too, each login.
-  if (p && p.status === 'approved' && !cookies().get(WELCOME_COOKIE)) {
+  if (p && p.status === 'approved' && !(await cookies()).get(WELCOME_COOKIE)) {
     redirect('/onboarding/welcome');
   }
   return <DashboardApp />;

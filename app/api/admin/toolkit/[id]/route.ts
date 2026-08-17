@@ -17,7 +17,8 @@ const schema = z.object({
   published: z.boolean().optional(),
 });
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const existing = await getToolkitResource(Number(params.id));
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -31,7 +32,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json({ resource });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   await deleteToolkitResource(Number(params.id));
   return NextResponse.json({ ok: true });

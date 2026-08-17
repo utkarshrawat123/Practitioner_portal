@@ -14,14 +14,16 @@ const patchSchema = z.object({
   published: z.boolean().optional(),
 });
 
-export async function GET(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const pathway = await getPathway(Number(params.id));
   if (!pathway) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json({ pathway, modules: await listPathwayModules(pathway.id) });
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   let json: unknown;
   try { json = await req.json(); } catch { return NextResponse.json({ error: 'Invalid body' }, { status: 400 }); }
@@ -32,7 +34,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json({ pathway });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const pathway = await getPathway(Number(params.id));
   if (!pathway) return NextResponse.json({ error: 'Not found' }, { status: 404 });

@@ -15,7 +15,8 @@ const patchSchema = z.object({
   published: z.boolean().optional(),
 });
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
@@ -30,7 +31,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json({ widget });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });

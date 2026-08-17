@@ -12,7 +12,8 @@ const schema = z.object({
   status: z.enum(['draft', 'published']).optional(),
 });
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   if (!(await getClinicalPearl(Number(params.id)))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   let json: unknown;
@@ -25,7 +26,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json({ pearl });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   await deleteClinicalPearl(Number(params.id));
   return NextResponse.json({ ok: true });

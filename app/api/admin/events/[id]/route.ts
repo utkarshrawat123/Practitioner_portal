@@ -18,7 +18,8 @@ const patchSchema = z.object({
   published: z.boolean().optional(),
 });
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   let json: unknown;
   try { json = await req.json(); } catch { return NextResponse.json({ error: 'Invalid body' }, { status: 400 }); }
@@ -29,7 +30,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   return NextResponse.json({ event });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const event = await getHubEvent(Number(params.id));
   if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });

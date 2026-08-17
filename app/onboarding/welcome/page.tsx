@@ -11,7 +11,7 @@ export default async function WelcomePage() {
   const p = await getServerSessionPractitioner();
   if (!p || p.status !== 'approved') redirect('/dashboard');
   // Already dismissed this login session → straight to the dashboard.
-  if (cookies().get(WELCOME_COOKIE)) redirect('/dashboard');
+  if ((await cookies()).get(WELCOME_COOKIE)) redirect('/dashboard');
   return (
     <div className={`${fraunces.variable} ${inter.variable}`}>
       <WelcomeExperience firstName={p.name.split(' ')[0] || null} />

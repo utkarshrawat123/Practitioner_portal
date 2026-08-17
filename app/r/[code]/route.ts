@@ -4,10 +4,8 @@ import { shopifyDiscountUrl } from '@/lib/codes';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { code: string } }
-): Promise<NextResponse> {
+export async function GET(_req: Request, props: { params: Promise<{ code: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   const code = (params.code ?? '').toUpperCase();
   try {
     const practitioner = await findByCode(code);

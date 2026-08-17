@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic';
 const schema = z.object({ body: z.string().trim().min(1, 'Message cannot be empty').max(2000) });
 
 /** Full thread for one conversation; viewing marks practitioner messages read. */
-export async function GET(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const convo = await getConversation(Number(params.id));
   if (!convo) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -24,7 +25,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }):
 }
 
 /** Admin reply. */
-export async function POST(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const convo = await getConversation(Number(params.id));
   if (!convo) return NextResponse.json({ error: 'Not found' }, { status: 404 });

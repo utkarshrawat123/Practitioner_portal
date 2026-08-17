@@ -13,7 +13,8 @@ const patchSchema = z.object({
   required: z.boolean().optional(),
 });
 
-export async function PATCH(req: Request, { params }: { params: { id: string; moduleId: string } }): Promise<NextResponse> {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string; moduleId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   let json: unknown;
   try { json = await req.json(); } catch { return NextResponse.json({ error: 'Invalid body' }, { status: 400 }); }
@@ -24,7 +25,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string; mo
   return NextResponse.json({ module });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string; moduleId: string } }): Promise<NextResponse> {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string; moduleId: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const existing = await getPathwayModule(Number(params.moduleId));
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });

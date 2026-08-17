@@ -13,7 +13,8 @@ const schema = z.object({
   required: z.boolean().optional(),
 });
 
-export async function POST(req: Request, { params }: { params: { id: string } }): Promise<NextResponse> {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const pathway = await getPathway(Number(params.id));
   if (!pathway) return NextResponse.json({ error: 'Not found' }, { status: 404 });

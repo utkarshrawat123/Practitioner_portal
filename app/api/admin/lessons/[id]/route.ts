@@ -18,10 +18,8 @@ const fieldsSchema = z.object({
   topics: z.array(z.string()).min(1),
 });
 
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-): Promise<NextResponse> {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const params = await props.params;
   if (!isAuthed(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   const id = Number(params.id);
   if (!(await getLesson(id))) return NextResponse.json({ error: 'Not found' }, { status: 404 });
