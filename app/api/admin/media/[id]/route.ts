@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { del } from '@vercel/blob';
+import { deleteObjects } from '@/lib/storage';
 import { isAuthed } from '@/lib/adminAuth';
 import { getMedia, setMediaPublished, deleteMedia } from '@/lib/db';
 
@@ -23,9 +23,10 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   const item = await getMedia(id);
   if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  // Best-effort: remove any Blob-hosted file + uploaded thumbnail. Links have null pathnames.
-  const urls = [item.pathname && item.url, item.thumbnailPathname && item.thumbnailUrl].filter(Boolean) as string[];
-  if (urls.length) { try { await del(urls); } catch (err) { console.error('media blob cleanup failed', err); } }
+  // Best-effort: remove any stored file + uploaded thumbnail by key (pathname).
+  // Links have null pathnames and nothing to delete.
+  const keys = [item.pathname, item.thumbnailPathname].filter(Boolean) as string[];
+  if (keys.length) { try { await deleteObjects(keys); } catch (err) { console.error('media storage cleanup failed', err); } }
   await deleteMedia(id);
   return NextResponse.json({ ok: true });
 }

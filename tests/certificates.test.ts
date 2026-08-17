@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const put = vi.fn(async () => ({ url: 'https://blob.example/cert.pdf' }));
-vi.mock('@vercel/blob', () => ({ put: (...a: unknown[]) => put(...a) }));
+const put = vi.fn(async () => ({ key: 'certificates/cert.pdf', url: 'https://blob.example/cert.pdf' }));
+vi.mock('@/lib/storage', () => ({ putObject: (...a: unknown[]) => put(...a) }));
 
 let dir: string;
 beforeEach(() => {

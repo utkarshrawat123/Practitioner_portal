@@ -3,9 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { del } from '@vercel/blob';
+import { deleteObjects } from '@/lib/storage';
 
-// Blob del() is mocked so DELETE never hits the network.
+// The media DELETE route now deletes via lib/storage (R2/local); the cleanup
+// route still uses Vercel Blob del(). Mock both so neither hits the network.
 vi.mock('@vercel/blob', () => ({ del: vi.fn(async () => {}) }));
+vi.mock('@/lib/storage', () => ({ deleteObjects: vi.fn(async () => {}) }));
 
 let dir: string;
 beforeEach(() => {
@@ -85,7 +88,7 @@ describe('/api/admin/media', () => {
       { params: { id: '1' } }
     );
     expect(deleteRes.status).toBe(200);
-    expect(del).toHaveBeenCalledWith(['https://blob/x.pdf', 'https://blob/t.png']);
+    expect(deleteObjects).toHaveBeenCalledWith(['media/x.pdf', 'thumbnails/t.png']);
     expect(await (await import('@/lib/db')).getMedia(1)).toBeNull();
   });
 

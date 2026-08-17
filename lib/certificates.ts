@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { put } from '@vercel/blob';
+import { putObject } from '@/lib/storage';
 import {
   type Pathway,
   type Certificate,
@@ -70,7 +70,7 @@ export async function maybeIssueCertificate(
     cpdHours: pathway.cpdHours,
     date,
   });
-  const { url } = await put(
+  const { url } = await putObject(
     `certificates/${pathway.id}-${practitionerId}-${Date.now()}.pdf`,
     Buffer.from(pdf),
     { access: 'public', contentType: 'application/pdf' }

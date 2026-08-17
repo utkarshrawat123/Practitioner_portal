@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { putObject } from '@/lib/storage';
 import { verifyCertUploadToken } from '@/lib/certUpload';
 import { addEvent, getPractitioner, setCertification } from '@/lib/db';
 
@@ -59,7 +59,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   const pathname = `certifications/${id}-${Date.now()}-${safeName}`;
   let url: string;
   try {
-    const blob = await put(pathname, file, { access: 'public', contentType: file.type });
+    const blob = await putObject(pathname, file, { access: 'private', contentType: file.type });
     url = blob.url;
   } catch (err) {
     console.error('certification upload failed', err);

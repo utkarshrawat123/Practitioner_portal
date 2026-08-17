@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const put = vi.fn(async () => ({ url: 'https://blob.example/certifications/cert.pdf' }));
-vi.mock('@vercel/blob', () => ({ put: (...a: unknown[]) => put(...a) }));
+const put = vi.fn(async () => ({ key: 'certifications/cert.pdf', url: '/api/files/certifications/cert.pdf' }));
+vi.mock('@/lib/storage', () => ({ putObject: (...a: unknown[]) => put(...a) }));
 
 let dir: string;
 beforeEach(() => {
@@ -88,7 +88,7 @@ describe('POST /api/certification (upload)', () => {
 
     const { getPractitioner, listEvents } = await import('@/lib/db');
     const after = await getPractitioner(p.id);
-    expect(after!.certificationUrl).toBe('https://blob.example/certifications/cert.pdf');
+    expect(after!.certificationUrl).toBe('/api/files/certifications/cert.pdf');
     expect(after!.certificationFilename).toBe('proof.pdf');
     const events = await listEvents(p.id);
     expect(events.some((e) => e.type === 'certification')).toBe(true);
