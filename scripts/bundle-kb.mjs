@@ -15,7 +15,9 @@ function readMarkdownFiles(dir, isProduct) {
     .filter((f) => f.endsWith('.md'))
     .sort()
     .map((file) => {
-      const content = fs.readFileSync(path.join(dir, file), 'utf8');
+      // Keep the bundle byte-identical across platforms: Windows checks
+      // knowledge/*.md out as CRLF (core.autocrlf), so bundle LF regardless.
+      const content = fs.readFileSync(path.join(dir, file), 'utf8').replace(/\r\n/g, '\n');
       const heading = content.match(/^#\s+(.+)$/m);
       return {
         id: file.replace(/\.md$/, ''),

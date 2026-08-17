@@ -1,0 +1,6 @@
+# The AI knowledge base is read byte-for-byte into the assistant prompt and
+# bundled into lib/ai/kb.bundle.json for the Workers runtime (no filesystem).
+# Pin these to LF so a contributor on Windows (core.autocrlf) cannot commit a
+# CRLF bundle that diffs against the same content bundled on macOS/Linux.
+knowledge/**/*.md text eol=lf
+lib/ai/kb.bundle.json text eol=lf

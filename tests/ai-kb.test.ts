@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { loadKnowledgeBase, clearKbCacheForTests, isKnownProduct } from '@/lib/ai/kb';
 
@@ -28,6 +30,17 @@ describe('loadKnowledgeBase', () => {
     clearKbCacheForTests();
     expect(loadKnowledgeBase(FIXTURE_DIR)).not.toBe(first);
   });
+
+  it('normalises CRLF to LF so the prompt is identical on every platform', () => {
+    // Windows checks knowledge/*.md out as CRLF (core.autocrlf), which would
+    // otherwise leak \r into combinedText and into the bundle.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kb-crlf-'));
+    fs.writeFileSync(path.join(dir, 'crlf.md'), '# CRLF Doc\r\n\r\nline one\r\nline two\r\n');
+    const kb = loadKnowledgeBase(dir);
+    expect(kb.documents[0].content).not.toContain('\r');
+    expect(kb.combinedText).not.toContain('\r');
+    expect(kb.documents[0].title).toBe('CRLF Doc');
+  });
 });
 
 describe('isKnownProduct', () => {
@@ -41,12 +54,7 @@ describe('isKnownProduct', () => {
   });
 });
 
-describe('real knowledge base', () => {
-  it('loads at least 5 sample product dossiers, all marked SAMPLE', () => {
-    const kb = loadKnowledgeBase(path.join(process.cwd(), 'knowledge'));
-    expect(kb.productTitles.length).toBeGreaterThanOrEqual(5);
-    for (const doc of kb.documents) {
-      expect(doc.content).toContain('SAMPLE — replace with approved clinical content');
-    }
-  });
-});
+// The real knowledge base is covered by tests/kb-contract.test.ts, which checks
+// the dossier contract and clinical-review status rather than a literal SAMPLE
+// banner (that assertion would have to be deleted the moment real content lands,
+// leaving nothing enforcing the unapproved-content gate).

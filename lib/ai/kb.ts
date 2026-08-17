@@ -33,7 +33,10 @@ function readMarkdownFiles(dir: string, isProduct: boolean): KbDocument[] {
       .filter((f) => f.endsWith('.md'))
       .sort()
       .map((file) => {
-        const content = fs.readFileSync(path.join(dir, file), 'utf8');
+        // Normalise newlines: Windows checks knowledge/*.md out as CRLF
+        // (core.autocrlf), which would otherwise leak \r into the prompt and
+        // make the bundle differ from one built on macOS/Linux.
+        const content = fs.readFileSync(path.join(dir, file), 'utf8').replace(/\r\n/g, '\n');
         const heading = content.match(/^#\s+(.+)$/m);
         return {
           id: file.replace(/\.md$/, ''),

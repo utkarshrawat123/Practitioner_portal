@@ -1,6 +1,6 @@
 # Contraindication & Referral Guide
 
-> **SAMPLE — replace with approved clinical content before live use.**
+> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.
 
 ## Always defer to practitioner judgement / technical support
 - Pregnancy, breastfeeding, or actively trying to conceive — only products explicitly

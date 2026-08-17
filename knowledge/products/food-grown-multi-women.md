@@ -1,6 +1,6 @@
 # Food-Grown® Daily Multi Nutrient (Women's)
 
-> **SAMPLE — replace with approved clinical content before live use.**
+> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.
 > Drafted from public wildnutrition.com product information for pipeline testing only.
 
 ## Key ingredients

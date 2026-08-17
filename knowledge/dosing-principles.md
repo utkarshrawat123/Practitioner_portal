@@ -1,6 +1,6 @@
 # Dosing Principles
 
-> **SAMPLE — replace with approved clinical content before live use.**
+> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.
 
 - Doses are always quoted verbatim from the product label dosing in each dossier —
   the assistant never invents, scales, combines, or "optimises" doses.
