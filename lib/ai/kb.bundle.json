@@ -13,9 +13,27 @@
       "isProduct": true
     },
     {
+      "id": "high-fibre-plus",
+      "title": "High Fibre Plus",
+      "content": "# High Fibre Plus\n\n> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nBlend of soluble and insoluble plant fibres (including psyllium and flaxseed)\nwith food-state B vitamins to support normal digestive function.\n\n## Label dosing\n2 capsules daily, taken with or after food and a full glass of water.\n\n## Mechanism & evidence notes\nDietary fibre contributes to normal bowel function; psyllium husk in particular\nhas an established role in maintaining regularity and supporting normal blood\ncholesterol levels at adequate intakes. Practitioners commonly consider it where\ndietary fibre intake is assessed as low, alongside dietary change rather than in\nplace of it.\n\n## Cautions & interactions\n- Must be taken with adequate fluid — inadequate water intake with fibre supplements risks obstruction.\n- Separate from oral medication by 1–2 hours — fibre can reduce absorption of some medicines.\n- Caution in swallowing difficulties, oesophageal narrowing or existing GI obstruction (contraindicated).\n- Introduce gradually where fibre intake has been low to minimise bloating.\n",
+      "isProduct": true
+    },
+    {
+      "id": "immune-support",
+      "title": "Immune Support",
+      "content": "# Immune Support\n\n> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nFood-Grown® vitamin C, vitamin D, zinc and selenium with beta-glucans and\nelderberry in a food-state matrix.\n\n## Label dosing\n2 capsules daily, taken with or after food.\n\n## Mechanism & evidence notes\nVitamins C and D, zinc and selenium each contribute to the normal function of the\nimmune system (EFSA authorised claims). Practitioners commonly consider it as\nseasonal foundational support or where dietary assessment suggests low intakes of\nthese micronutrients.\n\n## Cautions & interactions\n- Contains zinc — long-term intakes above the label dose can impair copper status; never exceed label dosing.\n- Contains vitamin D — review total vitamin D intake across all supplements to avoid duplication.\n- Caution with immunosuppressant medication — immune-active botanicals require the client's medical team's involvement.\n- Separate zinc-containing products from tetracyclines and quinolones by 2–4 hours.\n",
+      "isProduct": true
+    },
+    {
       "id": "iron-plus",
       "title": "Iron Plus (Food-Grown®)",
       "content": "# Iron Plus (Food-Grown®)\n\n> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nFood-Grown® iron providing 20mg elemental iron per capsule, with vitamin C,\nmolybdenum and B vitamins in a food-state matrix.\n\n## Label dosing\n1 capsule daily, taken with or after food.\n\n## Mechanism & evidence notes\nIron contributes to normal formation of red blood cells and haemoglobin, normal\noxygen transport, and reduction of tiredness and fatigue (EFSA authorised claims).\nFood-state iron is commonly selected by practitioners for clients reporting\ngastric discomfort with conventional iron salts. Relevant where low ferritin has\nbeen identified by an appropriate healthcare professional.\n\n## Cautions & interactions\n- Iron supplementation should follow confirmed low iron status — unsupervised iron loading is inappropriate.\n- Keep out of reach of children — iron overdose is dangerous in children.\n- Reduces absorption of levothyroxine, tetracyclines and quinolones — separate by 2–4 hours.\n- Caution in haemochromatosis and iron-storage conditions (contraindicated).\n",
+      "isProduct": true
+    },
+    {
+      "id": "lions-mane-plus",
+      "title": "Lion's Mane Plus",
+      "content": "# Lion's Mane Plus\n\n> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nLion's mane (Hericium erinaceus) fruiting-body extract with supporting B vitamins\nin a food-state matrix.\n\n## Label dosing\n2 capsules daily, taken with or after food.\n\n## Mechanism & evidence notes\nLion's mane is a culinary-medicinal mushroom studied for cognitive performance,\nfocus and mood support; erinacines and hericenones are the constituents most\ndiscussed in the literature. Practitioners commonly consider it in protocols for\nconcentration and cognitive resilience. Evidence in humans is early-stage —\nposition it as supportive, not therapeutic.\n\n## Cautions & interactions\n- Not recommended in pregnancy or breastfeeding (insufficient safety data).\n- Caution with known mushroom allergy — discontinue on any hypersensitivity reaction.\n- Theoretical additive effect with anticoagulant/antiplatelet medication — practitioner review required.\n- Discontinue 2 weeks before surgery.\n",
       "isProduct": true
     },
     {
@@ -25,9 +43,21 @@
       "isProduct": true
     },
     {
+      "id": "menopause-complex",
+      "title": "Food-Grown® Menopause Complex",
+      "content": "# Food-Grown® Menopause Complex\n\n> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nFood-Grown® B vitamins, magnesium and zinc with sage, red clover and ashwagandha,\nformulated for the menopause transition.\n\n## Label dosing\n2 capsules daily, taken with or after food.\n\n## Mechanism & evidence notes\nVitamin B6 contributes to the regulation of hormonal activity; B vitamins and\nmagnesium contribute to the reduction of tiredness and fatigue and to normal\npsychological function (EFSA authorised claims). Sage has traditional use for\nmenopausal hot flushes. Practitioners commonly consider it as foundational\nsupport through perimenopause and menopause alongside dietary and lifestyle work.\n\n## Cautions & interactions\n- Not for use in pregnancy or breastfeeding.\n- Contains red clover (isoflavones) — hormone-sensitive conditions and tamoxifen require the client's medical team's involvement.\n- Contains ashwagandha — caution with thyroid medication, sedatives and immunosuppressants; discontinue 2 weeks before surgery.\n- Do not combine with other high-dose B-complex or magnesium products without reviewing total intakes (point out overlaps, e.g. with Magnesium (Food-Grown®)).\n",
+      "isProduct": true
+    },
+    {
       "id": "omega-3",
       "title": "Omega 3 (Pure Deep-Sea Fish Oil)",
       "content": "# Omega 3 (Pure Deep-Sea Fish Oil)\n\n> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nPure deep-sea fish oil providing EPA and DHA per two-capsule dose, certified\nsustainable, independently tested for oxidation and contaminants.\n\n## Label dosing\n2 capsules daily, taken with food.\n\n## Mechanism & evidence notes\nEPA and DHA contribute to the normal function of the heart (EFSA authorised claim,\n≥250mg EPA+DHA daily); DHA contributes to maintenance of normal brain function and\nvision. Practitioners commonly consider omega-3 status alongside dietary oily-fish\nintake, particularly in vegetarian-leaning diets.\n\n## Cautions & interactions\n- Not suitable for people with fish allergy.\n- Caution with anticoagulant/antiplatelet medication (warfarin, DOACs, aspirin) — high-dose fish oil may increase bleeding tendency; practitioner supervision required.\n- Not a vegetarian/vegan product.\n",
+      "isProduct": true
+    },
+    {
+      "id": "shatavari-plus",
+      "title": "SRI-81™ Shatavari Plus",
+      "content": "# SRI-81™ Shatavari Plus\n\n> **Clinical review:** AWAITING APPROVAL — not for live practitioner use.\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nSRI-81™ shatavari (Asparagus racemosus) root extract with Food-Grown® supporting\nnutrients.\n\n## Label dosing\n1 capsule daily, taken with or after food.\n\n## Mechanism & evidence notes\nShatavari is a botanical traditionally used in Ayurvedic practice and studied for\nsupport through the menstrual cycle and menopause transition. Human evidence is\nlimited and largely traditional-use based — position as supportive within a wider\nprotocol, and defer to practitioner judgement on hormonal presentations.\n\n## Cautions & interactions\n- Not recommended in pregnancy or breastfeeding without practitioner supervision.\n- Caution with known allergy to asparagus species.\n- Theoretical interaction with diuretics and lithium — practitioner review required where either is prescribed.\n- Hormone-sensitive conditions: defer to the practitioner and the client's medical team.\n",
       "isProduct": true
     },
     {

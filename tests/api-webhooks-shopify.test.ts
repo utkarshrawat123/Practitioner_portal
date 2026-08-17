@@ -91,3 +91,79 @@ describe('POST /api/webhooks/shopify', () => {
     expect(s.revenueAllTime).toBe(55);
   });
 });
+
+// Patient-cart reconciliation: createDraftOrder() stamps the cart token onto the
+// draft order as a custom attribute, which Shopify propagates to the completed
+// order's note_attributes. The webhook uses that to mark OUR cart paid and
+// attribute the sale — no discount code involved.
+describe('POST /api/webhooks/shopify — patient cart reconciliation', () => {
+  async function seedCart(): Promise<{ practitionerId: number; token: string; cartId: number }> {
+    const { execForTests, createPatientCart } = await import('@/lib/db');
+    const ins = await execForTests(
+      `INSERT INTO practitioners (name, email, register_body, register_number, qualification_status, status, affiliate_code)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ['Cart Owner', 'owner@example.com', 'BANT', '2', 'qualified', 'approved', 'WN-OWNER-XY9Z']
+    );
+    const practitionerId = ins.lastInsertRowid;
+    const token = 'carttok-abc123';
+    const cart = await createPatientCart({
+      practitionerId,
+      patientName: 'Pat Patient',
+      patientEmail: 'pat@example.com',
+      token,
+      provider: 'shopify',
+      externalId: 'gid://shopify/DraftOrder/999',
+      payUrl: 'https://test-store.myshopify.com/invoices/abc',
+      currency: 'GBP',
+      subtotal: 41,
+      discountAmount: 4.1,
+      total: 36.9,
+      commissionAmount: 7.38,
+      items: [{ productRef: 'gid://shopify/ProductVariant/111', title: 'Magnesium', imageUrl: 'x', unitPrice: 20.5, qty: 2 }],
+    });
+    return { practitionerId, token, cartId: cart.id };
+  }
+
+  const cartOrder = (token: string, over: Record<string, unknown> = {}) =>
+    order({
+      discount_codes: [],
+      note_attributes: [{ name: 'wn_cart_token', value: token }],
+      current_total_price: '36.90',
+      ...over,
+    });
+
+  it('marks the cart paid and attributes the sale to its practitioner', async () => {
+    const { token, cartId } = await seedCart();
+    const body = cartOrder(token);
+    const { POST } = await import('@/app/api/webhooks/shopify/route');
+    const res = await POST(req(body, sign(body)));
+    expect(res.status).toBe(200);
+    expect((await res.json()).matched).toBe(true);
+
+    const { getCartByToken, orderStatsByCode } = await import('@/lib/db');
+    const cart = await getCartByToken(token);
+    expect(cart?.id).toBe(cartId);
+    expect(cart?.status).toBe('paid');
+    const s = await orderStatsByCode('WN-OWNER-XY9Z');
+    expect(s.ordersAllTime).toBe(1);
+    expect(s.revenueAllTime).toBe(36.9);
+  });
+
+  it('is idempotent — a webhook retry neither double-counts nor re-pays', async () => {
+    const { token } = await seedCart();
+    const body = cartOrder(token);
+    const { POST } = await import('@/app/api/webhooks/shopify/route');
+    await POST(req(body, sign(body)));
+    await POST(req(body, sign(body)));
+    const { orderStatsByCode } = await import('@/lib/db');
+    expect((await orderStatsByCode('WN-OWNER-XY9Z')).ordersAllTime).toBe(1);
+  });
+
+  it('acknowledges an unknown cart token without writing anything', async () => {
+    const body = cartOrder('no-such-token');
+    const { POST } = await import('@/app/api/webhooks/shopify/route');
+    const res = await POST(req(body, sign(body)));
+    expect(res.status).toBe(200);
+    expect((await res.json()).matched).toBe(false);
+  });
+});

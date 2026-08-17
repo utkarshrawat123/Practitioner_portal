@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { findByCode, recordOrder } from '@/lib/db';
+import { findByCode, recordOrder, getCartByToken, markCartPaid, getPractitioner } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +8,7 @@ interface ShopifyOrder {
   id?: number | string;
   admin_graphql_api_id?: string;
   discount_codes?: Array<{ code?: string }>;
+  note_attributes?: Array<{ name?: string; value?: string }>;
   current_total_price?: string | number;
   total_price?: string | number;
   currency?: string;
@@ -46,6 +47,34 @@ export async function POST(req: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
+  const orderIdStr = String(order.admin_graphql_api_id ?? order.id ?? '');
+
+  // Patient-cart reconciliation FIRST: draft orders created by the portal carry
+  // wn_cart_token as a custom attribute, which Shopify propagates to the paid
+  // order's note_attributes. This path attributes by cart ownership, not
+  // discount code (patient carts use a draft-order discount, not a code).
+  const cartToken = (order.note_attributes ?? []).find((a) => a.name === 'wn_cart_token')?.value;
+  if (cartToken) {
+    const cart = await getCartByToken(cartToken);
+    // Unknown token → acknowledge so Shopify doesn't retry forever.
+    if (!cart) return NextResponse.json({ ok: true, matched: false });
+    if (!orderIdStr) return NextResponse.json({ error: 'Order id missing' }, { status: 400 });
+    if (cart.status !== 'paid') {
+      await markCartPaid(cart.id);
+      const practitioner = await getPractitioner(cart.practitionerId);
+      await recordOrder({
+        orderId: orderIdStr,
+        practitionerId: cart.practitionerId,
+        code: practitioner?.affiliateCode ?? `cart-${cart.id}`,
+        total: Number(order.current_total_price ?? order.total_price ?? cart.total),
+        currency: String(order.currency ?? cart.currency),
+        financialStatus: order.financial_status ? String(order.financial_status) : null,
+        createdAt: String(order.created_at ?? new Date().toISOString()),
+      });
+    }
+    return NextResponse.json({ ok: true, matched: true });
+  }
+
   const codes = (order.discount_codes ?? [])
     .map((d) => (d.code ?? '').trim())
     .filter(Boolean);
@@ -65,11 +94,10 @@ export async function POST(req: Request): Promise<NextResponse> {
   // Not a practitioner referral — acknowledge (200) so Shopify doesn't retry.
   if (!practitionerId) return NextResponse.json({ ok: true, matched: false });
 
-  const orderId = String(order.admin_graphql_api_id ?? order.id ?? '');
-  if (!orderId) return NextResponse.json({ error: 'Order id missing' }, { status: 400 });
+  if (!orderIdStr) return NextResponse.json({ error: 'Order id missing' }, { status: 400 });
 
   await recordOrder({
-    orderId,
+    orderId: orderIdStr,
     practitionerId,
     code: matchedCode,
     total: Number(order.current_total_price ?? order.total_price ?? 0),

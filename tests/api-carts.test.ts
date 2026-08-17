@@ -69,4 +69,29 @@ describe('patient carts API', () => {
     const listB = await GET(new Request('http://x/api/me/carts', { headers: await pHeaders(b.id) }));
     expect((await listB.json()).carts.length).toBe(0);
   });
+
+  it('POST /api/me/carts surfaces a 502 when the Shopify draft order fails (no silent mock link)', async () => {
+    const p = await seedApproved();
+    process.env.SHOPIFY_STORE_DOMAIN = 'test-store.myshopify.com';
+    process.env.SHOPIFY_ADMIN_TOKEN = 'shpat_test';
+    const realFetch = global.fetch;
+    // Every Shopify call fails: the catalog read degrades to mock (so the item
+    // resolves), but the draft-order WRITE must surface as an error response.
+    global.fetch = (async () => ({ ok: false, status: 500, json: async () => ({}), text: async () => 'boom' })) as unknown as typeof fetch;
+    try {
+      const { MOCK_CATALOG } = await import('@/lib/commerce');
+      const { POST } = await import('@/app/api/me/carts/route');
+      const res = await POST(new Request('http://x/api/me/carts', { method: 'POST', headers: await pHeaders(p.id),
+        body: JSON.stringify({ patientName: 'Pat', items: [{ productRef: MOCK_CATALOG[0].id, qty: 1 }] }) }));
+      expect(res.status).toBe(502);
+      expect((await res.json()).error).toMatch(/store/i);
+      // And no half-created cart is left behind.
+      const { listPatientCartsForPractitioner } = await import('@/lib/db');
+      expect((await listPatientCartsForPractitioner(p.id)).length).toBe(0);
+    } finally {
+      global.fetch = realFetch;
+      delete process.env.SHOPIFY_STORE_DOMAIN;
+      delete process.env.SHOPIFY_ADMIN_TOKEN;
+    }
+  });
 });

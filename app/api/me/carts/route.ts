@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { getSessionPractitioner } from '@/lib/practitionerAuth';
-import { getCatalog, priceCart, createDraftOrder } from '@/lib/commerce';
+import { getCatalog, priceCart, createDraftOrder, CommerceError } from '@/lib/commerce';
 import { createPatientCart, listPatientCartsForPractitioner } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -39,11 +39,25 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   const totals = priceCart(lineItems);
   const token = randomBytes(24).toString('hex');
-  const draft = await createDraftOrder({
-    token, patientName: parsed.data.patientName, patientEmail: parsed.data.patientEmail || null,
-    items: lineItems, subtotal: totals.subtotal, discountAmount: totals.discountAmount, total: totals.total,
-    practitionerId: p.id,
-  });
+  let draft;
+  try {
+    draft = await createDraftOrder({
+      token, patientName: parsed.data.patientName, patientEmail: parsed.data.patientEmail || null,
+      items: lineItems, subtotal: totals.subtotal, discountAmount: totals.discountAmount, total: totals.total,
+      practitionerId: p.id,
+    });
+  } catch (err) {
+    // With Shopify configured, a failed draft order must NOT silently fall back
+    // to a mock pay link the patient can't actually pay on. Tell the practitioner.
+    if (err instanceof CommerceError) {
+      console.error('[carts] draft order failed:', err.message);
+      return NextResponse.json(
+        { error: 'Could not create the order with the store. Please try again or contact support.' },
+        { status: 502 }
+      );
+    }
+    throw err;
+  }
 
   const cart = await createPatientCart({
     practitionerId: p.id, patientName: parsed.data.patientName, patientEmail: parsed.data.patientEmail || null,
