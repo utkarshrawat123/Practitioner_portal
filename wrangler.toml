@@ -19,9 +19,11 @@ database_id = "PLACEHOLDER_D1_ID"
 binding = "BUCKET"
 bucket_name = "practitioner-portal-media"
 
-# --- Cron (mirrors today's vercel.json) ---
+# --- Cron Triggers ---
+# Each schedule here MUST have a matching entry in lib/cron/map.ts (worker.ts
+# scheduled() routes by exact cron expression; an unmapped trigger does nothing).
 [triggers]
-crons = ["0 6 * * *", "0 7 * * *"]
+crons = ["0 6 * * *", "*/5 * * * *"]
 
 [vars]
 PORTAL_URL = "http://localhost:8787"

@@ -11,7 +11,10 @@ interface Reply { id: number; authorName: string; body: string; createdAt: strin
 const TYPE_LABELS: Record<string, string> = { discussion: 'Discussion', ask_expert: 'Ask the Expert', member_spotlight: 'Member Spotlight' };
 const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
 const input = 'mt-1 w-full border border-stone px-3 py-2 focus:border-terracotta focus:outline-none';
-const FB_GROUP_URL = 'https://www.facebook.com/groups/wildnutritionpractitioners';
+// PLACEHOLDER default — the real group URL comes from the business. Override
+// without a code change via NEXT_PUBLIC_FB_GROUP_URL (baked in at build time).
+const FB_GROUP_URL =
+  process.env.NEXT_PUBLIC_FB_GROUP_URL || 'https://www.facebook.com/groups/wildnutritionpractitioners';
 
 export default function CommunityApp() {
   const [posts, setPosts] = useState<Post[] | null>(null);

@@ -8,7 +8,10 @@
  */
 export const CRON_MAP: Record<string, string> = {
   '0 6 * * *': '/api/cron/run', // daily automation: tiers, re-engagement, quarterly report
-  '0 7 * * *': '/api/cron/chat-alerts', // daily missed-message alerts
+  // Every 5 minutes (was daily 7am — a Vercel Hobby cap that no longer applies).
+  // Safe at this cadence: sendChatAlerts() emails once per waiting conversation
+  // and marks it alerted, so retries are no-ops.
+  '*/5 * * * *': '/api/cron/chat-alerts',
 };
 
 export function cronPathFor(cron: string): string | null {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionPractitioner } from '@/lib/practitionerAuth';
 import { listPatientCartsForPractitioner, markCartSent } from '@/lib/db';
 import { sendSmtpEmail } from '@/lib/providers/smtp';
+import { formatMoney } from '@/lib/format';
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -20,7 +21,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 
   const origin = new URL(req.url).origin;
   const link = `${origin}${cart.payUrl}`;
-  const html = `<p>Hi ${esc(cart.patientName)},</p><p>${esc(p.name)} has prepared a Wild Nutrition order for you. You can review and pay here:</p><p><a href="${link}">${link}</a></p><p>Total: £${cart.total.toFixed(2)}</p>`;
+  const html = `<p>Hi ${esc(cart.patientName)},</p><p>${esc(p.name)} has prepared a Wild Nutrition order for you. You can review and pay here:</p><p><a href="${link}">${link}</a></p><p>Total: ${formatMoney(cart.total, cart.currency)}</p>`;
   const result = await sendSmtpEmail({ to: cart.patientEmail, subject: `Your Wild Nutrition order from ${p.name}`, html });
   await markCartSent(cart.id);
   return NextResponse.json({ ok: true, delivered: result.ok, detail: result.detail });

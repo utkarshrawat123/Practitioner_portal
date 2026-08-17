@@ -1,14 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { formatMoney } from '@/lib/format';
 
 interface Product { id: string; title: string; imageUrl: string; price: number; currency: string }
 interface Cart {
-  id: number; patientName: string; patientEmail: string | null; status: string;
+  id: number; patientName: string; patientEmail: string | null; status: string; currency?: string;
   subtotal: number; discountAmount: number; total: number; commissionAmount: number; payUrl: string;
 }
 
-const money = (n: number) => `£${n.toFixed(2)}`;
+const money = (n: number, currency?: string) => formatMoney(n, currency);
 
 export default function CartsApp({ practitionerName }: { practitionerName: string }) {
   const [catalog, setCatalog] = useState<Product[]>([]);
@@ -20,6 +21,7 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sentMsg, setSentMsg] = useState('');
+  const [createError, setCreateError] = useState('');
 
   const loadCarts = useCallback(async () => {
     const r = await fetch('/api/me/carts', { cache: 'no-store' });
@@ -41,7 +43,7 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
 
   async function createCart() {
     if (!patientName.trim() || lines.length === 0 || busy) return;
-    setBusy(true); setSentMsg('');
+    setBusy(true); setSentMsg(''); setCreateError('');
     const res = await fetch('/api/me/carts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ patientName, patientEmail: patientEmail || undefined,
@@ -52,6 +54,12 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
       setCreated({ cart: body.cart, link: `${window.location.origin}${body.payUrl}` });
       setQty({}); setPatientName(''); setPatientEmail('');
       loadCarts();
+    } else {
+      // Surface the failure — a silent no-op here left practitioners clicking
+      // "Create" with nothing happening (e.g. a 502 when the store rejects the
+      // draft order, or a 400 for an unknown product).
+      const body = await res.json().catch(() => ({}));
+      setCreateError(body.error ?? 'Could not create the cart. Please try again.');
     }
     setBusy(false);
   }
@@ -81,7 +89,7 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
               <img src={p.imageUrl} alt="" className="h-14 w-14 shrink-0 rounded object-cover" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{p.title}</p>
-                <p className="text-xs text-ink2/60">{money(p.price)}</p>
+                <p className="text-xs text-ink2/60">{money(p.price, p.currency)}</p>
               </div>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => setItemQty(p.id, (qty[p.id] ?? 0) - 1)} className="h-7 w-7 border border-stone text-ink2">–</button>
@@ -105,6 +113,7 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
           className="mt-4 w-full bg-terracotta px-4 py-2.5 text-xs uppercase tracking-[0.15em] text-cream disabled:opacity-50">
           Create pay link
         </button>
+        {createError && <p className="mt-2 text-sm text-terracotta" role="alert">{createError}</p>}
 
         {created && (
           <div className="mt-4 border-t border-stone pt-4">
@@ -127,9 +136,9 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
           {carts.length === 0 && <p className="p-4 text-sm text-ink2/60">No carts yet.</p>}
           {carts.map((c) => (
             <div key={c.id} className="flex items-center justify-between px-4 py-3 text-sm">
-              <div><span className="font-medium text-ink">{c.patientName}</span> <span className="text-ink2/60">· {money(c.total)}</span></div>
+              <div><span className="font-medium text-ink">{c.patientName}</span> <span className="text-ink2/60">· {money(c.total, c.currency)}</span></div>
               <div className="flex items-center gap-4">
-                <span className="text-forest">You earn {money(c.commissionAmount)}</span>
+                <span className="text-forest">You earn {money(c.commissionAmount, c.currency)}</span>
                 <span className={`rounded-full px-2.5 py-0.5 text-[11px] uppercase tracking-wide ${c.status === 'paid' ? 'bg-forest text-cream' : c.status === 'sent' ? 'bg-sage/50 text-ink' : 'bg-stone/50 text-ink2'}`}>{c.status}</span>
               </div>
             </div>

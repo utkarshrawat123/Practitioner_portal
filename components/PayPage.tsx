@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatMoney } from '@/lib/format';
 
 interface Item { title: string; imageUrl: string | null; unitPrice: number; qty: number }
 interface CartView {
   practitionerName: string; patientName: string; items: Item[];
   subtotal: number; discount: number; total: number; currency: string; status: string;
 }
-
-const money = (n: number) => `£${n.toFixed(2)}`;
 
 export default function PayPage({ token }: { token: string }) {
   const [cart, setCart] = useState<CartView | null>(null);
@@ -34,6 +33,9 @@ export default function PayPage({ token }: { token: string }) {
 
   if (notFound) return <main className="mx-auto max-w-md px-6 py-24 text-center"><p className="text-ink2">This payment link is not valid.</p></main>;
   if (!cart) return <main className="mx-auto max-w-md px-6 py-24 text-center text-ink2/60">Loading…</main>;
+
+  // Carts carry their own currency — never hardcode "£" on a page a patient pays on.
+  const money = (n: number) => formatMoney(n, cart.currency);
 
   return (
     <main className="min-h-screen bg-cream">
