@@ -35,12 +35,29 @@ In the dashboard (Workers → your Worker → Settings → Variables), or via
 | `R2_PUBLIC_BASE` | The R2 public URL from step 1 (used for media URLs) |
 | `PORTAL_URL` | Your live URL (also used by cron self-calls) — set in `[vars]` or as a secret |
 
+**Shopify (set whenever the store credentials arrive — independent of the rest):**
+
+| Secret | Purpose |
+|---|---|
+| `SHOPIFY_STORE_DOMAIN` | e.g. `your-store.myshopify.com` — with `SHOPIFY_ADMIN_TOKEN`, flips `commerceProvider()` to `'shopify'` |
+| `SHOPIFY_ADMIN_TOKEN` | Admin API access token (scopes below) |
+| `SHOPIFY_WEBHOOK_SECRET` | HMAC secret verifying `/api/webhooks/shopify` |
+| `AFFILIATE_DISCOUNT_PERCENT` | Optional; patient/referral discount % (default 10) |
+| `STATS_SOURCE` | Optional; `shopify-live` queries the Admin API directly instead of the local `orders` table (reconciliation) |
+
+Admin API **scopes** to request for the token: `write_discounts` (referral discount codes),
+`read_orders` (live stats query), `read_products` + `write_draft_orders` (Patient Carts once
+the shopify branch of `getCatalog()`/`createDraftOrder()` is implemented — see `HANDOVER.md` §13).
+Also register **`orders/create` + `orders/paid` webhooks** on the store pointing at
+`https://<your-portal>/api/webhooks/shopify`, signed with `SHOPIFY_WEBHOOK_SECRET`.
+
 **Not needed on Cloudflare** (replaced): `TURSO_*`, `BLOB_READ_WRITE_TOKEN`,
 `GMAIL_USER`, `GMAIL_APP_PASSWORD`, all `VERCEL_*`.
 
 ## 4. Connect the repo for git-based deploys (browser only)
 - Cloudflare dashboard → Workers & Pages → **Create → Workers → Connect to Git**.
-- Pick `utkarshrawat123/Practitioner_portal`, branch `main` (or your working branch).
+- Pick `utkarshrawat123/Practitioner_portal`, branch **`cloudflare-migration`** (the default branch —
+  `main` is the pre-migration Vercel app and must NOT be deployed).
 - **Build command:** `npx opennextjs-cloudflare build`
 - **Deploy command:** `npx wrangler deploy` (entry is `worker.ts` per `wrangler.toml`).
 - Every push now builds and deploys automatically — nothing to install locally.
