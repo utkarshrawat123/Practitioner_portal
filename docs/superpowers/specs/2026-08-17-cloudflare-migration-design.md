@@ -24,8 +24,20 @@ copy-paste checklist — no further code work.
    buildable and testable **offline** using Wrangler's local emulators
    (Miniflare: local D1, local R2, local Workers). Real Cloudflare account +
    tokens are needed only for the final production deploy.
-3. **Existing test suite stays green** (~144 tests via Vitest), running against a
-   local file-based libSQL database exactly as today.
+3. **Existing test suite stays green** (358 tests via Vitest as of implementation),
+   running against a local file-based libSQL database exactly as today.
+
+> **Implementation corrections (2026-08-17):**
+> - Cloudflare's current OpenNext adapter requires **Next.js 15+**, so the app was
+>   upgraded 14 → 15 (async `cookies()`/`params`) as a prerequisite.
+> - **Email is load-bearing, not "no change":** production ran on Gmail **SMTP**
+>   (`nodemailer`), which cannot run on Workers. `nodemailer` is now lazy-loaded so
+>   it never bundles into the Worker, and **Resend** (already `fetch`-based) is the
+>   Cloudflare sender — set `RESEND_API_KEY` + `EMAIL_FROM` at go-live.
+> - The AI features run on **Google Gemini** via `fetch` (already Workers-safe);
+>   secrets include `GEMINI_API_KEY`/`GEMINI_API_KEY2`.
+> - The AI knowledge base (`knowledge/*.md`) is now bundled at build time
+>   (`npm run bundle-kb`) so it loads on Workers without a filesystem.
 
 ## 3. Guiding principle — "mock until keyed"
 
