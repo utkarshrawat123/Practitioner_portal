@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import kbBundle from './kb.bundle.json';
 
 export interface KbDocument {
   id: string;
@@ -25,21 +26,26 @@ export function clearKbCacheForTests(): void {
 }
 
 function readMarkdownFiles(dir: string, isProduct: boolean): KbDocument[] {
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir)
-    .filter((f) => f.endsWith('.md'))
-    .sort()
-    .map((file) => {
-      const content = fs.readFileSync(path.join(dir, file), 'utf8');
-      const heading = content.match(/^#\s+(.+)$/m);
-      return {
-        id: file.replace(/\.md$/, ''),
-        title: heading ? heading[1].trim() : file.replace(/\.md$/, ''),
-        content,
-        isProduct,
-      };
-    });
+  try {
+    if (!fs.existsSync(dir)) return [];
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.md'))
+      .sort()
+      .map((file) => {
+        const content = fs.readFileSync(path.join(dir, file), 'utf8');
+        const heading = content.match(/^#\s+(.+)$/m);
+        return {
+          id: file.replace(/\.md$/, ''),
+          title: heading ? heading[1].trim() : file.replace(/\.md$/, ''),
+          content,
+          isProduct,
+        };
+      });
+  } catch {
+    // No filesystem (e.g. Cloudflare Workers) — caller falls back to the bundle.
+    return [];
+  }
 }
 
 export function loadKnowledgeBase(
@@ -48,10 +54,15 @@ export function loadKnowledgeBase(
   const cached = cache.get(dir);
   if (cached) return cached;
 
-  const documents = [
+  // Read from disk in Node/dev (so edits are live); on Workers there is no
+  // filesystem, so fall back to the build-time bundle (scripts/bundle-kb.mjs).
+  let documents = [
     ...readMarkdownFiles(path.join(dir, 'products'), true),
     ...readMarkdownFiles(dir, false),
   ];
+  if (documents.length === 0) {
+    documents = (kbBundle.documents as KbDocument[]);
+  }
   const combinedText = documents
     .map((d) => `=== ${d.title} ===\n${d.content}`)
     .join('\n\n');

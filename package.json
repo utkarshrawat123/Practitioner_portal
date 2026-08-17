@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "generate-lessons": "tsx scripts/generate-lessons.ts",
+    "bundle-kb": "node scripts/bundle-kb.mjs",
     "preview:cf": "opennextjs-cloudflare build && wrangler dev",
     "deploy:cf": "opennextjs-cloudflare build && wrangler deploy",
     "cf-typegen": "wrangler types"

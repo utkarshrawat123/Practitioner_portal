@@ -1,0 +1,46 @@
+{
+  "documents": [
+    {
+      "id": "ashwagandha-plus",
+      "title": "Ashwagandha Plus",
+      "content": "# Ashwagandha Plus\n\n> **SAMPLE — replace with approved clinical content before live use.**\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nKSM-66® ashwagandha root extract 500mg per two-capsule dose with Food-Grown®\nmagnesium and B vitamins.\n\n## Label dosing\n2 capsules daily, taken with or after food.\n\n## Mechanism & evidence notes\nAshwagandha (Withania somnifera) is an adaptogenic herb studied for perceived\nstress and sleep quality; KSM-66® is the most-studied root-only extract with\nmultiple randomised controlled trials at 300–600mg/day. Practitioners commonly\nconsider it in protocols for stress resilience and sleep onset.\n\n## Cautions & interactions\n- Not recommended in pregnancy or breastfeeding.\n- Caution with thyroid medication — ashwagandha may increase thyroid hormone levels.\n- Caution with sedatives and immunosuppressants.\n- Discontinue 2 weeks before surgery.\n",
+      "isProduct": true
+    },
+    {
+      "id": "food-grown-multi-women",
+      "title": "Food-Grown® Daily Multi Nutrient (Women's)",
+      "content": "# Food-Grown® Daily Multi Nutrient (Women's)\n\n> **SAMPLE — replace with approved clinical content before live use.**\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nComprehensive Food-Grown® multivitamin and mineral formulated for women,\nincluding B vitamins, vitamin D, iron, zinc, selenium and iodine in food-state form.\n\n## Label dosing\n3 capsules daily, taken with or after food (can be split across the day).\n\n## Mechanism & evidence notes\nFormulated as foundational micronutrient support for women through adulthood and\nperimenopause. B6 contributes to the regulation of hormonal activity; iodine and\nselenium contribute to normal thyroid function (EFSA authorised claims).\n\n## Cautions & interactions\n- Contains iron — see Iron Plus cautions for interaction spacing (levothyroxine, tetracyclines).\n- Contains iodine — caution with thyroid conditions under medical management.\n- Do not combine with other high-dose multivitamins without reviewing total intakes.\n",
+      "isProduct": true
+    },
+    {
+      "id": "iron-plus",
+      "title": "Iron Plus (Food-Grown®)",
+      "content": "# Iron Plus (Food-Grown®)\n\n> **SAMPLE — replace with approved clinical content before live use.**\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nFood-Grown® iron providing 20mg elemental iron per capsule, with vitamin C,\nmolybdenum and B vitamins in a food-state matrix.\n\n## Label dosing\n1 capsule daily, taken with or after food.\n\n## Mechanism & evidence notes\nIron contributes to normal formation of red blood cells and haemoglobin, normal\noxygen transport, and reduction of tiredness and fatigue (EFSA authorised claims).\nFood-state iron is commonly selected by practitioners for clients reporting\ngastric discomfort with conventional iron salts. Relevant where low ferritin has\nbeen identified by an appropriate healthcare professional.\n\n## Cautions & interactions\n- Iron supplementation should follow confirmed low iron status — unsupervised iron loading is inappropriate.\n- Keep out of reach of children — iron overdose is dangerous in children.\n- Reduces absorption of levothyroxine, tetracyclines and quinolones — separate by 2–4 hours.\n- Caution in haemochromatosis and iron-storage conditions (contraindicated).\n",
+      "isProduct": true
+    },
+    {
+      "id": "magnesium",
+      "title": "Magnesium (Food-Grown®)",
+      "content": "# Magnesium (Food-Grown®)\n\n> **SAMPLE — replace with approved clinical content before live use.**\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nFood-Grown® magnesium providing 100mg elemental magnesium per two-capsule dose,\nin a food-state matrix (mineral-enriched lactobacillus culture).\n\n## Label dosing\n2 capsules daily, taken with or after food. Suitable for vegetarians and vegans.\n\n## Mechanism & evidence notes\nMagnesium contributes to normal psychological function, normal functioning of the\nnervous system, reduction of tiredness and fatigue, and normal muscle function\n(EFSA authorised claims). Commonly considered by practitioners in protocols for\nsleep quality and stress support.\n\n## Cautions & interactions\n- High supplemental doses of magnesium may have a laxative effect.\n- Caution with renal impairment — magnesium clearance is reduced.\n- May reduce absorption of some antibiotics (tetracyclines, quinolones) — separate dosing by 2+ hours.\n",
+      "isProduct": true
+    },
+    {
+      "id": "omega-3",
+      "title": "Omega 3 (Pure Deep-Sea Fish Oil)",
+      "content": "# Omega 3 (Pure Deep-Sea Fish Oil)\n\n> **SAMPLE — replace with approved clinical content before live use.**\n> Drafted from public wildnutrition.com product information for pipeline testing only.\n\n## Key ingredients\nPure deep-sea fish oil providing EPA and DHA per two-capsule dose, certified\nsustainable, independently tested for oxidation and contaminants.\n\n## Label dosing\n2 capsules daily, taken with food.\n\n## Mechanism & evidence notes\nEPA and DHA contribute to the normal function of the heart (EFSA authorised claim,\n≥250mg EPA+DHA daily); DHA contributes to maintenance of normal brain function and\nvision. Practitioners commonly consider omega-3 status alongside dietary oily-fish\nintake, particularly in vegetarian-leaning diets.\n\n## Cautions & interactions\n- Not suitable for people with fish allergy.\n- Caution with anticoagulant/antiplatelet medication (warfarin, DOACs, aspirin) — high-dose fish oil may increase bleeding tendency; practitioner supervision required.\n- Not a vegetarian/vegan product.\n",
+      "isProduct": true
+    },
+    {
+      "id": "contraindications",
+      "title": "Contraindication & Referral Guide",
+      "content": "# Contraindication & Referral Guide\n\n> **SAMPLE — replace with approved clinical content before live use.**\n\n## Always defer to practitioner judgement / technical support\n- Pregnancy, breastfeeding, or actively trying to conceive — only products explicitly\n  formulated and approved for pregnancy may be suggested, and only under practitioner supervision.\n- Clients under 18 — adult dosing does not apply; refer to practitioner judgement.\n- Anticoagulant therapy (warfarin, DOACs) — omega-3 and high-dose vitamin E interactions.\n- Thyroid medication (levothyroxine) — iron, calcium, magnesium and ashwagandha interactions; separate dosing and monitor.\n- Chemotherapy, immunosuppression, transplant recipients — no supplement suggestions without the client's medical team involved.\n- Renal or hepatic impairment — altered clearance of minerals and botanicals.\n- Epilepsy, heart failure, or any unstable/serious diagnosis — refer, do not suggest.\n\n## General rules\n- Never suggest a dose above the product label dose.\n- Where any medication is mentioned, an interaction check by the practitioner is required —\n  the assistant must flag this rather than adjudicate it.\n- The assistant provides suggestions for the practitioner to review; it never communicates\n  directly with clients and its output is not medical advice.\n",
+      "isProduct": false
+    },
+    {
+      "id": "dosing-principles",
+      "title": "Dosing Principles",
+      "content": "# Dosing Principles\n\n> **SAMPLE — replace with approved clinical content before live use.**\n\n- Doses are always quoted verbatim from the product label dosing in each dossier —\n  the assistant never invents, scales, combines, or \"optimises\" doses.\n- Food-Grown® nutrients are taken with or after food unless the label states otherwise.\n- Protocols should normally contain 1–4 products; fewer, well-rationalised products\n  are preferred over long lists.\n- Suggested review point for any protocol: 8–12 weeks, or sooner where symptoms change.\n- Where two products contain overlapping nutrients (e.g. a multi plus a single mineral),\n  the overlap must be pointed out in the rationale.\n",
+      "isProduct": false
+    }
+  ]
+}
