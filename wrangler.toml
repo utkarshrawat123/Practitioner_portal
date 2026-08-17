@@ -1,0 +1,30 @@
+name = "practitioner-portal"
+main = ".open-next/worker.js"
+compatibility_date = "2024-12-30"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets emitted by the OpenNext build.
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# --- Bindings (placeholder IDs; real values added at go-live) ---
+[[d1_databases]]
+binding = "DB"
+database_name = "practitioner-portal"
+database_id = "PLACEHOLDER_D1_ID"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "practitioner-portal-media"
+
+# --- Cron (mirrors today's vercel.json) ---
+[triggers]
+crons = ["0 6 * * *", "0 7 * * *"]
+
+[vars]
+PORTAL_URL = "http://localhost:8787"
+COMMISSION_PERCENT = "20"
+# Secrets (RESEND_API_KEY, EMAIL_FROM, GEMINI_API_KEY, GEMINI_API_KEY2,
+# ANTHROPIC_API_KEY, ADMIN_PASSWORD, SESSION_SECRET, CRON_SECRET, R2_PUBLIC_BASE)
+# are set via `wrangler secret put` — never committed. See docs/CLOUDFLARE_GO_LIVE.md.
