@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
+import { uploadFile } from '@/lib/uploadClient';
 
 const CATEGORIES = [
   'Women’s Health', 'Hormone Health', 'Gut Health', 'Immune Health',
@@ -105,9 +105,7 @@ export default function AdminPathways() {
       let pathname: string | null = null;
       let size: number | null = null;
       if (vid.source === 'file' && vid.file) {
-        const blob = await upload(`media/${Date.now()}-${vid.file.name}`, vid.file, {
-          access: 'public', handleUploadUrl: '/api/admin/media/upload',
-        });
+        const blob = await uploadFile(`media/${Date.now()}-${vid.file.name}`, vid.file);
         url = blob.url; pathname = blob.pathname; size = vid.file.size;
       }
       const mediaRes = await fetch('/api/admin/media', {

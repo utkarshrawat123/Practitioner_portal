@@ -16,7 +16,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
     "@libsql/client": "^0.17.4",
-    "@vercel/blob": "^2.6.1",
     "better-sqlite3": "^11.3.0",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.400.0",

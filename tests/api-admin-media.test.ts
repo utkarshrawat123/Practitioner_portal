@@ -2,12 +2,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { del } from '@vercel/blob';
 import { deleteObjects } from '@/lib/storage';
 
-// The media DELETE route now deletes via lib/storage (R2/local); the cleanup
-// route still uses Vercel Blob del(). Mock both so neither hits the network.
-vi.mock('@vercel/blob', () => ({ del: vi.fn(async () => {}) }));
+// Both the media DELETE route and the cleanup route delete via lib/storage
+// (R2/local). Mock it so neither hits the network.
 vi.mock('@/lib/storage', () => ({ deleteObjects: vi.fn(async () => {}) }));
 
 let dir: string;
@@ -92,22 +90,22 @@ describe('/api/admin/media', () => {
     expect(await (await import('@/lib/db')).getMedia(1)).toBeNull();
   });
 
-  it('cleanup deletes orphaned blob urls with the cookie', async () => {
+  it('cleanup deletes orphaned objects by key with the cookie', async () => {
     const cookie = await adminCookie();
     const { POST } = await import('@/app/api/admin/media/cleanup/route');
     const res = await POST(new Request('http://x/api/admin/media/cleanup', {
       method: 'POST', headers: { 'Content-Type': 'application/json', cookie },
-      body: JSON.stringify({ urls: ['https://blob/orphan.pdf', 'https://blob/orphan-thumb.png'] }),
+      body: JSON.stringify({ keys: ['media/orphan.pdf', 'thumbnails/orphan-thumb.png'] }),
     }));
     expect(res.status).toBe(200);
-    expect(del).toHaveBeenCalledWith(['https://blob/orphan.pdf', 'https://blob/orphan-thumb.png']);
+    expect(deleteObjects).toHaveBeenCalledWith(['media/orphan.pdf', 'thumbnails/orphan-thumb.png']);
   });
 
   it('cleanup 401s without the admin cookie', async () => {
     const { POST } = await import('@/app/api/admin/media/cleanup/route');
     const res = await POST(new Request('http://x/api/admin/media/cleanup', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ urls: ['https://blob/orphan.pdf'] }),
+      body: JSON.stringify({ keys: ['media/orphan.pdf'] }),
     }));
     expect(res.status).toBe(401);
   });

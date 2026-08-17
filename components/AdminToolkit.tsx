@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
+import { uploadFile } from '@/lib/uploadClient';
 
 interface Resource {
   id: number; title: string; type: string; description: string | null;
@@ -58,9 +58,7 @@ export default function AdminToolkit() {
       let url: string | null = form.url.trim() || null;
       let pathname: string | null = null;
       if (form.contentKind === 'file' && file) {
-        const blob = await upload(`toolkit/${Date.now()}-${file.name}`, file, {
-          access: 'public', handleUploadUrl: '/api/admin/media/upload',
-        });
+        const blob = await uploadFile(`toolkit/${Date.now()}-${file.name}`, file);
         url = blob.url; pathname = blob.pathname;
       }
       const res = await fetch('/api/admin/toolkit', {

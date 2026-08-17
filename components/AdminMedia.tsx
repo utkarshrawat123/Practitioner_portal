@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
+import { uploadFile } from '@/lib/uploadClient';
 import MediaCard from '@/components/MediaCard';
 
 interface MediaRow {
@@ -91,8 +91,9 @@ export default function AdminMedia() {
     if (source === 'link' && !linkUrl.trim()) return setError('Paste a link.');
     if (thumbNeeded && !thumbFile) return setError('A thumbnail is required — upload one.');
     setBusy(true);
-    // Blob URLs we upload before the metadata POST. If anything after an upload
-    // fails, these are orphaned (no media row references them) and get cleaned up.
+    // Storage keys we upload before the metadata POST. If anything after an
+    // upload fails, these are orphaned (no media row references them) and get
+    // cleaned up by key.
     const uploaded: string[] = [];
     try {
       // 1. Resolve the main URL (Blob upload for files, the raw URL for links).
@@ -101,11 +102,9 @@ export default function AdminMedia() {
       let size: number | null = null;
       const contentKind = source;
       if (source === 'file' && file) {
-        const blob = await upload(`media/${Date.now()}-${file.name}`, file, {
-          access: 'public', handleUploadUrl: '/api/admin/media/upload',
-        });
+        const blob = await uploadFile(`media/${Date.now()}-${file.name}`, file);
         url = blob.url; pathname = blob.pathname; size = file.size;
-        uploaded.push(blob.url);
+        uploaded.push(blob.pathname);
       }
       // 2. Resolve the thumbnail URL.
       let thumbnailUrl: string | null = null;
@@ -113,11 +112,9 @@ export default function AdminMedia() {
       if (source === 'file' && type === 'image' && file) {
         thumbnailUrl = url; // the image itself
       } else if (thumbFile) {
-        const t = await upload(`thumbnails/${Date.now()}-${thumbFile.name}`, thumbFile, {
-          access: 'public', handleUploadUrl: '/api/admin/media/upload',
-        });
+        const t = await uploadFile(`thumbnails/${Date.now()}-${thumbFile.name}`, thumbFile);
         thumbnailUrl = t.url; thumbnailPathname = t.pathname;
-        uploaded.push(t.url);
+        uploaded.push(t.pathname);
       } else if (thumbPreview) {
         thumbnailUrl = thumbPreview; // auto-derived remote thumbnail
       }
@@ -136,7 +133,7 @@ export default function AdminMedia() {
         try {
           await fetch('/api/admin/media/cleanup', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ urls: uploaded }),
+            body: JSON.stringify({ keys: uploaded }),
           });
         } catch { /* swallow — the original error below is what matters */ }
       }
