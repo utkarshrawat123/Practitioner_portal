@@ -16,7 +16,7 @@ type Result =
   | null;
 
 const inputClass =
-  'w-full border border-stone bg-white px-4 py-3 text-ink2 focus:border-terracotta focus:outline-none';
+  'w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[15px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
 const labelClass = 'mb-1.5 block text-xs uppercase tracking-[0.15em] text-ink2';
 
 export default function ApplyForm() {
@@ -71,7 +71,7 @@ export default function ApplyForm() {
         </div>
         <a
           href="/dashboard"
-          className="mt-6 inline-block bg-ink px-8 py-4 text-xs uppercase tracking-[0.2em] text-cream transition-colors hover:bg-terracotta"
+          className="mt-6 inline-block inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50"
         >
           Go to your dashboard →
         </a>
@@ -105,7 +105,7 @@ export default function ApplyForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="border border-stone bg-white p-8">
+    <form onSubmit={onSubmit} className="rounded-card bg-white shadow-card p-8">
       {result?.kind === 'error' && (
         <p className="mb-6 border border-terracotta bg-cream px-4 py-3 text-sm text-terracotta">
           {result.message}
@@ -162,7 +162,7 @@ export default function ApplyForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="mt-8 w-full bg-ink px-8 py-4 text-xs uppercase tracking-[0.2em] text-cream transition-colors hover:bg-terracotta disabled:opacity-50"
+        className="mt-8 w-full inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 disabled:opacity-50"
       >
         {submitting ? 'Verifying…' : 'Sign up now'}
       </button>

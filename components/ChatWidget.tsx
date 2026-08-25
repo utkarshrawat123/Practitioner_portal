@@ -118,8 +118,8 @@ export default function ChatWidget() {
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
       {open && (
-        <div className="mb-3 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-stone bg-cream shadow-2xl">
-          <div className="flex items-center justify-between bg-forest px-4 py-3 text-cream">
+        <div className="mb-3 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-card bg-cream shadow-lift">
+          <div className="flex items-center justify-between bg-navy px-4 py-3 text-white">
             <div>
               <p className="font-heading text-base leading-tight">Practitioner Support</p>
               <p className="text-[11px] opacity-80">We usually reply in a few minutes</p>
@@ -135,7 +135,7 @@ export default function ChatWidget() {
             {messages.map((m) => (
               <div key={m.id} className={`flex ${m.sender === 'practitioner' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm ${
-                  m.sender === 'practitioner' ? 'bg-terracotta text-cream' : 'bg-white text-ink border border-stone'
+                  m.sender === 'practitioner' ? 'bg-terracotta text-cream' : 'bg-white text-ink shadow-card'
                 }`}>
                   {m.body}
                 </div>
@@ -150,11 +150,11 @@ export default function ChatWidget() {
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(e); } }}
               rows={1}
               placeholder="Type a message…"
-              className="max-h-24 flex-1 resize-none rounded-lg border border-stone px-3 py-2 text-sm focus:border-terracotta focus:outline-none"
+              className="max-h-24 flex-1 resize-none rounded-xl border-0 bg-white px-3.5 py-2.5 text-[14px] outline-none ring-1 ring-ink/8 focus:ring-2 focus:ring-terracotta-mid/50"
             />
             <button
               disabled={sending || !draft.trim()}
-              className="rounded-lg bg-forest px-4 py-2 text-sm font-medium text-cream disabled:opacity-50"
+              className="rounded-pill bg-navy px-4 py-2 text-[14px] font-medium text-white hover:bg-navy-mid disabled:opacity-50"
             >
               Send
             </button>
@@ -164,7 +164,7 @@ export default function ChatWidget() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Open support chat"
-        className="relative flex h-14 w-14 items-center justify-center rounded-full bg-forest text-cream shadow-xl transition-transform hover:scale-105"
+        className="relative flex h-14 w-14 items-center justify-center rounded-full bg-navy text-white shadow-xl transition-transform hover:scale-105"
       >
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />

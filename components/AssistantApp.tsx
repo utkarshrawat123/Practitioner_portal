@@ -15,7 +15,7 @@ interface Output {
 }
 interface Result { output: Output; groundingWarnings: string[]; handoutHtml: string | null }
 
-const card = 'border border-stone bg-white p-6';
+const card = 'rounded-card bg-white shadow-card p-6';
 const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
 
 export default function AssistantApp() {
@@ -90,12 +90,12 @@ export default function AssistantApp() {
         <textarea
           id="profile" value={profile} onChange={(e) => setProfile(e.target.value)}
           required minLength={10} maxLength={2000} rows={4}
-          className="mt-1.5 w-full border border-stone px-4 py-3 text-ink2 focus:border-terracotta focus:outline-none"
+          className="mt-1.5 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[15px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50"
           placeholder='e.g. "35F, perimenopausal, low ferritin, insomnia, vegetarian"'
         />
         <button
           type="submit" disabled={busy || authed === null}
-          className="mt-4 bg-ink px-8 py-3 text-xs uppercase tracking-[0.2em] text-cream transition-colors hover:bg-terracotta disabled:opacity-50"
+          className="mt-4 inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 disabled:opacity-50"
         >
           {busy ? 'Generating…' : 'Generate protocol'}
         </button>
@@ -139,7 +139,7 @@ export default function AssistantApp() {
           )}
 
           {result.groundingWarnings.length > 0 && (
-            <p className="border border-stone bg-cream px-4 py-3 text-xs text-ink2/70">
+            <p className="rounded-card bg-blush px-4 py-3 text-[13px] text-ink2/70">
               {result.groundingWarnings.join(' ')}
             </p>
           )}
@@ -148,13 +148,13 @@ export default function AssistantApp() {
             <p className={label}>Suggested protocol</p>
             <div className="mt-4 space-y-5">
               {result.output.protocol.map((item, i) => (
-                <div key={i} className="border-b border-stone/60 pb-4 last:border-0 last:pb-0">
+                <div key={i} className="border-b border-ink/8 pb-4 last:border-0 last:pb-0">
                   <p className="font-heading text-xl text-terracotta">{item.product}</p>
                   <p className="mt-1 text-sm font-semibold">{item.dose}</p>
                   <p className="mt-2 text-sm text-ink2/90">{item.rationale}</p>
                   <p className="mt-1 text-xs text-ink2/70">{item.evidence_notes}</p>
                   {item.sources.length > 0 && (
-                    <p className="mt-1 text-xs text-forest">
+                    <p className="mt-1 text-xs text-terracotta">
                       {item.sources.length > 1 ? 'Sources' : 'Source'}: {item.sources.join(' · ')}
                     </p>
                   )}
@@ -162,12 +162,12 @@ export default function AssistantApp() {
               ))}
             </div>
             {result.output.general_notes && (
-              <p className="mt-4 border-t border-stone pt-4 text-sm text-ink2/80">
+              <p className="mt-4 border-t border-ink/10 pt-4 text-sm text-ink2/80">
                 {result.output.general_notes}
               </p>
             )}
             {result.output.sources_reviewed?.length > 0 && (
-              <p className="mt-3 border-t border-stone pt-3 text-xs text-ink2/60">
+              <p className="mt-3 border-t border-ink/10 pt-3 text-xs text-ink2/60">
                 <span className="uppercase tracking-[0.12em]">Resources analysed:</span>{' '}
                 {result.output.sources_reviewed.join(' · ')}
               </p>
@@ -180,7 +180,7 @@ export default function AssistantApp() {
                 <p className={label}>Client handout preview</p>
                 <button
                   onClick={printHandout}
-                  className="bg-forest px-5 py-2.5 text-xs uppercase tracking-[0.15em] text-cream hover:bg-terracotta"
+                  className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50"
                 >
                   Print / Save as PDF
                 </button>
@@ -189,7 +189,7 @@ export default function AssistantApp() {
                 ref={iframeRef}
                 srcDoc={result.handoutHtml}
                 title="Client handout"
-                className="mt-4 h-[600px] w-full border border-stone bg-white"
+                className="mt-4 h-[600px] w-full rounded-card bg-white shadow-card"
               />
             </div>
           )}

@@ -47,7 +47,7 @@ export default function CertificationUpload({ token, supportEmail }: { token: st
     setSubmitting(false);
   }
 
-  const card = 'mx-auto mt-16 max-w-lg border border-stone bg-white p-8';
+  const card = 'mx-auto mt-16 max-w-lg rounded-card bg-white shadow-card p-8';
 
   if (state.kind === 'loading') return <div className={card}><p className="text-ink2/70">Loading…</p></div>;
 
@@ -93,11 +93,11 @@ export default function CertificationUpload({ token, supportEmail }: { token: st
         ref={fileRef}
         type="file"
         accept="application/pdf,image/jpeg,image/png,image/heic,image/webp"
-        className="mt-5 block w-full text-sm file:mr-4 file:border-0 file:bg-forest file:px-4 file:py-2 file:text-cream"
+        className="mt-5 block w-full text-sm file:mr-4 file:border-0 file:rounded-pill file:bg-navy file:px-4 file:py-2 file:text-white"
       />
       <button
         disabled={submitting}
-        className="mt-6 bg-ink px-8 py-3.5 text-xs uppercase tracking-[0.2em] text-cream transition-colors hover:bg-terracotta disabled:opacity-50"
+        className="mt-6 inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 disabled:opacity-50"
       >
         {submitting ? 'Uploading…' : 'Submit certification'}
       </button>
