@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import SideNav, { type SideNavItem } from '@/components/SideNav';
+import SideNav from '@/components/SideNav';
+import type { NavSection } from '@/lib/nav';
 
 /**
  * The application frame. Decides which chrome a route gets, and reserves the
@@ -16,12 +17,12 @@ import SideNav, { type SideNavItem } from '@/components/SideNav';
  */
 export default function Chrome({
   signedIn,
-  navItems,
+  navSections,
   supportEmail,
   children,
 }: {
   signedIn: boolean;
-  navItems: SideNavItem[];
+  navSections: NavSection[];
   supportEmail: string | null;
   children: React.ReactNode;
 }) {
@@ -59,7 +60,7 @@ export default function Chrome({
 
   return (
     <>
-      <SideNav items={navItems} supportEmail={supportEmail} />
+      <SideNav sections={navSections} supportEmail={supportEmail} />
       <div className="lg:pl-[248px]">{children}</div>
     </>
   );

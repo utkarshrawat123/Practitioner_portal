@@ -5,8 +5,10 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import {
   Home, GraduationCap, ClipboardCheck, Users, CalendarDays, ShoppingBag,
-  Gift, BookOpen, Award, UserRound, LifeBuoy, Menu, X, type LucideIcon,
+  Gift, BookOpen, Award, UserRound, LifeBuoy, Menu, X, Sparkles, Trophy, type LucideIcon,
 } from 'lucide-react';
+
+import type { NavSection } from '@/lib/nav';
 
 export interface SideNavItem { label: string; href: string }
 
@@ -22,7 +24,9 @@ const ICONS: Record<string, LucideIcon> = {
   '/resources': BookOpen,
   '/library': BookOpen,
   '/cpd': Award,
-  '/leaderboard': Award,
+  '/leaderboard': Trophy,
+  '/assistant': Sparkles,
+  '/my-clinic': BookOpen,
 };
 
 function Wordmark() {
@@ -38,10 +42,35 @@ function Wordmark() {
   );
 }
 
-function NavLinks({ items, onNavigate }: { items: SideNavItem[]; onNavigate?: () => void }) {
+function NavLinks({ sections, onNavigate }: { sections: NavSection[]; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-col gap-0.5 px-3">
+    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3">
+      {sections.map((section, sectionIndex) => (
+        <div key={section.title ?? `section-${sectionIndex}`} className={sectionIndex > 0 ? 'mt-5' : ''}>
+          {section.title && (
+            <p className="px-3 pb-1.5 text-[10px] uppercase tracking-label text-white/35">
+              {section.title}
+            </p>
+          )}
+          <SectionLinks items={section.items} pathname={pathname} onNavigate={onNavigate} />
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function SectionLinks({
+  items,
+  pathname,
+  onNavigate,
+}: {
+  items: SideNavItem[];
+  pathname: string | null;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
       {items.map((item) => {
         const Icon = ICONS[item.href] ?? BookOpen;
         const active = pathname === item.href || pathname?.startsWith(`${item.href}/`);
@@ -63,7 +92,7 @@ function NavLinks({ items, onNavigate }: { items: SideNavItem[]; onNavigate?: ()
           </Link>
         );
       })}
-    </nav>
+    </>
   );
 }
 
@@ -93,7 +122,7 @@ function HelpBlock({ supportEmail }: { supportEmail: string | null }) {
  * Persistent navy sidebar — the shell from the design deck. Fixed on desktop;
  * on mobile it collapses behind a top bar with a slide-in drawer.
  */
-export default function SideNav({ items, supportEmail }: { items: SideNavItem[]; supportEmail: string | null }) {
+export default function SideNav({ sections, supportEmail }: { sections: NavSection[]; supportEmail: string | null }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -101,7 +130,7 @@ export default function SideNav({ items, supportEmail }: { items: SideNavItem[];
       {/* Desktop */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col bg-navy lg:flex">
         <Wordmark />
-        <NavLinks items={items} />
+        <NavLinks sections={sections} />
         <HelpBlock supportEmail={supportEmail} />
       </aside>
 
@@ -138,7 +167,7 @@ export default function SideNav({ items, supportEmail }: { items: SideNavItem[];
                 <X className="h-5 w-5" strokeWidth={1.7} />
               </button>
             </div>
-            <NavLinks items={items} onNavigate={() => setOpen(false)} />
+            <NavLinks sections={sections} onNavigate={() => setOpen(false)} />
             <HelpBlock supportEmail={supportEmail} />
           </div>
         </div>
