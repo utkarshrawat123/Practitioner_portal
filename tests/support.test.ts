@@ -37,7 +37,7 @@ describe('supportEmail', () => {
 
   it('never falls back to a personal address', async () => {
     const { supportEmail } = await import('@/lib/support');
-    expect(supportEmail()).not.toMatch(/gmail\.com/i);
+    expect(supportEmail() ?? '').not.toMatch(/gmail\.com/i);
   });
 });
 
