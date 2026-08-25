@@ -102,12 +102,15 @@ won't composite unless displayed):
 1. **Which sidebar?** The deck shows two treatments — **dark navy** (Ask Lorna screen,
    implemented) and **light cream with a terracotta active pill** (Events screen).
    Navy was chosen as the stronger brand statement; confirm.
-2. **Is Fraunces close enough to Gestura?** Cheap to change now, expensive after 42
-   more components are restyled.
+2. ~~**Is Fraunces close enough to Gestura?**~~ **DECIDED 2026-08-25: yes, ship Fraunces.**
+   The swap point above stays documented if the licensed font ever arrives. The reskin
+   is unblocked; no further sign-off is needed to restyle the remaining 42 components.
 3. **Photography.** The mockups lean heavily on brand photography and Lorna's video
    stills; none of those assets are available. Cards currently rely on whatever
    `imageUrl` the data carries.
-4. **Nav IA** — see `DECK_GAP_ANALYSIS.md` §5. The deck's sidebar has *Practice Growth*
+4. ~~**Nav IA**~~ **DECIDED 2026-08-25** — regroup only, no routes move; see
+   `DECK_GAP_ANALYSIS.md` §7. Q1 (navy vs cream sidebar) and Q3 (photography) stay open.
+   Original note — see `DECK_GAP_ANALYSIS.md` §5. The deck's sidebar has *Practice Growth*
    and *My Patients/My Clinic*, and omits Patient Carts / Refer & Earn / Leaderboard.
    Restyling is safe; renaming or moving routes is a product decision.
 
