@@ -14,7 +14,7 @@
 - **Repo:** `https://github.com/utkarshrawat123/Practitioner_portal` — branch **`cloudflare-migration`**
   (the default; all work branches from it). Never touch `Utkarshraw123/practitioner-portal`, which is a
   separate personal portfolio repo.
-- **State:** **437 tests pass · production build clean · runs fully in MOCK MODE with no API keys.**
+- **State:** **468 tests pass · production build clean · runs fully in MOCK MODE with no API keys.**
 - **Not deployed yet.** Go-live needs company Cloudflare account access — see §12.
 
 ---
@@ -23,7 +23,7 @@
 
 ```bash
 npm install
-npm test            # Vitest — 437 tests, keep green
+npm test            # Vitest — 468 tests, keep green
 npm run dev         # local dev → http://localhost:3100 (Node path, mock mode, no keys needed)
 npm run preview:cf  # REAL Cloudflare runtime locally: workerd + local D1/R2 → http://localhost:8787
 npm run build       # production build + type-check gate (stop the dev server first — it corrupts .next)
@@ -340,7 +340,7 @@ Full detail in **`docs/CLOUDFLARE_DEV.md`**. Two ways to run:
 - **Get a local practitioner session:** apply a qualified BANT applicant via `POST /api/apply`
   (auto-approves + sets the session cookie), OR `POST /api/auth/request-link` → open the returned
   `devLink`. Dismiss the welcome takeover via `POST /api/me/seen-welcome`.
-- **Tests:** `npm test` — 437 tests. Harness: `beforeEach` sets `process.env.DB_PATH` to a temp file;
+- **Tests:** `npm test` — 468 tests. Harness: `beforeEach` sets `process.env.DB_PATH` to a temp file;
   `afterEach` calls `resetDbForTests()`; raw SQL via `execForTests()`.
 - **`npm run build` corrupts `.next` if a dev server is running** — stop it first.
 - **Windows note:** `npm run preview:cf` works on Windows, but only because of the
