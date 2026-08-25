@@ -8,7 +8,7 @@ type Loaded =
   | { kind: 'ready'; name: string; alreadyUploaded: boolean };
 
 /** Token-gated certification upload for a student whose application is under review. */
-export default function CertificationUpload({ token }: { token: string }) {
+export default function CertificationUpload({ token, supportEmail }: { token: string; supportEmail: string | null }) {
   const [state, setState] = useState<Loaded>({ kind: 'loading' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +56,9 @@ export default function CertificationUpload({ token }: { token: string }) {
       <div className={card}>
         <h1 className="font-heading text-2xl text-ink">Link unavailable</h1>
         <p className="mt-3 text-ink2/80">{state.message}</p>
-        <p className="mt-3 text-sm text-ink2/60">If you need a new link, contact utkarshrawatofficial@gmail.com.</p>
+        {supportEmail && (
+          <p className="mt-3 text-sm text-ink2/60">If you need a new link, contact {supportEmail}.</p>
+        )}
       </div>
     );
   }

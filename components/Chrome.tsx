@@ -17,10 +17,12 @@ import SideNav, { type SideNavItem } from '@/components/SideNav';
 export default function Chrome({
   signedIn,
   navItems,
+  supportEmail,
   children,
 }: {
   signedIn: boolean;
   navItems: SideNavItem[];
+  supportEmail: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -57,7 +59,7 @@ export default function Chrome({
 
   return (
     <>
-      <SideNav items={navItems} />
+      <SideNav items={navItems} supportEmail={supportEmail} />
       <div className="lg:pl-[248px]">{children}</div>
     </>
   );

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { supportEmail } from '@/lib/support';
 import './globals.css';
 import { display, sans } from './fonts';
 import Chrome from '@/components/Chrome';
@@ -40,7 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>
-        <Chrome signedIn={signedIn} navItems={navItems}>
+        <Chrome signedIn={signedIn} navItems={navItems} supportEmail={supportEmail()}>
           <main>{children}</main>
         </Chrome>
         <ChatGate signedIn={signedIn} />

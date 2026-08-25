@@ -11,12 +11,8 @@ interface Reply { id: number; authorName: string; body: string; createdAt: strin
 const TYPE_LABELS: Record<string, string> = { discussion: 'Discussion', ask_expert: 'Ask the Expert', member_spotlight: 'Member Spotlight' };
 const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
 const input = 'mt-1 w-full border border-stone px-3 py-2 focus:border-terracotta focus:outline-none';
-// PLACEHOLDER default — the real group URL comes from the business. Override
-// without a code change via NEXT_PUBLIC_FB_GROUP_URL (baked in at build time).
-const FB_GROUP_URL =
-  process.env.NEXT_PUBLIC_FB_GROUP_URL || 'https://www.facebook.com/groups/wildnutritionpractitioners';
 
-export default function CommunityApp() {
+export default function CommunityApp({ fbGroupUrl }: { fbGroupUrl: string | null }) {
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [form, setForm] = useState({ postType: 'discussion', title: '', body: '' });
@@ -65,10 +61,12 @@ export default function CommunityApp() {
       <p className={label}>Community</p>
       <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">Practitioner Community</h1>
 
-      <a href={FB_GROUP_URL} target="_blank" rel="noopener noreferrer" className="mt-6 flex items-center justify-between border border-forest bg-cream p-5 hover:border-terracotta">
-        <div><p className="font-heading text-lg text-forest">Private Practitioner Facebook Group</p><p className="text-sm text-ink2/70">Members-only · peer discussion, live Q&amp;As and announcements.</p></div>
-        <span className="text-xs uppercase tracking-[0.2em] text-terracotta">Open ↗</span>
-      </a>
+      {fbGroupUrl && (
+        <a href={fbGroupUrl} target="_blank" rel="noopener noreferrer" className="mt-6 flex items-center justify-between border border-forest bg-cream p-5 hover:border-terracotta">
+          <div><p className="font-heading text-lg text-forest">Private Practitioner Facebook Group</p><p className="text-sm text-ink2/70">Members-only · peer discussion, live Q&amp;As and announcements.</p></div>
+          <span className="text-xs uppercase tracking-[0.2em] text-terracotta">Open ↗</span>
+        </a>
+      )}
 
       <form onSubmit={createPost} className="mt-8 grid gap-3 border border-stone bg-white p-6">
         <span className={label}>Start a discussion</span>

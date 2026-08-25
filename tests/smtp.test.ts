@@ -48,7 +48,23 @@ describe('sendSmtpEmail', () => {
     expect(transportOpts.auth.pass).toBe('abcdefghijklmnop'); // spaces stripped
     const mailOpts = sendMail.mock.calls[0][0];
     expect(mailOpts.to).toBe('jane@example.com');
-    expect(mailOpts.replyTo).toBe('utkarshrawatofficial@gmail.com');
+    // No SUPPORT_EMAIL configured in this test env: send with no reply-to at all
+    // rather than falling back to some hardcoded inbox.
+    expect(mailOpts.replyTo).toBeUndefined();
+  });
+
+  it('uses the configured support address as reply-to when one is set', async () => {
+    const saved = process.env.SUPPORT_EMAIL;
+    process.env.SUPPORT_EMAIL = 'practitioners@example.org';
+    try {
+      sendMail.mockResolvedValue({ messageId: '<abc@gmail.com>' });
+      await sendSmtpEmail({ to: 'jane@example.com', subject: 'Hi', html: '<p>Hi</p>' });
+      const mailOpts = sendMail.mock.calls[0][0];
+      expect(mailOpts.replyTo).toBe('practitioners@example.org');
+    } finally {
+      if (saved === undefined) delete process.env.SUPPORT_EMAIL;
+      else process.env.SUPPORT_EMAIL = saved;
+    }
   });
 
   it('returns ok=false when sendMail rejects (never throws)', async () => {

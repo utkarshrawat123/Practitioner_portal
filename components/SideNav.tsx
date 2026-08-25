@@ -67,13 +67,18 @@ function NavLinks({ items, onNavigate }: { items: SideNavItem[]; onNavigate?: ()
   );
 }
 
-function HelpBlock() {
+/**
+ * Renders nothing without a configured support address — a missing "contact us"
+ * block is a visible gap; a wrong address quietly misroutes practitioners.
+ */
+function HelpBlock({ supportEmail }: { supportEmail: string | null }) {
+  if (!supportEmail) return null;
   return (
     <div className="mt-auto px-3 pb-7 pt-8">
       <div className="mx-3 border-t border-white/12 pt-6">
         <p className="text-[13px] text-white/45">Need help?</p>
         <a
-          href="mailto:utkarshrawatofficial@gmail.com"
+          href={`mailto:${supportEmail}`}
           className="mt-2 flex items-center gap-2.5 text-[14px] text-white/75 transition-colors hover:text-white"
         >
           <LifeBuoy className="h-[17px] w-[17px] text-terracotta-mid" strokeWidth={1.6} />
@@ -88,7 +93,7 @@ function HelpBlock() {
  * Persistent navy sidebar — the shell from the design deck. Fixed on desktop;
  * on mobile it collapses behind a top bar with a slide-in drawer.
  */
-export default function SideNav({ items }: { items: SideNavItem[] }) {
+export default function SideNav({ items, supportEmail }: { items: SideNavItem[]; supportEmail: string | null }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -97,7 +102,7 @@ export default function SideNav({ items }: { items: SideNavItem[] }) {
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col bg-navy lg:flex">
         <Wordmark />
         <NavLinks items={items} />
-        <HelpBlock />
+        <HelpBlock supportEmail={supportEmail} />
       </aside>
 
       {/* Mobile top bar */}
@@ -134,7 +139,7 @@ export default function SideNav({ items }: { items: SideNavItem[] }) {
               </button>
             </div>
             <NavLinks items={items} onNavigate={() => setOpen(false)} />
-            <HelpBlock />
+            <HelpBlock supportEmail={supportEmail} />
           </div>
         </div>
       )}
