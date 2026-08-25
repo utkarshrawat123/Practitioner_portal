@@ -13,7 +13,7 @@ default  cloudflare-migration    @ 5de6544  (reskin merged in; decisions recorde
 open     feat/go-live-hardening  @ 15b4fa9  (complete, green, NOT merged)
 open     feat/saved-items        @ 09a79d5  (spec only, no code yet)
 local    C:\Users\UtkarshRawat\Projects\practitioner-portal
-tests    468 passing / 103 files
+tests    477 passing / 104 files
 build    clean
 deploy   NOT deployed — no company credentials yet
 ```
@@ -29,7 +29,7 @@ export PATH="/c/Users/UtkarshRawat/AppData/Local/node/node-v22.20.0-win-x64:$PAT
 ```
 
 ```bash
-npm test            # 468
+npm test            # 477
 npm run dev         # :3100
 npm run preview:cf  # :8787 — real workerd + local D1/R2
 npm run build       # STOP the dev server first (see §5)
