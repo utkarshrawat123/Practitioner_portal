@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { formatMoney } from '@/lib/format';
+import { Button, Card, Empty, Label, Loading } from '@/components/ui';
 
 interface ReferralView {
   id: number;
@@ -57,47 +58,47 @@ export default function ReferralsApp() {
     fetch('/api/me/referrals').then((r) => r.json()).then(setData).catch(() => {});
   }, []);
 
-  if (!data) return <p className="mt-8 text-ink2/60">Loading…</p>;
+  if (!data) return <Loading />;
 
   return (
     <div className="mt-8 space-y-8">
-      <div className="border border-stone bg-white p-5">
-        <p className="text-xs uppercase tracking-[0.15em] text-forest">Your invite link</p>
+      <Card className="p-6">
+        <Label>Your invite link</Label>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <code className="min-w-0 flex-1 truncate rounded bg-cream px-3 py-2 text-sm">{data.inviteLink}</code>
-          <button
+          <code className="min-w-0 flex-1 truncate rounded-xl bg-blush px-4 py-2.5 text-[14px] text-ink2">{data.inviteLink}</code>
+          <Button
             onClick={() => { navigator.clipboard.writeText(data.inviteLink); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-            className="shrink-0 bg-forest px-4 py-2 text-xs uppercase tracking-[0.15em] text-cream"
-          >{copied ? 'Copied' : 'Copy link'}</button>
+            className="shrink-0"
+          >{copied ? 'Copied' : 'Copy link'}</Button>
         </div>
-        <p className="mt-4 text-sm">
-          <span className="font-medium text-forest">£{data.earnings.creditedTotal.toFixed(2)} credited</span>
+        <p className="mt-5 text-[15px]">
+          <span className="font-medium text-terracotta">£{data.earnings.creditedTotal.toFixed(2)} credited</span>
           <span className="text-ink2/60"> · {data.earnings.pendingCount} pending</span>
         </p>
-      </div>
+      </Card>
 
       <div>
-        <p className="text-xs uppercase tracking-[0.15em] text-ink2/70">Your referrals</p>
+        <Label>Your referrals</Label>
         {data.referrals.length === 0 ? (
-          <p className="mt-3 text-sm text-ink2/60">No referrals yet. Share your link with a colleague to get started.</p>
+          <div className="mt-3"><Empty>No referrals yet. Share your link with a colleague to get started.</Empty></div>
         ) : (
           <ul className="mt-3 space-y-3">
             {data.referrals.map((r) => (
-              <li key={r.id} className="border border-stone bg-white p-4">
+              <li key={r.id} className="rounded-card bg-white p-5 shadow-card">
                 <div className="flex items-center justify-between gap-3">
                   <span className="min-w-0 truncate font-medium text-ink">{r.refereeName}</span>
-                  <span className={`shrink-0 text-sm ${r.status === 'credited' ? 'text-forest' : r.status === 'clawed_back' ? 'text-terracotta' : 'text-ink2/60'}`}>
+                  <span className={`shrink-0 text-sm ${r.status === 'credited' ? 'text-olive' : r.status === 'clawed_back' ? 'text-terracotta' : 'text-ink2/60'}`}>
                     {statusLabel(r.status, r.bonusAmount, r.currency ?? 'GBP')}
                   </span>
                 </div>
                 <ol className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-0">
                   {STAGES.map((s, i) => (
                     <li key={s.key} className="flex items-center gap-2 sm:flex-1">
-                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${reached(r.status, s.key) ? 'bg-forest text-cream' : 'border border-stone text-ink2/40'}`}>
+                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${reached(r.status, s.key) ? 'bg-olive text-white' : 'bg-stone text-ink2/50'}`}>
                         {reached(r.status, s.key) ? '✓' : i + 1}
                       </span>
                       <span className={`text-xs ${reached(r.status, s.key) ? 'text-ink' : 'text-ink2/50'}`}>{s.label}</span>
-                      {i < STAGES.length - 1 && <span className="mx-2 hidden h-px flex-1 bg-stone sm:block" />}
+                      {i < STAGES.length - 1 && <span className="mx-2 hidden h-px flex-1 bg-ink/10 sm:block" />}
                     </li>
                   ))}
                 </ol>

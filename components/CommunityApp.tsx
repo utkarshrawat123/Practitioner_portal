@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Button, Card, Empty, Label, Loading, Pill, inputClass } from '@/components/ui';
 
 interface Post {
   id: number; authorName: string; postType: string; title: string; body: string;
@@ -9,8 +10,8 @@ interface Post {
 interface Reply { id: number; authorName: string; body: string; createdAt: string }
 
 const TYPE_LABELS: Record<string, string> = { discussion: 'Discussion', ask_expert: 'Ask the Expert', member_spotlight: 'Member Spotlight' };
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
-const input = 'mt-1 w-full border border-stone px-3 py-2 focus:border-terracotta focus:outline-none';
+const label = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
+const input = inputClass;
 
 export default function CommunityApp({ fbGroupUrl }: { fbGroupUrl: string | null }) {
   const [posts, setPosts] = useState<Post[] | null>(null);
@@ -57,18 +58,18 @@ export default function CommunityApp({ fbGroupUrl }: { fbGroupUrl: string | null
   if (authed === false) return <div className="mx-auto max-w-3xl px-6 py-24 text-center"><h1 className="font-heading text-3xl text-ink">Community</h1><p className="mt-3 text-ink2/80">Please <a href="/dashboard" className="text-terracotta underline">sign in</a>.</p></div>;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-12">
-      <p className={label}>Community</p>
-      <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">Practitioner Community</h1>
+    <div className="mx-auto max-w-4xl px-6 py-10 lg:px-10 lg:py-12">
+      <Label>Community</Label>
+      <h1 className="mt-2 font-heading text-[34px] leading-[1.15] tracking-[-0.01em] text-ink lg:text-[42px]">Practitioner Community</h1>
 
       {fbGroupUrl && (
-        <a href={fbGroupUrl} target="_blank" rel="noopener noreferrer" className="mt-6 flex items-center justify-between border border-forest bg-cream p-5 hover:border-terracotta">
-          <div><p className="font-heading text-lg text-forest">Private Practitioner Facebook Group</p><p className="text-sm text-ink2/70">Members-only · peer discussion, live Q&amp;As and announcements.</p></div>
-          <span className="text-xs uppercase tracking-[0.2em] text-terracotta">Open ↗</span>
+        <a href={fbGroupUrl} target="_blank" rel="noopener noreferrer" className="mt-8 flex items-center justify-between gap-4 rounded-card bg-blush p-6 shadow-card transition-shadow hover:shadow-lift">
+          <div><p className="font-heading text-[19px] text-ink">Private Practitioner Facebook Group</p><p className="mt-1 text-[14px] text-ink2/70">Members-only · peer discussion, live Q&amp;As and announcements.</p></div>
+          <span className="shrink-0 text-[11px] uppercase tracking-label text-terracotta">Open ↗</span>
         </a>
       )}
 
-      <form onSubmit={createPost} className="mt-8 grid gap-3 border border-stone bg-white p-6">
+      <form onSubmit={createPost} className="mt-8 grid gap-4 rounded-card bg-white p-6 shadow-card">
         <span className={label}>Start a discussion</span>
         <div className="grid gap-3 sm:grid-cols-[200px_1fr]">
           <label className="block"><span className={label}>Type</span>
@@ -78,27 +79,27 @@ export default function CommunityApp({ fbGroupUrl }: { fbGroupUrl: string | null
           <label className="block"><span className={label}>Title</span><input className={input} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
         </div>
         <label className="block"><span className={label}>Message</span><textarea className={input} rows={3} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} /></label>
-        <div><button className="bg-ink px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">Post</button></div>
+        <div><Button type="submit">Post</Button></div>
       </form>
 
       <div className="mt-8 space-y-4">
-        {posts === null && <p className="text-sm text-ink2/60">Loading…</p>}
-        {posts && posts.length === 0 && <p className="text-sm text-ink2/70">No posts yet — start the first discussion.</p>}
+        {posts === null && <Loading />}
+        {posts && posts.length === 0 && <Empty>No posts yet — start the first discussion.</Empty>}
         {(posts ?? []).map((p) => (
-          <div key={p.id} className="border border-stone bg-white p-5">
+          <Card key={p.id} className="p-6">
             <div className="flex items-center gap-2">
-              {p.pinned && <span className="text-[10px] uppercase tracking-[0.15em] text-terracotta">Pinned</span>}
-              <span className="text-[10px] uppercase tracking-[0.15em] text-forest">{TYPE_LABELS[p.postType] ?? p.postType}</span>
+              {p.pinned && <Pill>Pinned</Pill>}
+              <Pill tone="sage">{TYPE_LABELS[p.postType] ?? p.postType}</Pill>
             </div>
-            <p className="mt-1 font-heading text-lg text-ink">{p.title}</p>
-            <p className="text-xs text-ink2/50">{p.authorName} · {p.createdAt.slice(0, 10)}</p>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-ink2/80">{p.body}</p>
-            <div className="mt-3 flex items-center gap-4 text-xs">
+            <p className="mt-3 font-heading text-[19px] leading-snug text-ink">{p.title}</p>
+            <p className="mt-0.5 text-[12px] text-ink2/50">{p.authorName} · {p.createdAt.slice(0, 10)}</p>
+            <p className="mt-3 whitespace-pre-wrap text-[14px] leading-relaxed text-ink2/80">{p.body}</p>
+            <div className="mt-4 flex items-center gap-4 text-[13px]">
               <button onClick={() => upvote(p.id)} className={p.upvotedByMe ? 'text-terracotta' : 'text-ink2/60 hover:text-terracotta'}>▲ {p.upvotes}</button>
               <button onClick={() => openPost(p.id)} className="text-ink2/60 hover:text-terracotta">{p.replyCount} {p.replyCount === 1 ? 'reply' : 'replies'}</button>
             </div>
             {open === p.id && (
-              <div className="mt-4 border-t border-stone pt-4">
+              <div className="mt-5 border-t border-ink/10 pt-4">
                 <div className="space-y-3">
                   {replies.map((r) => (
                     <div key={r.id} className="text-sm"><span className="font-medium text-ink">{r.authorName}</span> <span className="text-xs text-ink2/50">{r.createdAt.slice(0, 10)}</span><p className="whitespace-pre-wrap text-ink2/80">{r.body}</p></div>
@@ -106,12 +107,12 @@ export default function CommunityApp({ fbGroupUrl }: { fbGroupUrl: string | null
                   {replies.length === 0 && <p className="text-sm text-ink2/60">No replies yet.</p>}
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <input className="flex-1 border border-stone px-3 py-2 text-sm focus:border-terracotta focus:outline-none" placeholder="Write a reply…" value={replyText} onChange={(e) => setReplyText(e.target.value)} />
-                  <button onClick={() => addReply(p.id)} className="bg-forest px-4 py-2 text-xs uppercase tracking-[0.15em] text-cream hover:bg-terracotta">Reply</button>
+                  <input className={`${inputClass} mt-0 flex-1`} placeholder="Write a reply…" value={replyText} onChange={(e) => setReplyText(e.target.value)} />
+                  <Button onClick={() => addReply(p.id)}>Reply</Button>
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         ))}
       </div>
     </div>

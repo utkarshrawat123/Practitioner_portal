@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Button, Card, Empty, GhostButton, Label, Loading, inputClass } from '@/components/ui';
 
 interface Row { displayName: string; score: number; isMe: boolean }
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
 
 export default function LeaderboardApp() {
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -30,36 +30,63 @@ export default function LeaderboardApp() {
     load();
   }
 
-  if (authed === false) return <div className="mx-auto max-w-3xl px-6 py-24 text-center"><h1 className="font-heading text-3xl text-ink">Leaderboard</h1><p className="mt-3 text-ink2/80">Please <a href="/dashboard" className="text-terracotta underline">sign in</a>.</p></div>;
+  if (authed === false) {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-24 text-center">
+        <h1 className="font-heading text-[34px] text-ink">Leaderboard</h1>
+        <p className="mt-3 text-ink2/75">Please <a href="/dashboard" className="text-terracotta underline">sign in</a>.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12">
-      <p className={label}>Community</p>
-      <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">Engagement Leaderboard</h1>
-      <p className="mt-3 text-ink2/80">Ranked by engagement — learning, events and community participation. It’s opt-in and never based on revenue.</p>
+    <div className="mx-auto max-w-3xl px-6 py-10 lg:px-10 lg:py-12">
+      <Label>Community</Label>
+      <h1 className="mt-2 font-heading text-[34px] leading-[1.15] tracking-[-0.01em] text-ink lg:text-[42px]">
+        Engagement Leaderboard
+      </h1>
+      <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink2/75">
+        Ranked by engagement — learning, events and community participation. It’s opt-in and
+        never based on revenue.
+      </p>
 
-      <div className="mt-6 border border-stone bg-white p-5">
-        <p className={label}>Your visibility</p>
+      <Card className="mt-8 p-6">
+        <Label>Your visibility</Label>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <input className="border border-stone px-3 py-2 text-sm focus:border-terracotta focus:outline-none" placeholder="Display name (optional)" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          <button onClick={() => save(!optedIn)} disabled={busy} className={`px-5 py-2 text-xs uppercase tracking-[0.2em] disabled:opacity-60 ${optedIn ? 'border border-forest text-forest hover:border-terracotta hover:text-terracotta' : 'bg-ink text-cream hover:bg-terracotta'}`}>
-            {optedIn ? 'Remove me' : 'Show me on the leaderboard'}
-          </button>
-          {optedIn && <span className="text-xs text-forest">You’re listed</span>}
+          <input
+            className={`${inputClass} mt-0 max-w-xs`}
+            placeholder="Display name (optional)"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+          />
+          {optedIn ? (
+            <GhostButton onClick={() => save(false)}>Remove me</GhostButton>
+          ) : (
+            <Button onClick={() => save(true)} disabled={busy}>Show me on the leaderboard</Button>
+          )}
+          {optedIn && <span className="text-[13px] text-olive">You’re listed</span>}
         </div>
-      </div>
+      </Card>
 
       <div className="mt-8">
-        {rows === null && <p className="text-sm text-ink2/60">Loading…</p>}
-        {rows && rows.length === 0 && <p className="text-sm text-ink2/70">No one has opted in yet — be the first!</p>}
-        <ol className="space-y-2">
+        {rows === null && <Loading />}
+        {rows && rows.length === 0 && <Empty>No one has opted in yet — be the first!</Empty>}
+        <ol className="space-y-2.5">
           {(rows ?? []).map((r, i) => (
-            <li key={i} className={`flex items-center justify-between border p-4 ${r.isMe ? 'border-terracotta bg-cream' : 'border-stone bg-white'}`}>
+            <li
+              key={i}
+              className={`flex items-center justify-between rounded-card p-5 ${
+                r.isMe ? 'bg-blush shadow-lift ring-1 ring-terracotta-mid/40' : 'bg-white shadow-card'
+              }`}
+            >
               <div className="flex items-center gap-4">
-                <span className="w-6 font-heading text-lg text-ink2/60">{i + 1}</span>
-                <span className="font-medium text-ink">{r.displayName}{r.isMe && <span className="ml-2 text-xs text-terracotta">you</span>}</span>
+                <span className="w-6 font-heading text-[19px] text-ink2/45">{i + 1}</span>
+                <span className="text-[15px] font-medium text-ink">
+                  {r.displayName}
+                  {r.isMe && <span className="ml-2 text-[12px] uppercase tracking-label text-terracotta">you</span>}
+                </span>
               </div>
-              <span className="font-heading text-lg text-forest">{r.score}</span>
+              <span className="font-heading text-[19px] text-terracotta">{r.score}</span>
             </li>
           ))}
         </ol>
