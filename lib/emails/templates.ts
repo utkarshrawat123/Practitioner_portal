@@ -1,4 +1,13 @@
 import { portalUrl } from '@/lib/codes';
+import { supportEmail } from '@/lib/support';
+
+
+/** The contact line, or an empty string when no support address is configured. */
+function contactLine(): string {
+  const email = supportEmail();
+  return email ? `
+  <p style="font-size:13px;color:#666">Questions? Reach us at ${email}</p>` : '';
+}
 
 export interface RenderedEmail {
   subject: string;
@@ -28,8 +37,7 @@ export function welcomeEmail(input: {
   <p style="margin:20px 0">
     <a href="${loginUrl}" style="background:#191919;color:#f8f6f3;padding:14px 28px;text-decoration:none;font-size:12px;letter-spacing:2px;text-transform:uppercase">Go to your dashboard</a>
   </p>
-  <p style="font-size:13px;color:#666">We use a secure one-time login link — just enter this email address (${input.email}) on the sign-in page and we'll send you a link.</p>
-  <p style="font-size:13px;color:#666">Questions? Reach us at utkarshrawatofficial@gmail.com</p>
+  <p style="font-size:13px;color:#666">We use a secure one-time login link — just enter this email address (${input.email}) on the sign-in page and we'll send you a link.</p>${contactLine()}
 </div>`.trim();
   return { subject: 'Welcome to the Wild Nutrition Practitioner Community', html };
 }
@@ -48,8 +56,7 @@ export function certificationRequestEmail(input: { name: string; uploadUrl: stri
   </p>
   <p>Once uploaded, our practitioner team will review it and confirm your account. This secure link is
   unique to you and expires in 14 days.</p>
-  <p style="font-size:13px;color:#666">If you didn't apply, you can safely ignore this email.</p>
-  <p style="font-size:13px;color:#666">Questions? Reach us at utkarshrawatofficial@gmail.com</p>
+  <p style="font-size:13px;color:#666">If you didn't apply, you can safely ignore this email.</p>${contactLine()}
 </div>`.trim();
   return { subject: 'Please upload your certification — Wild Nutrition', html };
 }

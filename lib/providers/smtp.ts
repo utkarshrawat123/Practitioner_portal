@@ -1,4 +1,5 @@
 import type { SyncResult } from './types';
+import { supportEmail } from '@/lib/support';
 
 /**
  * Gmail SMTP transactional sender. Unlike Resend it needs no domain
@@ -42,7 +43,7 @@ export async function sendSmtpEmail(input: {
     const info = await (await transport()).sendMail({
       from: fromHeader(),
       to: input.to,
-      replyTo: 'utkarshrawatofficial@gmail.com',
+      replyTo: supportEmail() ?? undefined,
       subject: input.subject,
       html: input.html,
       attachments: input.attachments,
