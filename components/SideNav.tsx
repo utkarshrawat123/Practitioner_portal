@@ -31,7 +31,7 @@ const ICONS: Record<string, LucideIcon> = {
 
 function Wordmark() {
   return (
-    <Link href="/dashboard" className="block px-6 pb-6 pt-6">
+    <Link href="/dashboard" className="block px-6 pb-5 pt-6">
       <span className="block font-body text-[15px] font-semibold uppercase tracking-[0.18em] text-white">
         Wild Nutrition<sup className="align-super text-[8px]">®</sup>
       </span>
@@ -42,12 +42,28 @@ function Wordmark() {
   );
 }
 
-function NavLinks({ sections, onNavigate }: { sections: NavSection[]; onNavigate?: () => void }) {
+/**
+ * The scrolling region: nav sections plus the help block.
+ *
+ * The help block lives INSIDE this container rather than pinned outside it. Pinned,
+ * it permanently consumed ~120px of the panel, which is what forced the nav to
+ * overflow and produce a scrollbar on the navy. `mt-auto` still floats it to the
+ * bottom whenever there is room, so it looks pinned without costing the space.
+ */
+function NavLinks({
+  sections,
+  supportEmail,
+  onNavigate,
+}: {
+  sections: NavSection[];
+  supportEmail: string | null;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   return (
-    <nav className="no-scrollbar flex flex-1 flex-col gap-0.5 overflow-y-auto px-3">
+    <nav className="no-scrollbar flex flex-1 flex-col overflow-y-auto px-3 pb-4">
       {sections.map((section, sectionIndex) => (
-        <div key={section.title ?? `section-${sectionIndex}`} className={sectionIndex > 0 ? 'mt-4' : ''}>
+        <div key={section.title ?? `section-${sectionIndex}`} className={sectionIndex > 0 ? 'mt-3' : ''}>
           {section.title && (
             <p className="px-3 pb-1.5 text-[11px] uppercase tracking-label text-white/45">
               {section.title}
@@ -56,6 +72,7 @@ function NavLinks({ sections, onNavigate }: { sections: NavSection[]; onNavigate
           <SectionLinks items={section.items} pathname={pathname} onNavigate={onNavigate} />
         </div>
       ))}
+      <HelpBlock supportEmail={supportEmail} />
     </nav>
   );
 }
@@ -80,7 +97,7 @@ function SectionLinks({
             href={item.href}
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[16px] transition-colors ${
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[16px] transition-colors ${
               active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
             }`}
           >
@@ -103,7 +120,7 @@ function SectionLinks({
 function HelpBlock({ supportEmail }: { supportEmail: string | null }) {
   if (!supportEmail) return null;
   return (
-    <div className="mt-auto px-3 pb-6 pt-6">
+    <div className="mt-auto pt-6">
       <div className="mx-3 border-t border-white/12 pt-5">
         <p className="text-[13px] text-white/45">Need help?</p>
         <a
@@ -130,8 +147,7 @@ export default function SideNav({ sections, supportEmail }: { sections: NavSecti
       {/* Desktop */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col bg-navy lg:flex">
         <Wordmark />
-        <NavLinks sections={sections} />
-        <HelpBlock supportEmail={supportEmail} />
+        <NavLinks sections={sections} supportEmail={supportEmail} />
       </aside>
 
       {/* Mobile top bar */}
@@ -167,8 +183,7 @@ export default function SideNav({ sections, supportEmail }: { sections: NavSecti
                 <X className="h-5 w-5" strokeWidth={1.7} />
               </button>
             </div>
-            <NavLinks sections={sections} onNavigate={() => setOpen(false)} />
-            <HelpBlock supportEmail={supportEmail} />
+            <NavLinks sections={sections} supportEmail={supportEmail} onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}
