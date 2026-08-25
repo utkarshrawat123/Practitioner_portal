@@ -5,6 +5,7 @@ const KEYS = [
   'R2_PUBLIC_BASE', 'ADMIN_PASSWORD', 'SESSION_SECRET', 'CRON_SECRET', 'PORTAL_URL',
   'RESEND_API_KEY', 'EMAIL_FROM', 'GEMINI_API_KEY', 'GEMINI_API_KEY2', 'ANTHROPIC_API_KEY',
   'SHOPIFY_STORE_DOMAIN', 'SHOPIFY_ADMIN_TOKEN', 'SHOPIFY_WEBHOOK_SECRET', 'SENTRY_DSN',
+  'SUPPORT_EMAIL', 'NEXT_PUBLIC_FB_GROUP_URL', 'CLOUDFLARE_D1_ID',
 ];
 
 const saved: Record<string, string | undefined> = {};
@@ -74,7 +75,7 @@ describe('readinessReport', () => {
   });
 
   it('becomes ready once every required item is configured', () => {
-    for (const k of ['R2_PUBLIC_BASE', 'ADMIN_PASSWORD', 'SESSION_SECRET', 'CRON_SECRET', 'PORTAL_URL', 'EMAIL_FROM']) {
+    for (const k of ['R2_PUBLIC_BASE', 'ADMIN_PASSWORD', 'SESSION_SECRET', 'CRON_SECRET', 'PORTAL_URL', 'EMAIL_FROM', 'SUPPORT_EMAIL', 'CLOUDFLARE_D1_ID']) {
       process.env[k] = 'set';
     }
     process.env.RESEND_API_KEY = 'k';

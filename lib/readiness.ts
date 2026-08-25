@@ -44,6 +44,9 @@ export function readinessReport(
     set(process.env.GEMINI_API_KEY2) ||
     set(process.env.ANTHROPIC_API_KEY);
 
+  const portalUrl = (process.env.PORTAL_URL ?? '').trim();
+  const portalIsLocal = /localhost|127.0.0.1/i.test(portalUrl);
+
   const checks: ReadinessCheck[] = [
     {
       key: 'database',
@@ -98,11 +101,13 @@ export function readinessReport(
     {
       key: 'portal_url',
       label: 'Portal URL',
-      status: set(process.env.PORTAL_URL) ? 'live' : 'missing',
+      status: portalUrl && !portalIsLocal ? 'live' : 'missing',
       required: true,
-      detail: set(process.env.PORTAL_URL)
-        ? 'Set. Used for magic links, invites and cron self-calls.'
-        : 'PORTAL_URL unset — links will point at localhost.',
+      detail: !portalUrl
+        ? 'PORTAL_URL unset — links will point at localhost.'
+        : portalIsLocal
+          ? 'PORTAL_URL still points at localhost. Magic links, invites and cron self-calls would all be unreachable for practitioners.'
+          : 'Set. Used for magic links, invites and cron self-calls.',
     },
     {
       key: 'email',
@@ -141,6 +146,33 @@ export function readinessReport(
         : 'SHOPIFY_WEBHOOK_SECRET unset — /api/webhooks/shopify rejects every call with 401.',
     },
     {
+      key: 'support_email',
+      label: 'Support address shown to practitioners',
+      status: set(process.env.SUPPORT_EMAIL) ? 'live' : 'missing',
+      required: true,
+      detail: set(process.env.SUPPORT_EMAIL)
+        ? 'Set. Emails, the sidebar help link and error copy use it.'
+        : 'SUPPORT_EMAIL unset — every contact line is omitted. Practitioners are given no way to reach the team.',
+    },
+    {
+      key: 'fb_group',
+      label: 'Private Facebook group URL',
+      status: set(process.env.NEXT_PUBLIC_FB_GROUP_URL) ? 'live' : 'missing',
+      required: false,
+      detail: set(process.env.NEXT_PUBLIC_FB_GROUP_URL)
+        ? 'Set. The community page links to it.'
+        : 'NEXT_PUBLIC_FB_GROUP_URL unset — the group link is hidden rather than pointing somewhere wrong.',
+    },
+    {
+      key: 'd1_id',
+      label: 'D1 database id in wrangler.toml',
+      status: set(process.env.CLOUDFLARE_D1_ID) ? 'live' : 'missing',
+      required: true,
+      detail: set(process.env.CLOUDFLARE_D1_ID)
+        ? 'Recorded. Confirms wrangler.toml no longer ships PLACEHOLDER_D1_ID.'
+        : 'CLOUDFLARE_D1_ID unset. Set it alongside the real database_id in wrangler.toml so this check can confirm the placeholder was replaced.',
+    },
+    {
       key: 'monitoring',
       label: 'Error monitoring (Sentry)',
       status: set(process.env.SENTRY_DSN) ? 'live' : 'mock',
@@ -159,6 +191,16 @@ export function readinessReport(
   if (shopifyLive && !set(process.env.SHOPIFY_WEBHOOK_SECRET)) {
     warnings.push(
       'Shopify is configured but SHOPIFY_WEBHOOK_SECRET is unset: orders would never reconcile, so sales and referral credit would silently never register.'
+    );
+  }
+  if (portalIsLocal) {
+    warnings.push(
+      'PORTAL_URL points at localhost. Magic-link sign-in, referral links and cron self-calls would all target the local machine, so nothing would work for a real practitioner.'
+    );
+  }
+  if (!set(process.env.SUPPORT_EMAIL)) {
+    warnings.push(
+      'SUPPORT_EMAIL is unset, so every "contact us" line is omitted. This is deliberate — the app never invents an address — but practitioners currently have no contact route.'
     );
   }
   if (set(process.env.TURSO_DATABASE_URL)) {
