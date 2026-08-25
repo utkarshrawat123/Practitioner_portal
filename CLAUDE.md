@@ -19,9 +19,9 @@ Cloudflare access. It is **not on Vercel** any more.
 
 ## Commands
 ```bash
-npm run dev                 # local dev, http://localhost:3100 (Node path, mock mode, no keys)
+npm run dev                 # local dev, http://localhost:3100 (mock mode, no keys; real local D1+R2)
 npm run preview:cf          # REAL Cloudflare runtime: workerd + local D1/R2, http://localhost:8787
-npm test                    # Vitest — 381 tests, keep green
+npm test                    # Vitest — 437 tests, keep green
 npm run build               # production build (also the type-check gate; stop dev server first)
 npm run bundle-kb           # re-bundle knowledge/ → lib/ai/kb.bundle.json (REQUIRED after KB edits)
 npm run generate-lessons    # offline lesson pipeline (needs ANTHROPIC_API_KEY)
@@ -42,7 +42,7 @@ Admin: `/admin`, password = `ADMIN_PASSWORD`.
 - **Data layer:** `lib/db.ts` — single module, every function `async`. `rawClient()` takes the **D1
   binding first** (so `@libsql/client` is never referenced on the Worker), else dynamically imports
   `@libsql/client` against a `file:`/Turso URL. Base `SCHEMA` auto-creates, then `lib/migrations.ts`
-  (`001_orders` … `017_practitioner_referrals`) runs on first connection. `SCHEMA` exported for tests.
+  (`001_orders` … `018_referral_v2`) runs on first connection. `SCHEMA` exported for tests.
 - **Bindings:** `lib/db/binding.ts` `getD1Binding()` / `getR2Binding()` — lazily requires
   `@opennextjs/cloudflare` behind try/catch, so Node builds and Vitest get `null`, never an error.
 - **Storage:** `lib/storage/index.ts` — R2 with a local-disk fallback (`data/uploads/`) off-Workers.
@@ -99,19 +99,18 @@ Admin: `/admin`, password = `ADMIN_PASSWORD`.
 
 ## Build status
 **Parts 1–8 + Presence + Patient Carts + Referral Network are built; the Cloudflare migration is done and
-was verified end-to-end on `preview:cf`.** Admin = **16 sections**. 381 tests green, build clean, runs in
+was verified end-to-end on `preview:cf`.** Admin = **16 sections**. 437 tests green, build clean, runs in
 mock mode with no keys.
 
-**Remaining — two tracks:**
+**Remaining:**
 - **Track A — go live** (config only, no code): follow `docs/CLOUDFLARE_GO_LIVE.md` once company
-  Cloudflare access lands. ~30 min.
-- **Track B — feature gaps:** ① **Shopify connect** — implement the `shopify` branch of
-  `getCatalog()`/`createDraftOrder()` in `lib/commerce/index.ts` (they return mock even when the provider
-  is `'shopify'` — a half-activated state to guard) + reconcile `patient_carts` by `external_id` in
-  `/api/webhooks/shopify`. **The biggest gap.** ② replace the 5 unapproved draft KB dossiers with
-  clinically signed-off ones, then `npm run bundle-kb`. ③ AI quota (Gemini 429 — config only).
-  ④ polish: `CartsApp` swallows failed-create errors, `PayPage money()` hardcodes `£`, coming-soon stubs,
-  placeholder `FB_GROUP_URL` in `CommunityApp.tsx`. ⑤ add a `*/5 * * * *` chat-alerts trigger (the old
-  daily cap was a Vercel Hobby limit that no longer applies). ⑥ wire Sentry. ⑦ optional Referral v2.
+  Cloudflare access lands. ~30 min. Then open `/api/admin/readiness` to confirm each secret took effect.
+- **Track B feature work is DONE and merged** — Shopify connect (catalog, draft orders, webhook cart
+  reconciliation via `wn_cart_token`), KB contract + drift guard, polish, `*/5` chat cron, Sentry seam,
+  Referral v2 (paid-only credit, refund clawback, cap, optional approval).
+- **Waiting on other people:** company credentials (IT); clinical sign-off on the 12 AWAITING APPROVAL
+  KB dossiers; Gemini billing; a real Shopify store to validate the commerce path (a partner **dev store
+  is free and self-serve**); a real-device mobile pass.
+- **Deliberate non-goals:** referral email invites (consent/GDPR call for the business), DB transactions.
 
-See `HANDOVER.md` §13 for the full gap list with file-level detail.
+See `HANDOVER.md` §13 for the full list, split into waiting-on-people / non-goals / done.

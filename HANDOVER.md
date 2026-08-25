@@ -10,7 +10,7 @@
 - **Repo:** `https://github.com/utkarshrawat123/Practitioner_portal` — branch **`cloudflare-migration`**
   (the default; all work branches from it). Never touch `Utkarshraw123/practitioner-portal`, which is a
   separate personal portfolio repo.
-- **State:** **381 tests pass · production build clean · runs fully in MOCK MODE with no API keys.**
+- **State:** **437 tests pass · production build clean · runs fully in MOCK MODE with no API keys.**
 - **Not deployed yet.** Go-live needs company Cloudflare account access — see §12.
 
 ---
@@ -19,7 +19,7 @@
 
 ```bash
 npm install
-npm test            # Vitest — 381 tests, keep green
+npm test            # Vitest — 437 tests, keep green
 npm run dev         # local dev → http://localhost:3100 (Node path, mock mode, no keys needed)
 npm run preview:cf  # REAL Cloudflare runtime locally: workerd + local D1/R2 → http://localhost:8787
 npm run build       # production build + type-check gate (stop the dev server first — it corrupts .next)
@@ -46,7 +46,7 @@ npm run bundle-kb   # re-bundle the AI knowledge base after ANY edit under knowl
 - **Database = Cloudflare D1**, reached through a libSQL-shaped adapter behind `getClient()` in
   `lib/db.ts`. `lib/db/binding.ts` `getD1Binding()` returns the request context's `DB` binding, or null
   off-Workers. Off-Workers (dev, tests) the same code path uses **`@libsql/client`** against a local
-  `file:` DB. Schema = base `SCHEMA` string + append-only `lib/migrations.ts` (**001–017**), applied
+  `file:` DB. Schema = base `SCHEMA` string + append-only `lib/migrations.ts` (**001–018**), applied
   idempotently on first connection — **the app self-migrates, there is no manual migration step.**
 - **File storage = R2** via `lib/storage/index.ts`; binding `BUCKET` (`getR2Binding()`). Off-Workers it
   falls back to local disk under `data/uploads/`. Auth-gated reads go through `/api/files/[...key]`.
@@ -62,7 +62,7 @@ npm run bundle-kb   # re-bundle the AI knowledge base after ANY edit under knowl
   anything under `knowledge/`, run `npm run bundle-kb` and commit the bundle** — see §16 and
   `docs/KB_AUTHORING.md`.
 - **Commerce = a mock provider seam** (`lib/commerce/`). `commerceProvider()` returns `'shopify'` when
-  `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_ADMIN_TOKEN` are set, else `'mock'`. **Shopify is NOT connected.**
+  `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_ADMIN_TOKEN` are set, else `'mock'`. The shopify branch IS implemented (catalog, draft orders, webhook cart reconciliation) — it activates the moment those two creds are set. **No store credentials yet.**
 - **Cron = Cloudflare Cron Triggers.** `wrangler.toml [triggers]` declares the schedules;
   `lib/cron/map.ts` maps each cron expression to its internal route; `worker.ts scheduled()` calls it
   through the Worker's own fetch with `CRON_SECRET`. **Adding a schedule means editing BOTH files.**
@@ -80,7 +80,7 @@ npm run bundle-kb   # re-bundle the AI knowledge base after ANY edit under knowl
 app/                  Next.js routes (pages + api). See §4.
 components/           React components (client + a few server). See §5.
 lib/                  Domain logic + data layer (db.ts is the whole data layer). See §6.
-knowledge/            AI knowledge base — 5 product dossiers + 2 clinical guides. See §16.
+knowledge/            AI knowledge base — 10 product dossiers + 2 clinical guides. See §15.
 tests/                Vitest suites. Harness: temp DB_PATH + resetDbForTests() + execForTests().
 docs/CLOUDFLARE_DEV.md       How to run locally (Node + the Cloudflare runtime).
 docs/CLOUDFLARE_GO_LIVE.md   Deploy checklist for when account access lands.
@@ -212,7 +212,7 @@ reads), `/api/webhooks/shopify`, `/api/cron/{heartbeat,run,chat-alerts}`.
 
 ---
 
-## 7. DB SCHEMA (base + migrations 001–017)
+## 7. DB SCHEMA (base + migrations 001–018)
 
 **Base tables (`SCHEMA` in `lib/db.ts`):**
 - `practitioners(id PK, name, email UNIQUE, register_body, register_number, qualification_status,
@@ -323,7 +323,7 @@ Full detail in **`docs/CLOUDFLARE_DEV.md`**. Two ways to run:
 
 | Command | Runtime | Bindings |
 |---|---|---|
-| `npm run dev` | Node (Next dev, port 3100) | none → DB falls back to a local SQLite `file:`, storage to `data/uploads/`, email to mock. **The everyday loop.** |
+| `npm run dev` | Node (Next dev, port 3100) | **real local D1 + R2** via `initOpenNextCloudflareForDev()` in next.config.mjs; email mock. Shares .wrangler/state with preview:cf. **The everyday loop.** |
 | `npm run preview:cf` | Cloudflare Workers (Wrangler, port 8787) | local **D1** + **R2** emulation. Exercises the real Cloudflare code paths. No account needed. |
 
 - **`npm run preview:cf` is the gate that catches D1-specific bugs.** Unit tests run on the libSQL/file
@@ -333,7 +333,7 @@ Full detail in **`docs/CLOUDFLARE_DEV.md`**. Two ways to run:
 - **Get a local practitioner session:** apply a qualified BANT applicant via `POST /api/apply`
   (auto-approves + sets the session cookie), OR `POST /api/auth/request-link` → open the returned
   `devLink`. Dismiss the welcome takeover via `POST /api/me/seen-welcome`.
-- **Tests:** `npm test` — 381 tests. Harness: `beforeEach` sets `process.env.DB_PATH` to a temp file;
+- **Tests:** `npm test` — 437 tests. Harness: `beforeEach` sets `process.env.DB_PATH` to a temp file;
   `afterEach` calls `resetDbForTests()`; raw SQL via `execForTests()`.
 - **`npm run build` corrupts `.next` if a dev server is running** — stop it first.
 - **Windows note:** `npm run preview:cf` works on Windows, but only because of the
@@ -525,7 +525,7 @@ architecture.
 1. **THIS FILE** — the complete picture.
 2. `CLAUDE.md` — terse conventions + architecture map.
 3. `docs/CLOUDFLARE_DEV.md` — how to run it; `docs/CLOUDFLARE_GO_LIVE.md` — how to ship it.
-4. `lib/db.ts` (whole data layer) + `lib/migrations.ts` (001–017) + `lib/db/binding.ts` (D1/R2 bindings).
+4. `lib/db.ts` (whole data layer) + `lib/migrations.ts` (001–018) + `lib/db/binding.ts` (D1/R2 bindings).
 5. For **commerce/carts** (the biggest gap): `lib/commerce/*` + `app/api/pay/[token]/route.ts` +
    `components/{CartsApp,PayPage}.tsx`.
 6. For the **AI assistant / KB**: `docs/KB_AUTHORING.md` → `lib/ai/{kb,kbValidate,assistant,safety}.ts`.
