@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { videoEmbed } from '@/lib/embed';
+import { Button, GhostButton, Label, Progress } from '@/components/ui';
 
 interface Module {
   id: number; title: string; contentKind: 'lesson' | 'media'; contentId: number;
@@ -9,12 +10,10 @@ interface Module {
   mediaType: string | null; fileKind: 'file' | 'link' | null;
   url: string | null; description: string | null;
 }
-interface Progress { percent: number; complete: boolean; required: number; completedModuleIds: number[] }
+interface ProgressData { percent: number; complete: boolean; required: number; completedModuleIds: number[] }
 interface Pathway { id: number; title: string; description: string | null; category: string | null; cpdHours: number }
 interface Certificate { pdfUrl: string | null }
-interface Data { pathway: Pathway; modules: Module[]; progress: Progress; certificate: Certificate | null }
-
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
+interface Data { pathway: Pathway; modules: Module[]; progress: ProgressData; certificate: Certificate | null }
 
 export default function PathwayDetail({ pathwayId }: { pathwayId: string }) {
   const [data, setData] = useState<Data | null>(null);
@@ -65,39 +64,48 @@ export default function PathwayDetail({ pathwayId }: { pathwayId: string }) {
   if (status === 'loading' || !data) return <Shell><p className="text-sm text-ink2/60">Loading…</p></Shell>;
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
-      <a href="/learning" className="text-xs uppercase tracking-[0.15em] text-ink2/60 hover:text-terracotta">← Learning</a>
-      <p className={`${label} mt-4`}>{data.pathway.category ?? 'Pathway'} · {data.pathway.cpdHours} CPD hours</p>
-      <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">{data.pathway.title}</h1>
-      {data.pathway.description && <p className="mt-3 max-w-3xl text-ink2/80">{data.pathway.description}</p>}
+    <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-12">
+      <a
+        href="/learning"
+        className="group inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-label text-ink2/55 transition-colors hover:text-terracotta"
+      >
+        <span className="transition-transform group-hover:-translate-x-0.5">←</span> Learning
+      </a>
 
-      <div className="mt-6 max-w-3xl">
-        <div className="h-2 w-full overflow-hidden rounded-full bg-stone">
-          <div className="h-full rounded-full bg-forest transition-all" style={{ width: `${data.progress.percent}%` }} />
-        </div>
-        <p className="mt-2 text-sm text-ink2/70">{data.progress.percent}% complete · {done.size} of {data.modules.length} sessions</p>
+      <header className="mt-5">
+        <Label>{data.pathway.category ?? 'Pathway'} · {data.pathway.cpdHours} CPD hours</Label>
+        <h1 className="mt-2 font-heading text-[34px] leading-[1.15] tracking-[-0.01em] text-ink lg:text-[42px]">
+          {data.pathway.title}
+        </h1>
+        {data.pathway.description && (
+          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink2/75">{data.pathway.description}</p>
+        )}
+      </header>
+
+      <div className="mt-7 max-w-2xl">
+        <Progress value={data.progress.percent} />
+        <p className="mt-2.5 text-[13px] text-ink2/60">
+          {data.progress.percent}% complete · {done.size} of {data.modules.length} sessions
+        </p>
       </div>
 
       {data.progress.complete && (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border border-forest bg-cream p-5">
+        <div className="mt-7 flex flex-wrap items-center justify-between gap-4 rounded-card bg-blush p-6 shadow-card">
           <div>
-            <p className="font-heading text-lg text-forest">Pathway complete 🎉</p>
-            <p className="mt-1 text-sm text-ink2/70">Your CPD certificate is ready to download.</p>
+            <p className="font-heading text-[20px] text-ink">Pathway complete</p>
+            <p className="mt-1 text-[14px] text-ink2/70">Your CPD certificate is ready to download.</p>
           </div>
           {data.certificate?.pdfUrl && (
-            <a href={data.certificate.pdfUrl} target="_blank" rel="noopener noreferrer"
-              className="inline-block bg-forest px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">
-              Download certificate
-            </a>
+            <Button href={data.certificate.pdfUrl} newTab>Download certificate</Button>
           )}
         </div>
       )}
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[300px_1fr]">
+      <div className="mt-9 grid gap-6 lg:grid-cols-[300px_1fr]">
         {/* Session list */}
         <aside className="order-2 lg:order-1">
-          <p className={label}>Sessions</p>
-          <ol className="mt-3 space-y-2">
+          <Label className="px-1">Sessions</Label>
+          <ol className="mt-3 space-y-2.5">
             {data.modules.map((m, i) => {
               const isDone = done.has(m.id);
               const isActive = m.id === activeId;
@@ -105,18 +113,27 @@ export default function PathwayDetail({ pathwayId }: { pathwayId: string }) {
                 <li key={m.id}>
                   <button
                     onClick={() => setActiveId(m.id)}
-                    className={`flex w-full items-start gap-3 border p-3 text-left transition-colors ${
-                      isActive ? 'border-terracotta bg-white' : 'border-stone bg-white hover:border-terracotta/60'
+                    aria-current={isActive ? 'step' : undefined}
+                    className={`flex w-full items-start gap-3 rounded-card p-4 text-left transition-all ${
+                      isActive
+                        ? 'bg-white shadow-lift ring-1 ring-terracotta-mid/45'
+                        : 'bg-white/70 shadow-card hover:bg-white hover:shadow-lift'
                     }`}
                   >
-                    <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] ${
-                      isDone ? 'bg-forest text-cream' : isActive ? 'bg-terracotta text-cream' : 'bg-stone text-ink2'
-                    }`}>
+                    <span
+                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+                        isDone
+                          ? 'bg-olive text-white'
+                          : isActive
+                            ? 'bg-terracotta text-white'
+                            : 'bg-stone text-ink2/70'
+                      }`}
+                    >
                       {isDone ? '✓' : i + 1}
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-ink">{m.title}</span>
-                      <span className="text-xs text-ink2/60">
+                      <span className="block truncate text-[15px] font-medium text-ink">{m.title}</span>
+                      <span className="mt-0.5 block text-[12px] text-ink2/55">
                         {sessionKindLabel(m)}{!m.required && ' · optional'}
                       </span>
                     </span>
@@ -130,34 +147,38 @@ export default function PathwayDetail({ pathwayId }: { pathwayId: string }) {
         {/* Active session */}
         <section className="order-1 lg:order-2">
           {active ? (
-            <div className="border border-stone bg-white">
+            <div className="overflow-hidden rounded-card bg-white shadow-card">
               <SessionPlayer module={active} />
-              <div className="p-6">
-                <p className={label}>Session {activeIndex + 1} of {data.modules.length}</p>
-                <h2 className="mt-1 font-heading text-2xl text-ink">{active.title}</h2>
-                {active.description && <p className="mt-2 text-sm text-ink2/80">{active.description}</p>}
-                <div className="mt-5 flex flex-wrap items-center gap-3">
+              <div className="p-7">
+                <Label>Session {activeIndex + 1} of {data.modules.length}</Label>
+                <h2 className="mt-2 font-heading text-[25px] leading-tight text-ink">{active.title}</h2>
+                {active.description && (
+                  <p className="mt-2.5 text-[15px] leading-relaxed text-ink2/75">{active.description}</p>
+                )}
+                <div className="mt-6 flex flex-wrap items-center gap-3">
                   {done.has(active.id) ? (
                     <>
-                      <span className="inline-flex items-center gap-2 text-sm font-medium text-forest">✓ Completed</span>
+                      <span className="inline-flex items-center gap-2 rounded-pill bg-sage-pale px-4 py-2 text-[13px] font-medium text-ink">
+                        <span className="text-olive">✓</span> Completed
+                      </span>
                       {data.modules[activeIndex + 1] && (
-                        <button onClick={() => setActiveId(data.modules[activeIndex + 1].id)}
-                          className="border border-forest px-5 py-2 text-xs uppercase tracking-[0.2em] text-forest hover:border-terracotta hover:text-terracotta">
+                        <GhostButton onClick={() => setActiveId(data.modules[activeIndex + 1].id)}>
                           Next session →
-                        </button>
+                        </GhostButton>
                       )}
                     </>
                   ) : (
-                    <button onClick={() => completeAndContinue(active.id)} disabled={busy}
-                      className="bg-forest px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta disabled:opacity-60">
+                    <Button onClick={() => completeAndContinue(active.id)} disabled={busy}>
                       {busy ? 'Saving…' : data.modules[activeIndex + 1] ? 'Mark complete & continue' : 'Mark complete'}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="border border-stone bg-white p-8 text-sm text-ink2/70">This pathway has no sessions yet.</div>
+            <div className="rounded-card bg-white p-10 text-center text-[15px] text-ink2/60 shadow-card">
+              This pathway has no sessions yet.
+            </div>
           )}
         </section>
       </div>
@@ -197,12 +218,11 @@ function SessionPlayer({ module: m }: { module: Module }) {
 
   // Non-video resources (documents, slides, images) or lessons: link out.
   const href = m.contentKind === 'lesson' ? '/library' : m.url ?? '/resources';
+  const what = m.contentKind === 'lesson' ? 'lesson' : m.mediaType ?? 'resource';
   return (
-    <div className="flex items-center justify-center border-b border-stone bg-cream p-10">
-      <a href={href} target={m.url ? '_blank' : undefined} rel="noopener noreferrer"
-        className="bg-ink px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">
-        Open {m.contentKind === 'lesson' ? 'lesson' : m.mediaType ?? 'resource'}
-      </a>
+    <div className="flex flex-col items-center justify-center gap-3 bg-blush px-6 py-12">
+      <Label>{what}</Label>
+      <Button href={href} newTab={!!m.url}>Open {what}</Button>
     </div>
   );
 }

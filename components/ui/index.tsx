@@ -108,6 +108,7 @@ export function Button({
   disabled = false,
   className = '',
   type = 'button',
+  newTab = false,
 }: {
   children: React.ReactNode;
   href?: string;
@@ -116,11 +117,19 @@ export function Button({
   disabled?: boolean;
   className?: string;
   type?: 'button' | 'submit';
+  /** Opens in a new tab with a safe `rel` — for PDFs and off-site resources. */
+  newTab?: boolean;
 }) {
   const cls = `inline-flex items-center justify-center gap-2 rounded-pill px-5 py-2.5 text-[14px] font-medium transition-colors disabled:opacity-50 ${
     invert ? 'bg-white text-ink hover:bg-white/90' : 'bg-navy text-white hover:bg-navy-mid'
   } ${className}`;
-  if (href) return <Link href={href} className={cls}>{children}</Link>;
+  if (href) {
+    return newTab ? (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>{children}</a>
+    ) : (
+      <Link href={href} className={cls}>{children}</Link>
+    );
+  }
   return (
     <button type={type} onClick={onClick} disabled={disabled} className={cls}>
       {children}
