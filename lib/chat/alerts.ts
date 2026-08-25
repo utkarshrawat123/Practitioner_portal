@@ -1,10 +1,15 @@
 import { conversationsAwaitingAlert, markConversationAlerted } from '@/lib/db';
 import { smtpConfigured, sendSmtpEmail } from '@/lib/providers/smtp';
 import { portalUrl as basePortalUrl } from '@/lib/codes';
+import { supportEmail } from '@/lib/support';
 
-/** Where missed-message alerts go. Contact inbox by default; overridable. */
-export function alertRecipient(): string {
-  return process.env.ADMIN_ALERT_EMAIL || 'utkarshrawatofficial@gmail.com';
+/**
+ * Where missed-message alerts go: an explicit ops inbox, else the support
+ * address. Null when neither is configured — alerts are then skipped rather
+ * than delivered somewhere arbitrary.
+ */
+export function alertRecipient(): string | null {
+  return (process.env.ADMIN_ALERT_EMAIL ?? '').trim() || supportEmail();
 }
 
 /** Minutes a practitioner message may wait unanswered before the email fires. */
@@ -32,18 +37,20 @@ export async function sendChatAlerts(now = new Date()): Promise<{
   checked: number;
   alerted: number;
   skippedNoSmtp: boolean;
+  skippedNoRecipient: boolean;
 }> {
   void now;
   const due = await conversationsAwaitingAlert(alertThresholdMinutes());
   const smtp = smtpConfigured();
+  const to = alertRecipient();
   // Use the canonical PORTAL_URL helper rather than a second hardcoded default —
   // the old fallback pointed at the retired Vercel deployment.
   const portalUrl = basePortalUrl().replace(/\/$/, '');
   let alerted = 0;
   for (const convo of due) {
-    if (smtp) {
+    if (smtp && to) {
       const res = await sendSmtpEmail({
-        to: alertRecipient(),
+        to,
         subject: `New practitioner chat waiting — ${convo.practitionerName}`,
         html: alertHtml(convo.practitionerName, portalUrl),
       });
@@ -55,5 +62,5 @@ export async function sendChatAlerts(now = new Date()): Promise<{
     await markConversationAlerted(convo.id);
     alerted += 1;
   }
-  return { checked: due.length, alerted, skippedNoSmtp: !smtp };
+  return { checked: due.length, alerted, skippedNoSmtp: !smtp, skippedNoRecipient: !to };
 }
