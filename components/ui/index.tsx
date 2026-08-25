@@ -185,3 +185,72 @@ export function Empty({ children }: { children: React.ReactNode }) {
     </Card>
   );
 }
+
+/** Quiet loading line — same measure as Empty so layouts do not jump. */
+export function Loading({ children = 'Loading…' }: { children?: React.ReactNode }) {
+  return <p className="py-10 text-center text-[15px] text-ink2/50">{children}</p>;
+}
+
+/**
+ * Row of filter chips. Replaces the hard-bordered filter rows: the selected chip
+ * is a filled terracotta pill, the rest are quiet outlines on the cream canvas.
+ */
+export function FilterPills<T extends string>({
+  options,
+  value,
+  onChange,
+  className = '',
+}: {
+  options: { id: T; label: string }[];
+  value: T;
+  onChange: (id: T) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      {options.map((o) => {
+        const on = o.id === value;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => onChange(o.id)}
+            aria-pressed={on}
+            className={`rounded-pill px-4 py-1.5 text-[13px] transition-colors ${
+              on
+                ? 'bg-terracotta-mid text-white'
+                : 'bg-white/70 text-ink2 hover:bg-white hover:text-ink'
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Shared form-field styling. Exported as class strings rather than components so
+ * existing inputs keep their own props, handlers and validation untouched — the
+ * restyle stays presentational.
+ */
+export const inputClass =
+  'mt-1 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[15px] text-ink shadow-card outline-none ring-1 ring-ink/5 transition-shadow placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
+
+export const fieldLabelClass = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
+
+/** Soft inline notice — replaces the old left-border banners. */
+export function Note({
+  children,
+  tone = 'info',
+}: {
+  children: React.ReactNode;
+  tone?: 'info' | 'warn';
+}) {
+  const tones = {
+    info: 'bg-blush text-ink2',
+    warn: 'bg-terracotta-light/40 text-ink',
+  } as const;
+  return <div className={`rounded-card px-5 py-4 text-[14px] ${tones[tone]}`}>{children}</div>;
+}

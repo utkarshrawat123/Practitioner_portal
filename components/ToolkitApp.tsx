@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Button, Card, Empty, FilterPills, GhostButton, Label, Loading, Pill } from '@/components/ui';
 
 interface Resource {
   id: number; title: string; type: string; description: string | null;
@@ -22,22 +23,21 @@ const FILTERS: { id: string; label: string }[] = [
   { id: 'email_template', label: 'Email templates' },
 ];
 
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
-const card = 'border border-stone bg-white p-6';
-
 function CopyBody({ body }: { body: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="mt-3">
-      <pre className="max-h-64 overflow-auto whitespace-pre-wrap border-l-2 border-sage bg-cream p-3 text-sm text-ink2/90">{body}</pre>
-      <button
+    <div className="mt-4">
+      <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-xl bg-blush p-4 text-[13px] leading-relaxed text-ink2/90">
+        {body}
+      </pre>
+      <GhostButton
         onClick={async () => {
           try { await navigator.clipboard.writeText(body); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* clipboard unavailable */ }
         }}
-        className="mt-3 bg-ink px-4 py-2 text-xs uppercase tracking-[0.15em] text-cream transition-colors hover:bg-terracotta"
+        className="mt-3"
       >
         {copied ? 'Copied ✓' : 'Copy text'}
-      </button>
+      </GhostButton>
     </div>
   );
 }
@@ -45,30 +45,28 @@ function CopyBody({ body }: { body: string }) {
 function ResourceCard({ r }: { r: Resource }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={card}>
-      <span className="inline-block bg-sage/40 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-forest">
-        {TYPE_LABELS[r.type] ?? r.type}
-      </span>
-      <p className="mt-3 font-heading text-lg text-ink">{r.title}</p>
-      {r.description && <p className="mt-1 text-sm text-ink2/70">{r.description}</p>}
+    <Card className="flex flex-col p-6">
+      <div>
+        <Pill tone="sage">{TYPE_LABELS[r.type] ?? r.type}</Pill>
+      </div>
+      <p className="mt-3 font-heading text-[19px] leading-snug text-ink">{r.title}</p>
+      {r.description && <p className="mt-1.5 text-[14px] leading-relaxed text-ink2/70">{r.description}</p>}
 
       {r.contentKind === 'text' ? (
         <>
-          <button onClick={() => setOpen((o) => !o)}
-            className="mt-3 border border-forest px-4 py-1.5 text-xs uppercase tracking-[0.15em] text-forest hover:border-terracotta hover:text-terracotta">
+          <GhostButton onClick={() => setOpen((o) => !o)} className="mt-4 self-start">
             {open ? 'Hide' : 'View'}
-          </button>
+          </GhostButton>
           {open && r.body && <CopyBody body={r.body} />}
         </>
       ) : (
         r.url && (
-          <a href={r.url} target="_blank" rel="noopener noreferrer"
-            className="mt-4 inline-block bg-ink px-5 py-2 text-xs uppercase tracking-[0.15em] text-cream transition-colors hover:bg-terracotta">
+          <Button href={r.url} newTab className="mt-4 self-start">
             {r.contentKind === 'file' ? 'Download' : 'Open'}
-          </a>
+          </Button>
         )
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -88,8 +86,8 @@ export default function ToolkitApp() {
   if (authed === false) {
     return (
       <div className="mx-auto max-w-md px-6 py-16 text-center">
-        <h1 className="font-heading text-3xl text-ink">Clinical Toolkit</h1>
-        <p className="mt-4 text-ink2/80">
+        <h1 className="font-heading text-[34px] text-ink">Clinical Toolkit</h1>
+        <p className="mt-4 text-ink2/75">
           Available to approved practitioners. Please{' '}
           <a href="/dashboard" className="text-terracotta underline">log in to your dashboard</a> first.
         </p>
@@ -98,32 +96,25 @@ export default function ToolkitApp() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
-      <p className={label}>Practitioner tools</p>
-      <h1 className="mt-1 font-heading text-3xl text-ink md:text-4xl">Clinical Toolkit</h1>
-      <p className="mt-3 max-w-2xl text-sm text-ink2/80">
+    <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-12">
+      <Label>Practitioner tools</Label>
+      <h1 className="mt-2 font-heading text-[34px] leading-[1.15] tracking-[-0.01em] text-ink lg:text-[42px]">
+        Clinical Toolkit
+      </h1>
+      <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink2/75">
         Practical, in-clinic resources — client handouts, protocols, decision trees, recipes,
         FAQs and email templates you can use and adapt.
       </p>
 
-      <div className="mt-8 flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <button key={f.id} onClick={() => setFilter(f.id)}
-            className={`px-3 py-1.5 text-xs uppercase tracking-[0.15em] transition-colors ${
-              filter === f.id ? 'bg-ink text-cream' : 'border border-stone text-ink2/70 hover:border-terracotta'
-            }`}>
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <FilterPills options={FILTERS} value={filter} onChange={setFilter} className="mt-8" />
 
       <div className="mt-8">
         {resources === null ? (
-          <p className="text-sm text-ink2/60">Loading…</p>
+          <Loading />
         ) : resources.length === 0 ? (
-          <p className="text-sm text-ink2/70">No resources here yet — check back soon.</p>
+          <Empty>No resources here yet — check back soon.</Empty>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {resources.map((r) => <ResourceCard key={r.id} r={r} />)}
           </div>
         )}
