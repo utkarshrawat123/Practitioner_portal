@@ -4,6 +4,10 @@
 `CLAUDE.md` is the terse agent guide. `docs/CLOUDFLARE_DEV.md` covers running locally and
 `docs/CLOUDFLARE_GO_LIVE.md` covers deploying. Last rewritten **2026-08-17**.
 
+> **Starting a new session? Read `docs/NEXT_SESSION.md` FIRST** — current branch state, what the
+> last session did, and where to pick up. Then `docs/DECK_GAP_ANALYSIS.md` (remaining features vs the
+> design deck) and `docs/UI_REDESIGN.md` (the in-flight brand reskin).
+
 > **Platform:** this app deploys to **Cloudflare Workers**. It is **not** on Vercel any more.
 > Anything you read about Vercel, Turso or Vercel Blob is history — see §17.
 
@@ -85,6 +89,9 @@ tests/                Vitest suites. Harness: temp DB_PATH + resetDbForTests() +
 docs/CLOUDFLARE_DEV.md       How to run locally (Node + the Cloudflare runtime).
 docs/CLOUDFLARE_GO_LIVE.md   Deploy checklist for when account access lands.
 docs/KB_AUTHORING.md         Knowledge-base contract, template and go-live gate.
+docs/NEXT_SESSION.md         START HERE in a new session — state + next steps.
+docs/DECK_GAP_ANALYSIS.md    Design-deck features vs what is built (remaining-work map).
+docs/UI_REDESIGN.md          Brand design system + reskin progress.
 docs/superpowers/{specs,plans}/  Dated design specs + implementation plans, one per feature (history).
 worker.ts             Cloudflare Worker entry (wraps OpenNext + adds scheduled()).
 wrangler.toml         Bindings (D1 `DB`, R2 `BUCKET`), cron triggers, vars.
@@ -522,6 +529,7 @@ architecture.
 
 ## 18. READ-FIRST ORDER FOR A NEW SESSION
 
+0. **`docs/NEXT_SESSION.md`** — where the last session stopped, and the open decisions.
 1. **THIS FILE** — the complete picture.
 2. `CLAUDE.md` — terse conventions + architecture map.
 3. `docs/CLOUDFLARE_DEV.md` — how to run it; `docs/CLOUDFLARE_GO_LIVE.md` — how to ship it.
