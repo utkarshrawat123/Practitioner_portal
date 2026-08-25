@@ -1,5 +1,7 @@
-const USER_AGENT =
-  'WildNutritionPractitionerPortal/1.0 (+utkarshrawatofficial@gmail.com; membership verification)';
+import { outboundUserAgent } from '@/lib/support';
+
+// Read per request, not frozen at module load, so a secret set at runtime applies.
+const userAgent = (): string => outboundUserAgent('membership verification');
 const MIN_INTERVAL_MS = 1000;
 const TIMEOUT_MS = 8000;
 
@@ -12,7 +14,7 @@ export async function politeFetch(url: string): Promise<string | null> {
   lastRequestAt = Date.now();
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      headers: { 'User-Agent': userAgent(), Accept: 'text/html' },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) return null;

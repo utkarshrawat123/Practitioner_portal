@@ -1,3 +1,4 @@
+import { outboundUserAgent } from '@/lib/support';
 const TIMEOUT_MS = 8000;
 
 export function parseYouTubeId(url: string): string | null {
@@ -30,7 +31,7 @@ export async function resolveLinkThumbnail(rawUrl: string): Promise<string | nul
     }
 
     const res = await fetch(rawUrl, {
-      headers: { 'User-Agent': 'WildNutritionPractitionerPortal/1.0 (+utkarshrawatofficial@gmail.com)' },
+      headers: { 'User-Agent': outboundUserAgent() },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) return null;
