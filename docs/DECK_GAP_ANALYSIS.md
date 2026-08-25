@@ -120,3 +120,37 @@ Cheapest-first, each unlocking the next:
 6. **Notifications + header chrome**
 7. **Community: polls/surveys, NPD trials**
 8. Later, and deliberately so: native mobile app; patient testing area.
+
+---
+
+## 7. Decisions taken — 2026-08-25
+
+The two blocking questions in §5 and §3.1 are now answered. Recorded here so the
+analysis above is read in light of them.
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | §3.1 — is "Ask Lorna" built? | **Ask Lorna is dropped from scope.** It is *not* the built Ask the Expert, and it will not be built. Ask the Expert stays as-is (protocol generator) and gets surfaced properly in the nav instead of living only in a Dashboard tile. |
+| 2 | §5 — Carts / Referrals / Leaderboard vs the deck's nav | **Reading 1: regroup, don't rebuild.** The deck's slots are containers for what already exists. *Practice Growth* groups Patient Carts + Refer & Earn + Leaderboard. *My Clinic* groups saved resources + Clinical Toolkit. **No routes are renamed or moved. No data migration.** |
+| 3 | `UI_REDESIGN.md` §7 Q2 — Fraunces vs Gestura | **Ship Fraunces.** The swap point in `app/fonts.ts` stays documented if the licensed webfont ever arrives. The reskin is unblocked. |
+
+### Consequence for §6's build order
+
+Ask Lorna leaving scope removes **global search's main justification** — it was
+primarily a prerequisite for Lorna. Search drops well down the order and only returns
+if practitioners demonstrably cannot find things. The revised order is:
+
+1. **Saved resources / "My Clinic"** ← in progress
+2. **Nav regroup** (Practice Growth / My Clinic sections) — also surfaces `/resources`,
+   `/library` and `/assistant`, which are currently **not in the sidebar at all** and
+   reachable only from Dashboard quick-links
+3. Events: On Demand + My Events tabs
+4. Consultation + mentoring booking (blocked: needs a real booking destination)
+5. Notifications + header chrome
+6. Global search — deprioritised, see above
+
+### Still open (not decided)
+
+- Photography (`UI_REDESIGN.md` §7 Q3) — no brand assets available
+- Which sidebar treatment (§7 Q1) — navy shipped, not explicitly confirmed
+- Patient testing area — unchanged; needs its own health-data/consent conversation
