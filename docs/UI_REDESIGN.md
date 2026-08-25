@@ -56,11 +56,11 @@ Also added: `rounded-card` (16px), `rounded-pill`, `shadow-card`/`shadow-lift`,
 
 ## 4. Shell + primitives
 
-- **`components/SideNav.tsx`** — the deck's persistent navy sidebar: 248px, wordmark +
+- **`components/SideNav.tsx`** — the deck's persistent navy sidebar: 280px (`w-sidebar`), wordmark +
   "In Practice" lockup, terracotta line icons, active state, "Need help? Contact our
   team" footer. Collapses to a navy top bar + slide-in drawer under `lg`.
 - **`components/Chrome.tsx`** — the frame. Owns **both** the per-route chrome decision
-  and the sidebar space reservation (`lg:pl-[248px]`), deliberately together because
+  and the sidebar space reservation (`lg:pl-sidebar`), deliberately together because
   they need identical path logic and would otherwise drift.
   - `/onboarding/*`, `/admin`, `/pay/*` → **no chrome** (full-takeover routes)
   - signed in → navy sidebar
@@ -90,7 +90,7 @@ Also added: `rounded-card` (16px), `rounded-pill`, `shadow-card`/`shadow-lift`,
 Checked in-browser via computed styles (screenshots unavailable — the Browser pane
 won't composite unless displayed):
 
-- sidebar `rgb(6,27,50)` @ 248px with the full audience-gated nav
+- sidebar `rgb(6,27,50)` @ 280px with the full audience-gated nav
 - canvas `rgb(250,246,243)`, pills `rgb(195,138,107)`, card radius `16px`
 - `h1` = Fraunces @ 38px, white on the navy hero
 - at 375px: sidebar hidden, burger present, **no horizontal overflow**

@@ -62,6 +62,12 @@ const config: Config = {
       letterSpacing: {
         label: '0.15em',   // uppercase micro-labels
       },
+      spacing: {
+        // Sidebar width. SideNav paints it (`w-sidebar`) and Chrome reserves the
+        // same space (`lg:pl-sidebar`) — one token so the two can never drift.
+        sidebar: '280px',
+        'sidebar-drawer': '300px',  // mobile drawer, slightly wider for thumbs
+      },
     },
   },
   plugins: [],

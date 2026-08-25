@@ -61,7 +61,7 @@ export default function Chrome({
   return (
     <>
       <SideNav sections={navSections} supportEmail={supportEmail} />
-      <div className="lg:pl-[248px]">{children}</div>
+      <div className="lg:pl-sidebar">{children}</div>
     </>
   );
 }

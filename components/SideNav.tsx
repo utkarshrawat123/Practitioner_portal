@@ -31,7 +31,7 @@ const ICONS: Record<string, LucideIcon> = {
 
 function Wordmark() {
   return (
-    <Link href="/dashboard" className="block px-6 pb-5 pt-6">
+    <Link href="/dashboard" className="block px-7 pb-5 pt-6">
       <span className="block font-body text-[15px] font-semibold uppercase tracking-[0.18em] text-white">
         Wild Nutrition<sup className="align-super text-[8px]">®</sup>
       </span>
@@ -61,7 +61,7 @@ function NavLinks({
 }) {
   const pathname = usePathname();
   return (
-    <nav className="no-scrollbar flex flex-1 flex-col overflow-y-auto px-3 pb-4">
+    <nav className="no-scrollbar flex flex-1 flex-col overflow-y-auto px-4 pb-4">
       {sections.map((section, sectionIndex) => (
         <div key={section.title ?? `section-${sectionIndex}`} className={sectionIndex > 0 ? 'mt-3' : ''}>
           {section.title && (
@@ -145,7 +145,7 @@ export default function SideNav({ sections, supportEmail }: { sections: NavSecti
   return (
     <>
       {/* Desktop */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col bg-navy lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-sidebar flex-col bg-navy lg:flex">
         <Wordmark />
         <NavLinks sections={sections} supportEmail={supportEmail} />
       </aside>
@@ -172,7 +172,7 @@ export default function SideNav({ sections, supportEmail }: { sections: NavSecti
             onClick={() => setOpen(false)}
             className="absolute inset-0 bg-navy/60 backdrop-blur-sm"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[268px] flex-col bg-navy shadow-lift">
+          <div className="absolute inset-y-0 left-0 flex w-sidebar-drawer flex-col bg-navy shadow-lift">
             <div className="flex items-start justify-between">
               <Wordmark />
               <button
