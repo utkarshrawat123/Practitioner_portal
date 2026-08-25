@@ -34,6 +34,9 @@ In the dashboard (Workers → your Worker → Settings → Variables), or via
 | `CRON_SECRET` | Authorises the scheduled cron calls |
 | `R2_PUBLIC_BASE` | The R2 public URL from step 1 (used for media URLs) |
 | `PORTAL_URL` | Your live URL (also used by cron self-calls) — set in `[vars]` or as a secret |
+| `SUPPORT_EMAIL` | **Required.** The address practitioners are told to contact. Unset = every contact line is omitted rather than wrong. |
+| `NEXT_PUBLIC_FB_GROUP_URL` | The private Facebook group. Unset = the link is hidden on /community. |
+| `CLOUDFLARE_D1_ID` | Same value as `database_id` in `wrangler.toml`; lets readiness confirm the placeholder was replaced. |
 
 **Shopify (set whenever the store credentials arrive — independent of the rest):**
 
@@ -82,6 +85,28 @@ Anything still `mock` is safe (the app degrades by design); anything `missing` a
 required will keep `ready: false`. It also warns on the two combinations that fail
 silently: Shopify configured without `SHOPIFY_WEBHOOK_SECRET` (orders would never
 reconcile), and a leftover `TURSO_DATABASE_URL`.
+
+## 5c. Pre-flight — the checks that fail silently
+
+`/api/admin/readiness` must show `ready: true` **and an empty `warnings` array**.
+`ready: true` alone is not sufficient; warnings cover the settings that are present
+but wrong, which no amount of clicking around will reveal:
+
+- `PORTAL_URL` still on localhost — magic links, referral links and cron self-calls
+  all break for real practitioners while looking fine to you
+- `SUPPORT_EMAIL` unset — every contact line is silently omitted
+- Shopify configured without `SHOPIFY_WEBHOOK_SECRET` — orders never reconcile, so
+  sales and referral credit silently never register
+- A leftover `TURSO_DATABASE_URL`
+
+**Ask IT for the DNS records early.** Resend needs a *domain-verified* sender before
+any email sends; that is a DNS change with a lead time, and it is the single most
+likely cause of a delayed launch. Request it at the same time as the API key, not after.
+
+**Known unverified assumption:** the Shopify order path (`wn_cart_token` →
+`note_attributes` reconciliation) has only ever run against stubbed fetches. The first
+real draft order will happen in production — watch it, and check that the cart is
+marked paid and any referral is credited.
 
 ## 6. Smoke test
 1. Open the site → `/apply` submits and a practitioner appears in `/admin`.
