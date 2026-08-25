@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { supportEmail } from '@/lib/support';
 import { z } from 'zod';
 import { DuplicateEmailError, processApplication } from '@/lib/pipeline';
 import { sessionCookieHeader } from '@/lib/practitionerAuth';
@@ -54,8 +55,13 @@ export async function POST(req: Request): Promise<NextResponse> {
     });
   } catch (err) {
     if (err instanceof DuplicateEmailError) {
+      const email = supportEmail();
       return NextResponse.json(
-        { error: 'An application already exists for this email address. Contact utkarshrawatofficial@gmail.com if you need help.' },
+        {
+          error: email
+            ? `An application already exists for this email address. Contact ${email} if you need help.`
+            : 'An application already exists for this email address.',
+        },
         { status: 409 }
       );
     }
