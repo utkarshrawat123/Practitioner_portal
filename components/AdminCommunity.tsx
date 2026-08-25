@@ -32,8 +32,8 @@ export default function AdminCommunity() {
             <p className="text-xs text-ink2/60">{p.authorName} · {p.postType} · {p.upvotes} upvotes · {p.replyCount} replies</p>
           </div>
           <div className="flex shrink-0 gap-2 text-xs">
-            <button onClick={() => patch(p.id, { pinned: !p.pinned })} className="border border-stone px-3 py-1">{p.pinned ? 'Unpin' : 'Pin'}</button>
-            <button onClick={() => patch(p.id, { hidden: !p.hidden })} className="border border-stone px-3 py-1">{p.hidden ? 'Show' : 'Hide'}</button>
+            <button onClick={() => patch(p.id, { pinned: !p.pinned })} className="rounded-pill bg-white px-3 py-1 text-[13px] text-ink2 shadow-card transition-colors hover:text-ink">{p.pinned ? 'Unpin' : 'Pin'}</button>
+            <button onClick={() => patch(p.id, { hidden: !p.hidden })} className="rounded-pill bg-white px-3 py-1 text-[13px] text-ink2 shadow-card transition-colors hover:text-ink">{p.hidden ? 'Show' : 'Hide'}</button>
             <button onClick={() => remove(p.id)} className="border border-terracotta px-3 py-1 text-terracotta">Delete</button>
           </div>
         </div>

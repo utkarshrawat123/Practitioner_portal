@@ -16,7 +16,7 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="border border-stone bg-white px-4 py-3">
+    <div className="rounded-card bg-white shadow-card px-4 py-3">
       <p className="text-2xl font-heading text-ink">{value}</p>
       <p className="text-[11px] uppercase tracking-[0.12em] text-ink2/60">{label}</p>
     </div>
@@ -82,18 +82,18 @@ export default function ChatInsights() {
         <label className="text-xs uppercase tracking-[0.12em] text-ink2/70">
           From<br />
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
-            className="mt-1 border border-stone px-2 py-1.5 text-sm" />
+            className="mt-1 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[14px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50" />
         </label>
         <label className="text-xs uppercase tracking-[0.12em] text-ink2/70">
           To<br />
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
-            className="mt-1 border border-stone px-2 py-1.5 text-sm" />
+            className="mt-1 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[14px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50" />
         </label>
-        <button onClick={load} className="bg-ink px-4 py-2 text-xs uppercase tracking-[0.15em] text-cream hover:bg-terracotta">
+        <button onClick={load} className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta">
           Apply
         </button>
         <a href={`/api/admin/chat/insights?export=csv&${qs()}`}
-          className="border border-stone px-4 py-2 text-xs uppercase tracking-[0.15em] text-ink2 hover:text-terracotta">
+          className="inline-flex items-center justify-center rounded-pill bg-white px-4 py-2 text-[13px] text-ink ring-1 ring-ink/12 transition-colors hover:ring-ink/30">
           Export CSV
         </a>
       </div>
@@ -113,14 +113,14 @@ export default function ChatInsights() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Monthly volume */}
-            <div className="border border-stone bg-white p-4">
+            <div className="rounded-card bg-white shadow-card p-4">
               <h4 className="mb-3 text-xs uppercase tracking-[0.15em] text-ink2/70">Monthly volume</h4>
               {stats.byMonth.length === 0 ? <p className="text-sm text-ink2/50">No data.</p> : (
                 <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <tbody>
                     {stats.byMonth.map((m) => (
-                      <tr key={m.month} className="border-b border-stone/60">
+                      <tr key={m.month} className="border-b border-ink/8">
                         <td className="py-1.5">{m.month}</td>
                         <td className="py-1.5 text-right text-ink2/70">{m.conversations} convos</td>
                         <td className="py-1.5 text-right font-medium">{m.messages} msgs</td>
@@ -133,7 +133,7 @@ export default function ChatInsights() {
             </div>
 
             {/* Busiest weekday */}
-            <div className="border border-stone bg-white p-4">
+            <div className="rounded-card bg-white shadow-card p-4">
               <h4 className="mb-3 text-xs uppercase tracking-[0.15em] text-ink2/70">Busiest day</h4>
               <div className="space-y-1.5">
                 {WEEKDAYS.map((label, wd) => {
@@ -142,7 +142,7 @@ export default function ChatInsights() {
                     <div key={wd} className="flex items-center gap-2 text-xs">
                       <span className="w-9 text-ink2/70">{label}</span>
                       <div className="h-3 flex-1 bg-stone/40">
-                        <div className="h-3 bg-forest" style={{ width: `${(n / maxWd) * 100}%` }} />
+                        <div className="h-3 bg-navy" style={{ width: `${(n / maxWd) * 100}%` }} />
                       </div>
                       <span className="w-8 text-right text-ink2/70">{n}</span>
                     </div>
@@ -154,12 +154,12 @@ export default function ChatInsights() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Top practitioners */}
-            <div className="border border-stone bg-white p-4">
+            <div className="rounded-card bg-white shadow-card p-4">
               <h4 className="mb-3 text-xs uppercase tracking-[0.15em] text-ink2/70">Most active practitioners</h4>
               {stats.topPractitioners.length === 0 ? <p className="text-sm text-ink2/50">No data.</p> : (
                 <ol className="space-y-1 text-sm">
                   {stats.topPractitioners.map((p) => (
-                    <li key={p.practitionerId} className="flex justify-between border-b border-stone/60 py-1">
+                    <li key={p.practitionerId} className="flex justify-between border-b border-ink/8 py-1">
                       <span>{p.name}</span><span className="text-ink2/70">{p.messages}</span>
                     </li>
                   ))}
@@ -168,7 +168,7 @@ export default function ChatInsights() {
             </div>
 
             {/* Keywords */}
-            <div className="border border-stone bg-white p-4">
+            <div className="rounded-card bg-white shadow-card p-4">
               <h4 className="mb-3 text-xs uppercase tracking-[0.15em] text-ink2/70">Most-asked terms</h4>
               {keywords.length === 0 ? <p className="text-sm text-ink2/50">No data.</p> : (
                 <div className="flex flex-wrap gap-2">
@@ -183,11 +183,11 @@ export default function ChatInsights() {
           </div>
 
           {/* AI FAQ consolidation */}
-          <div className="border border-stone bg-white p-4">
+          <div className="rounded-card bg-white shadow-card p-4">
             <div className="flex items-center justify-between">
               <h4 className="text-xs uppercase tracking-[0.15em] text-ink2/70">FAQ consolidation (AI)</h4>
               <button onClick={consolidate} disabled={faqBusy}
-                className="bg-forest px-4 py-2 text-xs uppercase tracking-[0.15em] text-cream hover:bg-terracotta disabled:opacity-50">
+                className="inline-flex items-center justify-center rounded-pill bg-navy px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 disabled:opacity-50">
                 {faqBusy ? 'Analysing…' : 'Consolidate FAQs'}
               </button>
             </div>
@@ -196,7 +196,7 @@ export default function ChatInsights() {
             {faqs && faqs.length > 0 && (
               <div className="mt-4 space-y-3">
                 {faqs.map((f, i) => (
-                  <div key={i} className="border border-stone/60 p-3">
+                  <div key={i} className="rounded-xl ring-1 ring-ink/8 p-3">
                     <div className="flex items-start justify-between gap-3">
                       <p className="font-medium text-ink">{f.question}</p>
                       <span className="shrink-0 rounded-full bg-cream px-2 py-0.5 text-[11px] text-ink2/70">×{f.frequency}</span>

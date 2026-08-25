@@ -7,8 +7,8 @@ interface Pearl {
   audience: 'all' | 'qualified' | 'student'; status: 'draft' | 'published'; source: string | null;
 }
 
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
-const input = 'mt-1 w-full border border-stone px-3 py-2 focus:border-terracotta focus:outline-none';
+const label = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
+const input = 'mt-1 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[15px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
 
 export default function AdminPearls() {
   const [rows, setRows] = useState<Pearl[]>([]);
@@ -42,7 +42,7 @@ export default function AdminPearls() {
 
   return (
     <div className="mt-6 grid gap-8 lg:grid-cols-2">
-      <form onSubmit={create} className="grid gap-4 border border-stone bg-white p-6">
+      <form onSubmit={create} className="grid gap-4 rounded-card bg-white shadow-card p-6">
         <span className={label}>New clinical pearl</span>
         <label className="block"><span className={label}>Tip (one or two sentences)</span>
           <textarea className={input} rows={3} required value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} /></label>
@@ -55,20 +55,20 @@ export default function AdminPearls() {
             </select></label>
         </div>
         {error && <p className="text-sm text-terracotta">{error}</p>}
-        <button className="bg-ink px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">Publish pearl</button>
+        <button className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta">Publish pearl</button>
       </form>
 
       <div className="space-y-2">
         {rows.length === 0 && <p className="text-sm text-ink2/70">No pearls yet.</p>}
         {rows.map((p) => (
-          <div key={p.id} className="border border-stone bg-white p-3">
+          <div key={p.id} className="rounded-card bg-white shadow-card p-3">
             <p className="text-sm text-ink">{p.body}</p>
             <div className="mt-2 flex items-center justify-between">
               <span className="text-xs text-ink2/60">
                 {p.category ?? 'Uncategorised'} · {p.audience} · {p.status}{p.source === 'content-factory' ? ' · from webinar' : ''}
               </span>
               <div className="flex shrink-0 gap-2 text-xs">
-                <button onClick={() => patch(p.id, { status: p.status === 'published' ? 'draft' : 'published' })} className="border border-stone px-2 py-1">
+                <button onClick={() => patch(p.id, { status: p.status === 'published' ? 'draft' : 'published' })} className="ring-1 ring-ink/10 px-2 py-1">
                   {p.status === 'published' ? 'Unpublish' : 'Publish'}
                 </button>
                 <button onClick={() => remove(p.id)} className="border border-terracotta px-2 py-1 text-terracotta">Delete</button>

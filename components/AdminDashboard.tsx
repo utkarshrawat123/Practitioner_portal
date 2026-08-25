@@ -214,14 +214,14 @@ export default function AdminDashboard() {
 
   if (authed === false) {
     return (
-      <form onSubmit={login} className="mt-10 max-w-sm border border-stone bg-white p-8">
+      <form onSubmit={login} className="mt-10 max-w-sm rounded-card bg-white shadow-card p-8">
         <label className="mb-1.5 block text-xs uppercase tracking-[0.15em]">Admin password</label>
         <input
           type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-          className="w-full border border-stone px-4 py-3 focus:border-terracotta focus:outline-none"
+          className="w-full rounded-xl border-0 bg-white px-4 py-3 text-[15px] shadow-card outline-none ring-1 ring-ink/5 focus:ring-2 focus:ring-terracotta-mid/50"
         />
         {loginError && <p className="mt-2 text-sm text-terracotta">{loginError}</p>}
-        <button className="mt-5 w-full bg-ink px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">
+        <button className="mt-5 w-full inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta">
           Log in
         </button>
       </form>
@@ -233,7 +233,7 @@ export default function AdminDashboard() {
       {chatToast && (
         <button
           onClick={() => { openSection('chat'); setChatToast(false); }}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-stone bg-forest px-5 py-4 text-left text-cream shadow-2xl"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-card bg-navy px-5 py-4 text-left text-cream shadow-2xl"
         >
           <span className="relative flex h-3 w-3">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-terracotta opacity-75" />
@@ -271,7 +271,7 @@ export default function AdminDashboard() {
         <div className="space-y-8">
           {GROUPS.map((g) => (
             <div key={g.title}>
-              <p className="mb-3 text-xs uppercase tracking-[0.15em] text-forest">{g.title}</p>
+              <p className="mb-3 text-xs uppercase tracking-[0.15em] text-terracotta">{g.title}</p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {g.cards.map(({ id, label, desc, Icon }) => {
                   const badge = id === 'applications' ? flaggedCount : id === 'chat' ? chatUnread : 0;
@@ -279,7 +279,7 @@ export default function AdminDashboard() {
                     <button
                       key={id}
                       onClick={() => openSection(id)}
-                      className="group relative flex flex-col items-start rounded-xl border border-stone bg-white p-4 text-left transition-colors hover:border-terracotta"
+                      className="group relative flex flex-col items-start rounded-xl rounded-card bg-white shadow-card p-4 text-left transition-colors hover:border-terracotta"
                     >
                       {badge > 0 && (
                         <span className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1.5 text-[11px] font-semibold text-cream">
@@ -335,7 +335,7 @@ export default function AdminDashboard() {
               <button
                 key={f.id}
                 onClick={() => { setTab(f.id); setSelected(null); }}
-                className={`px-3 py-1.5 ${tab === f.id ? 'bg-forest text-cream' : 'bg-stone/40 text-ink2'}`}
+                className={`px-3 py-1.5 ${tab === f.id ? 'bg-navy text-white' : 'bg-stone/40 text-ink2'}`}
               >
                 {f.label}
               </button>
@@ -345,7 +345,7 @@ export default function AdminDashboard() {
             <div className="min-w-0 overflow-x-auto">
             <table className="w-full border-collapse bg-white text-sm">
               <thead>
-                <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
+                <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
                   <th className="p-3">Name</th><th className="p-3">Register</th>
                   <th className="p-3">Status</th><th className="p-3">Reason</th><th className="p-3">Applied</th>
                 </tr>
@@ -355,7 +355,7 @@ export default function AdminDashboard() {
                   <tr
                     key={p.id}
                     onClick={() => select(p)}
-                    className={`cursor-pointer border-b border-stone/60 hover:bg-cream ${
+                    className={`cursor-pointer border-b border-ink/8 hover:bg-cream ${
                       selected?.id === p.id ? 'bg-sage/30' : ''
                     }`}
                   >
@@ -363,7 +363,7 @@ export default function AdminDashboard() {
                     <td className="p-3">{p.registerBody} #{p.registerNumber}</td>
                     <td className="p-3">
                       <span className={
-                        p.status === 'approved' ? 'text-forest' :
+                        p.status === 'approved' ? 'text-terracotta' :
                         p.status === 'flagged' ? 'text-terracotta' : 'text-ink2/70'
                       }>
                         {p.status}{p.pendingSync ? ' (sync pending)' : ''}
@@ -381,7 +381,7 @@ export default function AdminDashboard() {
             </div>
 
             {selected && (
-              <div className="h-fit border border-stone bg-white p-6">
+              <div className="h-fit rounded-card bg-white shadow-card p-6">
                 <h2 className="font-heading text-2xl text-ink">{selected.name}</h2>
                 <dl className="mt-4 space-y-2 text-sm">
                   <div><dt className="inline font-semibold">Email: </dt><dd className="inline">{selected.email}</dd></div>
@@ -430,7 +430,7 @@ export default function AdminDashboard() {
                 <div className="mt-5 flex gap-3">
                   {selected.status !== 'approved' && (
                     <button disabled={busy} onClick={() => act(selected.id, 'approve')}
-                      className="bg-forest px-5 py-2.5 text-xs uppercase tracking-[0.15em] text-cream disabled:opacity-50">
+                      className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 disabled:opacity-50">
                       Approve
                     </button>
                   )}

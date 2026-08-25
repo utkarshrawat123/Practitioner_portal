@@ -113,7 +113,7 @@ export default function AdminChat() {
 
   return (
     <div className="mt-6">
-      <div className="mb-4 flex gap-2 border-b border-stone">
+      <div className="mb-4 flex gap-2 border-b border-ink/10">
         {(['conversations', 'insights'] as const).map((v) => (
           <button key={v} onClick={() => setView(v)}
             className={`px-4 py-2 text-xs uppercase tracking-[0.15em] ${
@@ -129,13 +129,13 @@ export default function AdminChat() {
       <div className="mb-3 flex gap-2 text-xs uppercase tracking-[0.15em]">
         {(['open', 'closed', 'all'] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 ${filter === f ? 'bg-forest text-cream' : 'bg-stone/40 text-ink2'}`}>
+            className={`px-3 py-1.5 ${filter === f ? 'bg-navy text-white' : 'bg-stone/40 text-ink2'}`}>
             {f}
           </button>
         ))}
       </div>
-      <div className="mb-3 rounded-lg border border-stone bg-white p-3">
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-forest">
+      <div className="mb-3 rounded-lg rounded-card bg-white shadow-card p-3">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-terracotta">
           Online now ({online.length})
         </div>
         {online.length === 0 ? (
@@ -146,7 +146,7 @@ export default function AdminChat() {
               <li key={o.id}>
                 <button type="button" onClick={() => openOrStart(o)}
                   title={`Message ${o.name}`}
-                  className="flex items-center gap-2 rounded-full border border-stone px-3 py-1 text-sm hover:bg-cream">
+                  className="flex items-center gap-2 rounded-full rounded-pill bg-white px-3 py-1 text-[13px] text-ink2 shadow-card transition-colors hover:text-ink text-sm hover:bg-cream">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" aria-hidden />
                   <span className="text-ink">{o.name}</span>
                 </button>
@@ -157,11 +157,11 @@ export default function AdminChat() {
       </div>
       <div className="grid gap-4 md:grid-cols-[20rem_1fr]">
         {/* Conversation list */}
-        <div className="max-h-[32rem] overflow-y-auto border border-stone bg-white">
+        <div className="max-h-[32rem] overflow-y-auto rounded-card bg-white shadow-card">
           {convos.length === 0 && <p className="p-4 text-sm text-ink2/60">No conversations.</p>}
           {convos.map((c) => (
             <button key={c.id} onClick={() => openConvo(c.id)}
-              className={`block w-full border-b border-stone px-4 py-3 text-left hover:bg-cream ${activeId === c.id ? 'bg-cream' : ''}`}>
+              className={`block w-full border-b border-ink/10 px-4 py-3 text-left hover:bg-cream ${activeId === c.id ? 'bg-cream' : ''}`}>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 font-medium text-ink">
                   <span
@@ -187,12 +187,12 @@ export default function AdminChat() {
         </div>
 
         {/* Thread */}
-        <div className="flex h-[32rem] flex-col border border-stone bg-cream">
+        <div className="flex h-[32rem] flex-col rounded-card bg-blush">
           {!active ? (
             <p className="m-auto text-sm text-ink2/60">Select a conversation to view and reply.</p>
           ) : (
             <>
-              <div className="flex items-center justify-between border-b border-stone bg-white px-4 py-3">
+              <div className="flex items-center justify-between border-b border-ink/10 bg-white px-4 py-3">
                 <div>
                   <p className="font-medium text-ink">{active.practitionerName}</p>
                   <p className="text-[11px] text-ink2/60">{active.practitionerEmail}</p>
@@ -206,7 +206,7 @@ export default function AdminChat() {
                 {messages.map((m) => (
                   <div key={m.id} className={`flex ${m.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[75%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm ${
-                      m.sender === 'admin' ? 'bg-forest text-cream' : 'bg-white text-ink border border-stone'
+                      m.sender === 'admin' ? 'bg-navy text-white' : 'bg-white text-ink shadow-card'
                     }`}>
                       {m.body}
                     </div>
@@ -214,11 +214,11 @@ export default function AdminChat() {
                 ))}
                 <div ref={bottomRef} />
               </div>
-              <form onSubmit={send} className="flex items-end gap-2 border-t border-stone bg-white p-2.5">
+              <form onSubmit={send} className="flex items-end gap-2 border-t border-ink/10 bg-white p-2.5">
                 <textarea value={draft} onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(e); } }}
                   rows={1} placeholder="Type your reply…"
-                  className="max-h-24 flex-1 resize-none rounded-lg border border-stone px-3 py-2 text-sm focus:border-terracotta focus:outline-none" />
+                  className="max-h-24 flex-1 resize-none rounded-lg w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[14px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50" />
                 <button disabled={sending || !draft.trim()}
                   className="rounded-lg bg-terracotta px-4 py-2 text-sm font-medium text-cream disabled:opacity-50">
                   Send

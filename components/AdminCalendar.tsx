@@ -36,7 +36,7 @@ export default function AdminCalendar() {
         <div className="flex flex-wrap gap-2">
           {KINDS.map((k) => (
             <button key={k} onClick={() => setKind(k)}
-              className={`px-3 py-1 text-xs uppercase tracking-[0.15em] ${kind === k ? 'bg-ink text-cream' : 'border border-stone text-ink2/70 hover:border-terracotta'}`}>
+              className={`rounded-pill px-4 py-1.5 text-[13px] ${kind === k ? 'bg-terracotta-mid text-white' : 'bg-white text-ink2 shadow-card hover:text-ink'}`}>
               {k === 'all' ? 'All' : KIND_LABELS[k]}
             </button>
           ))}
@@ -48,18 +48,18 @@ export default function AdminCalendar() {
         <div className="overflow-x-auto">
         <table className="w-full border-collapse bg-white text-sm">
           <thead>
-            <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
+            <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
               <th className="p-3">Type</th><th className="p-3">Title</th>
               <th className="p-3">Status</th><th className="p-3">Audience</th><th className="p-3">Date</th>
             </tr>
           </thead>
           <tbody>
             {shown.map((i) => (
-              <tr key={`${i.kind}-${i.id}`} className="border-b border-stone/60">
-                <td className="p-3"><span className="bg-sage/40 px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-forest">{KIND_LABELS[i.kind]}</span></td>
+              <tr key={`${i.kind}-${i.id}`} className="border-b border-ink/8">
+                <td className="p-3"><span className="bg-sage/40 px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-terracotta">{KIND_LABELS[i.kind]}</span></td>
                 <td className="p-3 text-ink">{i.title}</td>
                 <td className="p-3">
-                  <span className={i.status === 'published' ? 'text-forest' : 'text-terracotta'}>{i.status}</span>
+                  <span className={i.status === 'published' ? 'text-terracotta' : 'text-terracotta'}>{i.status}</span>
                 </td>
                 <td className="p-3 text-ink2/70">{i.audience}</td>
                 <td className="p-3 text-ink2/60">{i.date?.slice(0, 10)}</td>

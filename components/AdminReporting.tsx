@@ -16,7 +16,7 @@ interface Summary {
 
 type SortKey = keyof ReportRow;
 
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
+const label = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
 const gbp = (n: number) => n.toLocaleString('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 });
 const tierLabel = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const day = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
@@ -97,7 +97,7 @@ export default function AdminReporting() {
             `${summary.dormant} dormant`,
             `${summary.byTier.gold} Gold · ${summary.byTier.silver} Silver · ${summary.byTier.standard} Standard`,
           ].map((chip, i) => (
-            <span key={i} className="border border-stone bg-white px-4 py-2 text-xs uppercase tracking-[0.1em] text-ink2/80">
+            <span key={i} className="rounded-card bg-white shadow-card px-4 py-2 text-xs uppercase tracking-[0.1em] text-ink2/80">
               {chip}
             </span>
           ))}
@@ -109,7 +109,7 @@ export default function AdminReporting() {
         <div>
           <label className={label}>Tier</label>
           <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)}
-            className="mt-1 block border border-stone px-3 py-2 text-sm focus:border-terracotta focus:outline-none">
+            className="mt-1 block w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[14px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50">
             <option value="">All</option>
             <option value="gold">Gold</option>
             <option value="silver">Silver</option>
@@ -119,7 +119,7 @@ export default function AdminReporting() {
         <div>
           <label className={label}>Flag</label>
           <select value={flagFilter} onChange={(e) => setFlagFilter(e.target.value as any)}
-            className="mt-1 block border border-stone px-3 py-2 text-sm focus:border-terracotta focus:outline-none">
+            className="mt-1 block w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[14px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50">
             <option value="">All</option>
             <option value="power">Power users</option>
             <option value="churn">Churn risk</option>
@@ -129,10 +129,10 @@ export default function AdminReporting() {
         <div className="flex-1 min-w-[180px]">
           <label className={label}>Search</label>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or email…"
-            className="mt-1 block w-full border border-stone px-3 py-2 text-sm focus:border-terracotta focus:outline-none" />
+            className="mt-1 block w-full w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[14px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50" />
         </div>
         <a href="/api/admin/reporting/export"
-          className="bg-ink px-5 py-2.5 text-xs uppercase tracking-[0.15em] text-cream hover:bg-terracotta">
+          className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta">
           Export CSV
         </a>
       </div>
@@ -141,7 +141,7 @@ export default function AdminReporting() {
       <div className="mt-6 overflow-x-auto">
         <table className="w-full border-collapse bg-white text-sm">
           <thead>
-            <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
+            <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
               {COLUMNS.map((c) => (
                 <th key={c.key} onClick={() => sortBy(c.key)} className="cursor-pointer select-none p-3 hover:text-terracotta">
                   {c.label}{sortKey === c.key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
@@ -152,13 +152,13 @@ export default function AdminReporting() {
           </thead>
           <tbody>
             {view.map((r) => (
-              <tr key={r.id} className={`border-b border-stone/60 align-top ${r.churnRisk ? 'bg-terracotta/5' : ''}`}>
+              <tr key={r.id} className={`border-b border-ink/8 align-top ${r.churnRisk ? 'bg-terracotta/5' : ''}`}>
                 {COLUMNS.map((c) => (
                   <td key={c.key} className="p-3">{c.render(r)}</td>
                 ))}
                 <td className="p-3">
                   <div className="flex flex-wrap gap-1">
-                    {r.powerUser && <span className="bg-sage/50 px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-forest">Power</span>}
+                    {r.powerUser && <span className="bg-sage/50 px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-terracotta">Power</span>}
                     {r.churnRisk && <span className="bg-terracotta/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-terracotta">Churn</span>}
                     {r.dormant && <span className="bg-stone/60 px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-ink2/70">Dormant</span>}
                     {r.dataWarning && <span title="Revenue data unavailable" className="text-[10px] uppercase tracking-[0.1em] text-ink2/50">no data</span>}

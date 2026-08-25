@@ -9,8 +9,8 @@ interface Widget {
 }
 
 const empty = { title: '', body: '', linkUrl: '', imageUrl: '', audience: 'all' as const };
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
-const input = 'mt-1 w-full border border-stone px-3 py-2 focus:border-terracotta focus:outline-none';
+const label = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
+const input = 'mt-1 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[15px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
 
 export default function AdminWidgets() {
   const [widgets, setWidgets] = useState<Widget[]>([]);
@@ -67,7 +67,7 @@ export default function AdminWidgets() {
 
   return (
     <div className="space-y-8">
-      <form onSubmit={create} className="grid gap-4 border border-stone bg-white p-6 md:grid-cols-2">
+      <form onSubmit={create} className="grid gap-4 rounded-card bg-white shadow-card p-6 md:grid-cols-2">
         <div className="md:col-span-2"><span className={label}>What&apos;s New card</span></div>
         <label className="block"><span className={label}>Title</span>
           <input className={input} required value={form.title}
@@ -91,7 +91,7 @@ export default function AdminWidgets() {
         {error && <p className="text-sm text-terracotta md:col-span-2">{error}</p>}
         <div className="md:col-span-2">
           <button disabled={busy}
-            className="bg-ink px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta disabled:opacity-60">
+            className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta disabled:opacity-60">
             {busy ? 'Saving…' : 'Add card'}
           </button>
         </div>
@@ -100,7 +100,7 @@ export default function AdminWidgets() {
       <div className="space-y-3">
         {widgets.length === 0 && <p className="text-sm text-ink2/70">No cards yet.</p>}
         {widgets.map((w, i) => (
-          <div key={w.id} className="flex flex-wrap items-center justify-between gap-3 border border-stone bg-white p-4">
+          <div key={w.id} className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-white shadow-card p-4">
             <div className="min-w-0">
               <p className="font-heading text-lg text-ink">{w.title}
                 {!w.published && <span className="ml-2 text-xs uppercase tracking-[0.15em] text-ink2/50">hidden</span>}
@@ -109,9 +109,9 @@ export default function AdminWidgets() {
               <p className="mt-1 text-xs uppercase tracking-[0.15em] text-ink2/50">Audience: {w.audience}</p>
             </div>
             <div className="flex items-center gap-2 text-xs">
-              <button onClick={() => move(i, -1)} disabled={i === 0} className="border border-stone px-2 py-1 disabled:opacity-40">↑</button>
-              <button onClick={() => move(i, 1)} disabled={i === widgets.length - 1} className="border border-stone px-2 py-1 disabled:opacity-40">↓</button>
-              <button onClick={() => patch(w.id, { published: !w.published })} className="border border-stone px-3 py-1">
+              <button onClick={() => move(i, -1)} disabled={i === 0} className="ring-1 ring-ink/10 px-2 py-1 disabled:opacity-40">↑</button>
+              <button onClick={() => move(i, 1)} disabled={i === widgets.length - 1} className="ring-1 ring-ink/10 px-2 py-1 disabled:opacity-40">↓</button>
+              <button onClick={() => patch(w.id, { published: !w.published })} className="rounded-pill bg-white px-3 py-1 text-[13px] text-ink2 shadow-card transition-colors hover:text-ink">
                 {w.published ? 'Hide' : 'Show'}
               </button>
               <button onClick={() => remove(w.id)} className="border border-terracotta px-3 py-1 text-terracotta">Delete</button>

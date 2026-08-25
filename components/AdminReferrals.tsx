@@ -55,7 +55,7 @@ export default function AdminReferrals() {
   return (
     <div className="mt-6">
       <p className="text-sm text-ink2/70">
-        {rows.length} referrals · <span className="text-forest">{money(total, 'GBP')} credited</span>
+        {rows.length} referrals · <span className="text-terracotta">{money(total, 'GBP')} credited</span>
         {requiresApproval && <span className="text-ink2/50"> · admin approval required</span>}
       </p>
       {error && <p className="mt-2 text-sm text-terracotta" role="alert">{error}</p>}
@@ -68,7 +68,7 @@ export default function AdminReferrals() {
           </h3>
           <ul className="mt-3 space-y-2">
             {pending.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-stone/60 pb-2 text-sm last:border-0">
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/8 pb-2 text-sm last:border-0">
                 <span className="min-w-0">
                   <span className="font-medium text-ink">{r.referrerName}</span>
                   <span className="text-ink2/60"> referred </span>
@@ -77,7 +77,7 @@ export default function AdminReferrals() {
                 <button
                   onClick={() => approve(r.id)}
                   disabled={busyId === r.id}
-                  className="bg-forest px-3 py-1.5 text-xs uppercase tracking-[0.15em] text-cream disabled:opacity-50"
+                  className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 disabled:opacity-50"
                 >
                   {busyId === r.id ? 'Approving…' : 'Approve credit'}
                 </button>
@@ -90,17 +90,17 @@ export default function AdminReferrals() {
       <div className="mt-4 overflow-x-auto">
         <table className="w-full border-collapse bg-white text-sm">
           <thead>
-            <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
+            <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
               <th className="p-3">Referrer</th><th className="p-3">Referred</th><th className="p-3">Status</th><th className="p-3">Bonus</th><th className="p-3">Created</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-stone/60">
+              <tr key={r.id} className="border-b border-ink/8">
                 <td className="p-3 text-ink">{r.referrerName}</td>
                 <td className="p-3 text-ink">{r.refereeName} <span className="text-ink2/50">({r.refereeStatus})</span></td>
                 <td className="p-3">
-                  <span className={r.status === 'credited' ? 'text-forest' : 'text-terracotta'}>
+                  <span className={r.status === 'credited' ? 'text-terracotta' : 'text-terracotta'}>
                     {r.status === 'clawed_back' ? 'clawed back (refunded)' : r.status.replace(/_/g, ' ')}
                   </span>
                 </td>

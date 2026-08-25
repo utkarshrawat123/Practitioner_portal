@@ -6,8 +6,8 @@ interface EventRow {
   id: number; title: string; startsAt: string; eventType: 'online' | 'in_person';
   location: string | null; capacity: number | null; recordingUrl: string | null; published: boolean;
 }
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
-const input = 'mt-1 w-full border border-stone px-3 py-2 focus:border-terracotta focus:outline-none';
+const label = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
+const input = 'mt-1 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[15px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
 const empty = { title: '', description: '', startsAt: '', endsAt: '', location: '', eventType: 'online' as const, capacity: '', audience: 'all' as const, recordingUrl: '', published: false };
 
 export default function AdminEvents() {
@@ -47,7 +47,7 @@ export default function AdminEvents() {
 
   return (
     <div className="space-y-8">
-      <form onSubmit={create} className="grid gap-4 border border-stone bg-white p-6 md:grid-cols-2">
+      <form onSubmit={create} className="grid gap-4 rounded-card bg-white shadow-card p-6 md:grid-cols-2">
         <div className="md:col-span-2"><span className={label}>New event</span></div>
         <label className="block md:col-span-2"><span className={label}>Title</span><input className={input} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
         <label className="block"><span className={label}>Starts at</span><input type="datetime-local" className={input} required value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} /></label>
@@ -62,19 +62,19 @@ export default function AdminEvents() {
         <label className="block md:col-span-2"><span className={label}>Description</span><textarea className={input} rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
         <label className="flex items-center gap-2 text-sm md:col-span-2"><input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} /> Publish immediately</label>
         {error && <p className="text-sm text-terracotta md:col-span-2">{error}</p>}
-        <div className="md:col-span-2"><button className="bg-ink px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">Create event</button></div>
+        <div className="md:col-span-2"><button className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta">Create event</button></div>
       </form>
 
       <div className="space-y-2">
         {events.length === 0 && <p className="text-sm text-ink2/70">No events yet.</p>}
         {events.map((e) => (
-          <div key={e.id} className="flex flex-wrap items-center justify-between gap-3 border border-stone bg-white p-4">
+          <div key={e.id} className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-white shadow-card p-4">
             <div className="min-w-0">
-              <p className="font-heading text-ink">{e.title} {!e.published && <span className="text-xs text-ink2/50">(draft)</span>} {e.recordingUrl && <span className="text-xs text-forest">· on-demand</span>}</p>
+              <p className="font-heading text-ink">{e.title} {!e.published && <span className="text-xs text-ink2/50">(draft)</span>} {e.recordingUrl && <span className="text-xs text-terracotta">· on-demand</span>}</p>
               <p className="text-xs text-ink2/60">{new Date(e.startsAt).toLocaleString('en-GB')} · {e.eventType}{e.capacity ? ` · cap ${e.capacity}` : ''}</p>
             </div>
             <div className="flex shrink-0 gap-2 text-xs">
-              <button onClick={() => patch(e.id, { published: !e.published })} className="border border-stone px-3 py-1">{e.published ? 'Unpublish' : 'Publish'}</button>
+              <button onClick={() => patch(e.id, { published: !e.published })} className="rounded-pill bg-white px-3 py-1 text-[13px] text-ink2 shadow-card transition-colors hover:text-ink">{e.published ? 'Unpublish' : 'Publish'}</button>
               <button onClick={() => remove(e.id)} className="border border-terracotta px-3 py-1 text-terracotta">Delete</button>
             </div>
           </div>

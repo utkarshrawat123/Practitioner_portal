@@ -18,8 +18,8 @@ const TYPES = [
   { id: 'email_template', label: 'Email template' },
 ];
 
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
-const input = 'mt-1 w-full border border-stone px-3 py-2 focus:border-terracotta focus:outline-none';
+const label = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
+const input = 'mt-1 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[15px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
 
 const EMPTY = {
   title: '', type: 'handout', audience: 'all' as const, contentKind: 'link' as 'file' | 'link' | 'text',
@@ -94,7 +94,7 @@ export default function AdminToolkit() {
   return (
     <div className="mt-6 grid gap-8 lg:grid-cols-2">
       {/* Create */}
-      <form onSubmit={create} className="grid gap-4 border border-stone bg-white p-6">
+      <form onSubmit={create} className="grid gap-4 rounded-card bg-white shadow-card p-6">
         <span className={label}>New toolkit resource</span>
         <label className="block"><span className={label}>Title</span>
           <input className={input} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></label>
@@ -112,7 +112,7 @@ export default function AdminToolkit() {
           <input className={input} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
         <div>
           <span className={label}>Content</span>
-          <div className="mt-1 inline-flex rounded-sm border border-stone p-0.5 text-xs">
+          <div className="mt-1 inline-flex rounded-sm ring-1 ring-ink/10 p-0.5 text-xs">
             {(['link', 'file', 'text'] as const).map((k) => (
               <button key={k} type="button" onClick={() => setForm({ ...form, contentKind: k })}
                 className={`px-3 py-1.5 uppercase tracking-[0.15em] ${form.contentKind === k ? 'bg-ink text-cream' : 'text-ink2/70'}`}>
@@ -134,7 +134,7 @@ export default function AdminToolkit() {
             <textarea className={input} rows={5} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} /></label>
         )}
         {error && <p className="text-sm text-terracotta">{error}</p>}
-        <button disabled={busy} className="bg-ink px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta disabled:opacity-60">
+        <button disabled={busy} className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta disabled:opacity-60">
           {busy ? 'Saving…' : 'Add resource'}
         </button>
       </form>
@@ -143,13 +143,13 @@ export default function AdminToolkit() {
       <div className="space-y-2">
         {rows.length === 0 && <p className="text-sm text-ink2/70">No resources yet.</p>}
         {rows.map((r) => (
-          <div key={r.id} className="flex items-center justify-between border border-stone bg-white p-3">
+          <div key={r.id} className="flex items-center justify-between rounded-card bg-white shadow-card p-3">
             <div className="min-w-0">
               <p className="font-heading text-ink">{r.title} {!r.published && <span className="text-xs text-ink2/50">(hidden)</span>}</p>
               <p className="text-xs text-ink2/60">{r.type} · {r.contentKind} · {r.audience}</p>
             </div>
             <div className="flex shrink-0 gap-2 text-xs">
-              <button onClick={() => patch(r.id, { published: !r.published })} className="border border-stone px-2 py-1">{r.published ? 'Hide' : 'Publish'}</button>
+              <button onClick={() => patch(r.id, { published: !r.published })} className="ring-1 ring-ink/10 px-2 py-1">{r.published ? 'Hide' : 'Publish'}</button>
               <button onClick={() => remove(r.id)} className="border border-terracotta px-2 py-1 text-terracotta">Delete</button>
             </div>
           </div>

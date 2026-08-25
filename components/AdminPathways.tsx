@@ -17,8 +17,8 @@ interface Module {
 }
 interface ContentItem { id: number; title: string }
 
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
-const input = 'mt-1 w-full border border-stone px-3 py-2 focus:border-terracotta focus:outline-none';
+const label = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
+const input = 'mt-1 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[15px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
 
 export default function AdminPathways() {
   const [pathways, setPathways] = useState<Pathway[]>([]);
@@ -151,7 +151,7 @@ export default function AdminPathways() {
     <div className="grid gap-8 lg:grid-cols-2">
       {/* Left: create + list */}
       <div className="space-y-6">
-        <form onSubmit={createPathway} className="grid gap-4 border border-stone bg-white p-6">
+        <form onSubmit={createPathway} className="grid gap-4 rounded-card bg-white shadow-card p-6">
           <span className={label}>New pathway</span>
           <label className="block"><span className={label}>Title</span>
             <input className={input} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
@@ -171,7 +171,7 @@ export default function AdminPathways() {
             <textarea className={input} rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} /> Publish immediately</label>
           {error && <p className="text-sm text-terracotta">{error}</p>}
-          <button className="bg-ink px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">Create pathway</button>
+          <button className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta">Create pathway</button>
         </form>
 
         <div className="space-y-2">
@@ -183,7 +183,7 @@ export default function AdminPathways() {
                 <p className="text-xs text-ink2/60">{p.category ?? 'Uncategorised'} · {p.cpdHours} CPD h · {p.audience}</p>
               </button>
               <div className="flex shrink-0 gap-2 text-xs">
-                <button onClick={() => patchPathway(p.id, { published: !p.published })} className="border border-stone px-2 py-1">{p.published ? 'Unpublish' : 'Publish'}</button>
+                <button onClick={() => patchPathway(p.id, { published: !p.published })} className="ring-1 ring-ink/10 px-2 py-1">{p.published ? 'Unpublish' : 'Publish'}</button>
                 <button onClick={() => removePathway(p.id)} className="border border-terracotta px-2 py-1 text-terracotta">Delete</button>
               </div>
             </div>
@@ -192,7 +192,7 @@ export default function AdminPathways() {
       </div>
 
       {/* Right: module builder */}
-      <div className="border border-stone bg-white p-6">
+      <div className="rounded-card bg-white shadow-card p-6">
         {selected === null ? (
           <p className="text-sm text-ink2/70">Select a pathway to build its modules.</p>
         ) : (
@@ -201,19 +201,19 @@ export default function AdminPathways() {
             <div className="mt-3 space-y-2">
               {modules.length === 0 && <p className="text-sm text-ink2/60">No modules yet.</p>}
               {modules.map((m, i) => (
-                <div key={m.id} className="flex items-center justify-between border border-stone p-2 text-sm">
+                <div key={m.id} className="flex items-center justify-between ring-1 ring-ink/10 p-2 text-sm">
                   <div className="min-w-0"><span className="font-medium">{i + 1}. {m.title}</span>
                     <span className="ml-2 text-xs text-ink2/50">{m.contentKind}#{m.contentId}{m.required ? ' · required' : ' · optional'}</span></div>
                   <div className="flex shrink-0 items-center gap-1 text-xs">
-                    <button onClick={() => moveModule(i, -1)} disabled={i === 0} className="border border-stone px-2 disabled:opacity-40">↑</button>
-                    <button onClick={() => moveModule(i, 1)} disabled={i === modules.length - 1} className="border border-stone px-2 disabled:opacity-40">↓</button>
-                    <button onClick={() => toggleRequired(m)} className="border border-stone px-2 py-1">{m.required ? 'Make optional' : 'Make required'}</button>
+                    <button onClick={() => moveModule(i, -1)} disabled={i === 0} className="ring-1 ring-ink/10 px-2 disabled:opacity-40">↑</button>
+                    <button onClick={() => moveModule(i, 1)} disabled={i === modules.length - 1} className="ring-1 ring-ink/10 px-2 disabled:opacity-40">↓</button>
+                    <button onClick={() => toggleRequired(m)} className="ring-1 ring-ink/10 px-2 py-1">{m.required ? 'Make optional' : 'Make required'}</button>
                     <button onClick={() => removeModule(m)} className="border border-terracotta px-2 py-1 text-terracotta">✕</button>
                   </div>
                 </div>
               ))}
             </div>
-            <form onSubmit={mod.kind === 'video' ? addVideoModule : addModule} className="mt-5 grid gap-3 border-t border-stone pt-4">
+            <form onSubmit={mod.kind === 'video' ? addVideoModule : addModule} className="mt-5 grid gap-3 border-t border-ink/10 pt-4">
               <span className={label}>Add session</span>
               <label className="block"><span className={label}>Type</span>
                 <select className={input} value={mod.kind} onChange={(e) => setMod({ ...mod, kind: e.target.value as 'lesson' | 'media' | 'video', contentId: '' })}>
@@ -226,7 +226,7 @@ export default function AdminPathways() {
                 <>
                   <label className="block"><span className={label}>Video title</span>
                     <input className={input} required value={mod.title} onChange={(e) => setMod({ ...mod, title: e.target.value })} placeholder="e.g. Session 1 — Gut health foundations" /></label>
-                  <div className="inline-flex rounded-sm border border-stone p-0.5 text-xs">
+                  <div className="inline-flex rounded-sm ring-1 ring-ink/10 p-0.5 text-xs">
                     {(['link', 'file'] as const).map((s) => (
                       <button key={s} type="button" onClick={() => setVid({ ...vid, source: s, error: '' })}
                         className={`px-3 py-1.5 uppercase tracking-[0.15em] ${vid.source === s ? 'bg-ink text-cream' : 'text-ink2/70'}`}>
@@ -243,7 +243,7 @@ export default function AdminPathways() {
                   )}
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={mod.required} onChange={(e) => setMod({ ...mod, required: e.target.checked })} /> Required for completion</label>
                   {vid.error && <p className="text-sm text-terracotta">{vid.error}</p>}
-                  <button disabled={vid.busy} className="bg-forest px-5 py-2 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta disabled:opacity-60">
+                  <button disabled={vid.busy} className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta disabled:opacity-60">
                     {vid.busy ? 'Saving…' : 'Add video session'}
                   </button>
                 </>
@@ -265,7 +265,7 @@ export default function AdminPathways() {
                   <label className="block"><span className={label}>Session title (optional)</span>
                     <input className={input} value={mod.title} onChange={(e) => setMod({ ...mod, title: e.target.value })} placeholder="Defaults to content title" /></label>
                   <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={mod.required} onChange={(e) => setMod({ ...mod, required: e.target.checked })} /> Required for completion</label>
-                  <button className="bg-forest px-5 py-2 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta">Add session</button>
+                  <button className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta">Add session</button>
                 </>
               )}
             </form>

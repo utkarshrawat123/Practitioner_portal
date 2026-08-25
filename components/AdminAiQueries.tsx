@@ -37,7 +37,7 @@ export default function AdminAiQueries() {
       <div className="min-w-0 overflow-x-auto">
       <table className="w-full border-collapse bg-white text-sm">
         <thead>
-          <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
+          <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
             <th className="p-3">Practitioner</th><th className="p-3">Profile</th>
             <th className="p-3">Status</th><th className="p-3">Flags</th><th className="p-3">When</th>
           </tr>
@@ -47,7 +47,7 @@ export default function AdminAiQueries() {
             <tr
               key={q.id}
               onClick={() => setSelected(q)}
-              className={`cursor-pointer border-b border-stone/60 align-top hover:bg-cream ${
+              className={`cursor-pointer border-b border-ink/8 align-top hover:bg-cream ${
                 selected?.id === q.id ? 'bg-sage/30' : ''
               }`}
             >
@@ -55,7 +55,7 @@ export default function AdminAiQueries() {
               <td className="max-w-[240px] truncate p-3">{q.profileInput}</td>
               <td className="p-3">
                 <span className={
-                  q.status === 'ok' ? 'text-forest' :
+                  q.status === 'ok' ? 'text-terracotta' :
                   q.status === 'error' ? 'text-terracotta' : 'text-ink2/70'
                 }>
                   {q.status}
@@ -75,7 +75,7 @@ export default function AdminAiQueries() {
       </div>
 
       {selected && (
-        <div className="h-fit border border-stone bg-white p-6 text-sm">
+        <div className="h-fit rounded-card bg-white shadow-card p-6 text-sm">
           <p className="text-xs uppercase tracking-[0.15em] text-ink2/70">Query #{selected.id}</p>
           <p className="mt-2"><span className="font-semibold">Practitioner:</span> {selected.practitionerName ?? '—'}</p>
           <p className="mt-2 whitespace-pre-wrap border-l-2 border-sage bg-cream p-3">{selected.profileInput}</p>

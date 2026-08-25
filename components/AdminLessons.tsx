@@ -9,9 +9,9 @@ interface Lesson {
   status: string; createdAt: string;
 }
 
-const card = 'border border-stone bg-white p-6';
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
-const input = 'w-full border border-stone px-3 py-2 text-sm text-ink2 focus:border-terracotta focus:outline-none';
+const card = 'rounded-card bg-white p-6 shadow-card';
+const label = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
+const input = 'w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[14px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
 
 export default function AdminLessons() {
   const [rows, setRows] = useState<Lesson[]>([]);
@@ -63,7 +63,7 @@ export default function AdminLessons() {
       <div className="h-fit min-w-0 overflow-x-auto">
       <table className="w-full border-collapse bg-white text-sm">
         <thead>
-          <tr className="border-b border-stone text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
+          <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
             <th className="p-3">Title</th><th className="p-3">Status</th>
             <th className="p-3">Flags</th><th className="p-3">Source</th>
           </tr>
@@ -73,14 +73,14 @@ export default function AdminLessons() {
             <tr
               key={l.id}
               onClick={() => select(l)}
-              className={`cursor-pointer border-b border-stone/60 align-top hover:bg-cream ${
+              className={`cursor-pointer border-b border-ink/8 align-top hover:bg-cream ${
                 selected?.id === l.id ? 'bg-sage/30' : ''
               }`}
             >
               <td className="p-3">{l.title}</td>
               <td className="p-3">
                 <span className={
-                  l.status === 'published' ? 'text-forest' :
+                  l.status === 'published' ? 'text-terracotta' :
                   l.status === 'rejected' ? 'text-ink2/50' : 'text-terracotta'
                 }>{l.status}</span>
               </td>
@@ -131,7 +131,7 @@ export default function AdminLessons() {
           <div className="mt-2 flex items-center gap-2 text-sm">
             <span className={label}>Correct option #</span>
             <input type="number" min={1} max={draft.quiz.options.length}
-              className="w-16 border border-stone px-2 py-1"
+              className="w-16 ring-1 ring-ink/10 px-2 py-1"
               value={draft.quiz.correctIndex + 1}
               onChange={(e) => setDraft({ ...draft, quiz: { ...draft.quiz, correctIndex: Math.max(0, Number(e.target.value) - 1) } })} />
           </div>
@@ -146,7 +146,7 @@ export default function AdminLessons() {
             </button>
             {selected?.status !== 'published' && (
               <button disabled={busy} onClick={() => act('approve')}
-                className="bg-forest px-5 py-2.5 text-xs uppercase tracking-[0.15em] text-cream disabled:opacity-50">
+                className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 disabled:opacity-50">
                 Approve &amp; publish
               </button>
             )}

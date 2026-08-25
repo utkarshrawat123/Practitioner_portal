@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 
-const label = 'text-xs uppercase tracking-[0.15em] text-ink2/70';
-const input = 'mt-1 w-full border border-stone px-3 py-2 focus:border-terracotta focus:outline-none';
+const label = 'text-[11px] font-medium uppercase tracking-label text-ink2/55';
+const input = 'mt-1 w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[15px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
 
 interface Created {
   lesson: { id: number; status: string };
@@ -46,20 +46,20 @@ export default function AdminFactory() {
         Everything lands as a <strong>draft for your review</strong>; nothing is published automatically.
       </p>
 
-      <form onSubmit={run} className="mt-6 grid gap-4 border border-stone bg-white p-6">
+      <form onSubmit={run} className="mt-6 grid gap-4 rounded-card bg-white shadow-card p-6">
         <label className="block"><span className={label}>Webinar title</span>
           <input className={input} required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Supporting perimenopausal sleep" /></label>
         <label className="block"><span className={label}>Transcript</span>
           <textarea className={input} rows={10} required value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="Paste the webinar transcript here…" /></label>
         {error && <p className="text-sm text-terracotta">{error}</p>}
-        <button disabled={busy} className="bg-ink px-6 py-2.5 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta disabled:opacity-60">
+        <button disabled={busy} className="inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta disabled:opacity-60">
           {busy ? 'Drafting assets…' : 'Generate draft assets'}
         </button>
       </form>
 
       {created && (
         <div className="mt-6 border border-forest bg-cream p-5">
-          <p className="font-heading text-lg text-forest">Draft assets created 🎉</p>
+          <p className="font-heading text-lg text-terracotta">Draft assets created 🎉</p>
           <ul className="mt-3 space-y-1 text-sm text-ink2/80">
             <li>• <strong>Lesson</strong> #{created.lesson.id} — review in the <strong>Lessons</strong> tab (status: {created.lesson.status})</li>
             <li>• <strong>Patient handout</strong> #{created.toolkit.id} — review in the <strong>Toolkit</strong> tab (hidden until published)</li>

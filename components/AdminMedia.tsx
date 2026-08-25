@@ -17,8 +17,8 @@ const TYPES = [
   { id: 'image', label: 'Image / Infographic' },
 ] as const;
 
-const input = 'w-full border border-stone px-3 py-2 text-sm focus:border-terracotta focus:outline-none';
-const label = 'mb-1 block text-xs uppercase tracking-[0.15em] text-ink2';
+const input = 'w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[14px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50';
+const label = 'mb-1 block text-[11px] font-medium uppercase tracking-label text-ink2/55';
 
 export default function AdminMedia() {
   const [rows, setRows] = useState<MediaRow[]>([]);
@@ -156,7 +156,7 @@ export default function AdminMedia() {
   return (
     <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_2fr]">
       {/* Add form */}
-      <form onSubmit={submit} className="border border-stone bg-white p-6">
+      <form onSubmit={submit} className="rounded-card bg-white shadow-card p-6">
         <h2 className="font-heading text-xl text-ink">Add media</h2>
         {error && <p className="mt-3 border border-terracotta bg-cream px-3 py-2 text-sm text-terracotta">{error}</p>}
         <div className="mt-4 space-y-4">
@@ -179,7 +179,7 @@ export default function AdminMedia() {
           )}
           {thumbPreview && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={thumbPreview} alt="thumbnail preview" className="aspect-video w-full border border-stone object-cover" />
+            <img src={thumbPreview} alt="thumbnail preview" className="aspect-video w-full ring-1 ring-ink/10 object-cover" />
           )}
           {thumbNeeded && (
             <div>
@@ -187,7 +187,7 @@ export default function AdminMedia() {
               <input ref={thumbRef} type="file" accept="image/*" className={input} onChange={(e) => { const f = e.target.files?.[0] ?? null; setThumbFile(f); if (f) setThumbPreview(URL.createObjectURL(f)); }} />
             </div>
           )}
-          <button disabled={busy} className="w-full bg-ink px-6 py-3 text-xs uppercase tracking-[0.2em] text-cream hover:bg-terracotta disabled:opacity-50">
+          <button disabled={busy} className="w-full inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta disabled:opacity-50">
             {busy ? 'Saving…' : 'Add media'}
           </button>
         </div>
@@ -201,8 +201,8 @@ export default function AdminMedia() {
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {rows.map((m) => (
               <MediaCard key={m.id} item={m}>
-                <div className="mt-3 flex items-center gap-3 border-t border-stone pt-3 text-xs">
-                  <span className={m.published ? 'text-forest' : 'text-ink2/60'}>{m.published ? 'Visible' : 'Hidden'}</span>
+                <div className="mt-3 flex items-center gap-3 border-t border-ink/10 pt-3 text-xs">
+                  <span className={m.published ? 'text-terracotta' : 'text-ink2/60'}>{m.published ? 'Visible' : 'Hidden'}</span>
                   <button onClick={() => toggle(m.id, !m.published)} className="uppercase tracking-[0.15em] text-ink2/70 hover:text-terracotta">{m.published ? 'Hide' : 'Show'}</button>
                   <button onClick={() => remove(m.id)} className="uppercase tracking-[0.15em] text-terracotta hover:underline">Delete</button>
                 </div>
