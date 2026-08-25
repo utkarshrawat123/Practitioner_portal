@@ -13,6 +13,16 @@ h1, h2, h3 {
   font-variation-settings: 'SOFT' 0, 'WONK' 0;
 }
 
+/* Sidebar scrolls on short viewports but never shows a scrollbar — a visible
+   track breaks the flat navy panel. Scrolling still works by wheel/trackpad. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Featured "Ask the Expert" Quick Link — a light sweep flashes across the card. */
 @keyframes quickShine {
   0% { transform: translateX(-160%) skewX(-20deg); }

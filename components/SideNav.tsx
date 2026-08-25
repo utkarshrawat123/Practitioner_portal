@@ -31,7 +31,7 @@ const ICONS: Record<string, LucideIcon> = {
 
 function Wordmark() {
   return (
-    <Link href="/dashboard" className="block px-6 pb-8 pt-7">
+    <Link href="/dashboard" className="block px-6 pb-6 pt-6">
       <span className="block font-body text-[15px] font-semibold uppercase tracking-[0.18em] text-white">
         Wild Nutrition<sup className="align-super text-[8px]">®</sup>
       </span>
@@ -45,11 +45,11 @@ function Wordmark() {
 function NavLinks({ sections, onNavigate }: { sections: NavSection[]; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3">
+    <nav className="no-scrollbar flex flex-1 flex-col gap-0.5 overflow-y-auto px-3">
       {sections.map((section, sectionIndex) => (
-        <div key={section.title ?? `section-${sectionIndex}`} className={sectionIndex > 0 ? 'mt-5' : ''}>
+        <div key={section.title ?? `section-${sectionIndex}`} className={sectionIndex > 0 ? 'mt-4' : ''}>
           {section.title && (
-            <p className="px-3 pb-1.5 text-[10px] uppercase tracking-label text-white/35">
+            <p className="px-3 pb-1.5 text-[11px] uppercase tracking-label text-white/45">
               {section.title}
             </p>
           )}
@@ -80,12 +80,12 @@ function SectionLinks({
             href={item.href}
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition-colors ${
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[16px] transition-colors ${
               active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
             }`}
           >
             <Icon
-              className={`h-[18px] w-[18px] shrink-0 ${active ? 'text-terracotta-light' : 'text-terracotta-mid'}`}
+              className={`h-[19px] w-[19px] shrink-0 ${active ? 'text-terracotta-light' : 'text-terracotta-mid'}`}
               strokeWidth={1.6}
             />
             <span className="truncate">{item.label}</span>
@@ -103,12 +103,12 @@ function SectionLinks({
 function HelpBlock({ supportEmail }: { supportEmail: string | null }) {
   if (!supportEmail) return null;
   return (
-    <div className="mt-auto px-3 pb-7 pt-8">
-      <div className="mx-3 border-t border-white/12 pt-6">
+    <div className="mt-auto px-3 pb-6 pt-6">
+      <div className="mx-3 border-t border-white/12 pt-5">
         <p className="text-[13px] text-white/45">Need help?</p>
         <a
           href={`mailto:${supportEmail}`}
-          className="mt-2 flex items-center gap-2.5 text-[14px] text-white/75 transition-colors hover:text-white"
+          className="mt-2 flex items-center gap-2.5 text-[15px] text-white/75 transition-colors hover:text-white"
         >
           <LifeBuoy className="h-[17px] w-[17px] text-terracotta-mid" strokeWidth={1.6} />
           Contact our team
