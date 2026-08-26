@@ -161,3 +161,34 @@ fixed and covered by `tests/events-tabs.test.ts`. The remaining events gap is on
 - Photography (`UI_REDESIGN.md` §7 Q3) — no brand assets available
 - Which sidebar treatment (§7 Q1) — navy shipped, not explicitly confirmed
 - Patient testing area — unchanged; needs its own health-data/consent conversation
+
+---
+
+## 8. Verification pass — 2026-08-26
+
+Every remaining "missing" claim in §3 and §4 re-checked **against the code**, not the
+deck. Two were already wrong, so treat this table as the current truth.
+
+| Claim | Verdict |
+|---|---|
+| Events: On-Demand + My Events tabs missing | ❌ **WRONG — already built.** All four tabs existed. The real defect was the filter hiding past events; fixed, . |
+|  carries an  column | ❌ **WRONG.** Only  has . Media and lessons gate on /. |
+| Saved resources / My Clinic missing | ✅ was true — **now built** (, migration ). |
+| Global search missing | ✅ **Confirmed missing.** No search route; only a per-page lesson search in . Deprioritised anyway once Ask Lorna was dropped. |
+| Consultation + mentoring booking missing | ✅ **Confirmed missing** — and there is no coming-soon stub either, contrary to §4. Nothing exists at all. |
+| Notifications missing | ✅ **Confirmed missing** as a general model. Chat has its own unread badge (), and admin has ; neither is a notifications system. |
+| Header chrome (search icon, avatar) missing | ✅ **Confirmed missing.**  is imported in  but unused. |
+| Pathway browse by health area (icon grid) | ⚠️ **Partly.** The eight categories exist and group the catalogue, but there are no icons —  imports nothing from . |
+| Video welcome from Lorna | ✅ **Confirmed missing.**  contains no video element. |
+| Polls / surveys / NPD trials | ✅ **Confirmed missing.** Matches for "poll" are all  polling, unrelated. |
+| Practitioner-facing contraindications / product knowledge | ✅ **Confirmed missing.**  holds the dossiers for the AI; no browsing UI. |
+| "Our processes" page | ✅ **Confirmed missing.** |
+| Personalisation by specialism/interest | ✅ **Confirmed missing.** No specialism or interest field anywhere. |
+
+### Two data facts worth knowing
+
+- **All 12  dossiers are still ** — 12 of 12. Unchanged,
+  and still the longest-lead launch item.
+- **No seeded event has a recording**, so the On-Demand tab renders "Recording to follow"
+  cards rather than players. That is correct behaviour, not a bug — but it means the tab
+  cannot be judged visually until a real recording URL exists.
