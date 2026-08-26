@@ -177,7 +177,7 @@ export default function AdminPathways() {
         <div className="space-y-2">
           {pathways.length === 0 && <p className="text-sm text-ink2/70">No pathways yet.</p>}
           {pathways.map((p) => (
-            <div key={p.id} className={`flex items-center justify-between border p-3 ${selected === p.id ? 'border-terracotta' : 'border-stone'} bg-white`}>
+            <div key={p.id} className={`flex items-center justify-between rounded-card p-4 bg-white ${selected === p.id ? 'shadow-lift ring-1 ring-terracotta-mid/45' : 'shadow-card'}`}>
               <button onClick={() => openPathway(p.id)} className="min-w-0 text-left">
                 <p className="font-heading text-ink">{p.title} {!p.published && <span className="text-xs text-ink2/50">(draft)</span>}</p>
                 <p className="text-xs text-ink2/60">{p.category ?? 'Uncategorised'} · {p.cpdHours} CPD h · {p.audience}</p>

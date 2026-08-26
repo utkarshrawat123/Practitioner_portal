@@ -26,7 +26,7 @@ export default function AdminCommunity() {
     <div className="space-y-3">
       {posts.length === 0 && <p className="text-sm text-ink2/70">No community posts yet.</p>}
       {posts.map((p) => (
-        <div key={p.id} className={`flex flex-wrap items-center justify-between gap-3 border p-4 ${p.hidden ? 'border-stone bg-cream opacity-70' : 'border-stone bg-white'}`}>
+        <div key={p.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-card p-5 shadow-card ${p.hidden ? 'bg-blush opacity-70' : 'bg-white'}`}>
           <div className="min-w-0">
             <p className="font-heading text-ink">{p.pinned && <span className="mr-2 text-xs text-terracotta">Pinned</span>}{p.title} {p.hidden && <span className="text-xs text-ink2/50">(hidden)</span>}</p>
             <p className="text-xs text-ink2/60">{p.authorName} · {p.postType} · {p.upvotes} upvotes · {p.replyCount} replies</p>
