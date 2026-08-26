@@ -400,6 +400,28 @@ CREATE TABLE IF NOT EXISTS saved_items (
 CREATE INDEX IF NOT EXISTS idx_saved_items_practitioner ON saved_items(practitioner_id);
 `,
   },
+  {
+    // In-app notifications. Fan-out: one row per recipient, written at emit
+    // time. Rows are self-contained (title/body/href stored, not joined)
+    // because a notification records WHAT HAPPENED — it must stay readable
+    // even if the content is later renamed or unpublished. That is the
+    // opposite of saved_items, which describes a live thing.
+    id: '020_notifications',
+    sql: `
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  href TEXT,
+  read_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_practitioner
+  ON notifications(practitioner_id, read_at);
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */

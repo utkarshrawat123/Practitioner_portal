@@ -1715,6 +1715,71 @@ export async function listSavedItems(
   return out;
 }
 
+export type NotificationKind = 'content' | 'reply' | 'referral' | 'cart';
+
+export interface Notification {
+  id: number;
+  kind: NotificationKind;
+  title: string;
+  body: string | null;
+  href: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+/** Fan-out: one row per recipient. No-op on an empty list. */
+export async function notifyPractitioners(
+  practitionerIds: number[],
+  n: { kind: NotificationKind; title: string; body?: string | null; href?: string | null }
+): Promise<void> {
+  for (const id of practitionerIds) {
+    await run(
+      `INSERT INTO notifications (practitioner_id, kind, title, body, href) VALUES (?, ?, ?, ?, ?)`,
+      [id, n.kind, n.title, n.body ?? null, n.href ?? null]
+    );
+  }
+}
+
+export async function listNotifications(practitionerId: number, limit = 30): Promise<Notification[]> {
+  const rows = await all(
+    `SELECT * FROM notifications WHERE practitioner_id = ?
+     ORDER BY created_at DESC, id DESC LIMIT ?`,
+    [practitionerId, limit]
+  );
+  return rows.map((r) => ({
+    id: num(r.id),
+    kind: r.kind as NotificationKind,
+    title: r.title as string,
+    body: (r.body as string) ?? null,
+    href: (r.href as string) ?? null,
+    readAt: (r.read_at as string) ?? null,
+    createdAt: r.created_at as string,
+  }));
+}
+
+export async function unreadNotificationCount(practitionerId: number): Promise<number> {
+  const r = await one(
+    `SELECT COUNT(*) AS n FROM notifications WHERE practitioner_id = ? AND read_at IS NULL`,
+    [practitionerId]
+  );
+  return num(r?.n);
+}
+
+/** Marks all this practitioner's notifications read, or just one when `id` is given. */
+export async function markNotificationsRead(practitionerId: number, id?: number): Promise<void> {
+  if (id === undefined) {
+    await run(
+      `UPDATE notifications SET read_at = datetime('now') WHERE practitioner_id = ? AND read_at IS NULL`,
+      [practitionerId]
+    );
+  } else {
+    await run(
+      `UPDATE notifications SET read_at = datetime('now') WHERE practitioner_id = ? AND id = ? AND read_at IS NULL`,
+      [practitionerId, id]
+    );
+  }
+}
+
 export interface CommunityPost {
   id: number; practitionerId: number; authorName: string; postType: string;
   title: string; body: string; pinned: boolean; hidden: boolean; createdAt: string;
