@@ -436,7 +436,7 @@ export default function AdminDashboard() {
                   )}
                   {selected.status !== 'rejected' && selected.status !== 'approved' && (
                     <button disabled={busy} onClick={() => act(selected.id, 'reject')}
-                      className="bg-terracotta px-5 py-2.5 text-xs uppercase tracking-[0.15em] text-cream disabled:opacity-50">
+                      className="rounded-pill bg-terracotta px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-terracotta-mid disabled:opacity-50">
                       Reject
                     </button>
                   )}

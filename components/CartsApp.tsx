@@ -110,7 +110,7 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
           <div className="flex justify-between border-t border-ink/10 pt-1.5 text-terracotta"><dt>You earn (20%)</dt><dd>{money(commission)}</dd></div>
         </dl>
         <button disabled={busy || !patientName.trim() || lines.length === 0} onClick={createCart}
-          className="mt-4 w-full bg-terracotta px-4 py-2.5 text-xs uppercase tracking-[0.15em] text-cream disabled:opacity-50">
+          className="mt-5 w-full rounded-pill bg-terracotta px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-terracotta-mid disabled:opacity-50">
           Create pay link
         </button>
         {createError && <p className="mt-2 text-sm text-terracotta" role="alert">{createError}</p>}

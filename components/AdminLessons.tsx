@@ -152,7 +152,7 @@ export default function AdminLessons() {
             )}
             {selected?.status !== 'rejected' && (
               <button disabled={busy} onClick={() => act('reject')}
-                className="bg-terracotta px-5 py-2.5 text-xs uppercase tracking-[0.15em] text-cream disabled:opacity-50">
+                className="rounded-pill bg-terracotta px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-terracotta-mid disabled:opacity-50">
                 Reject
               </button>
             )}
