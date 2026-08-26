@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import type { NavSection } from '@/lib/nav';
+import NotificationBell from '@/components/NotificationBell';
 
 export interface SideNavItem { label: string; href: string }
 
@@ -146,7 +147,10 @@ export default function SideNav({ sections, supportEmail }: { sections: NavSecti
     <>
       {/* Desktop */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-sidebar flex-col bg-navy lg:flex">
-        <Wordmark />
+        <div className="flex items-start justify-between pr-4">
+          <Wordmark />
+          <div className="pt-7"><NotificationBell /></div>
+        </div>
         <NavLinks sections={sections} supportEmail={supportEmail} />
       </aside>
 
@@ -162,6 +166,7 @@ export default function SideNav({ sections, supportEmail }: { sections: NavSecti
         <span className="font-body text-[13px] font-semibold uppercase tracking-[0.16em] text-white">
           Wild Nutrition<sup className="align-super text-[7px]">®</sup>
         </span>
+        <div className="ml-auto"><NotificationBell /></div>
       </div>
 
       {/* Mobile drawer */}
