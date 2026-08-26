@@ -76,7 +76,7 @@ const PRACTITIONER_APIS = [
   '/api/me', '/api/me/stats', '/api/me/pathways', '/api/me/cpd', '/api/me/toolkit',
   '/api/resources', '/api/library', '/api/me/community', '/api/me/events',
   '/api/me/carts', '/api/me/referrals', '/api/me/leaderboard', '/api/me/widgets',
-  '/api/me/pearls', '/api/me/catalog', '/api/me/saved',
+  '/api/me/pearls', '/api/me/catalog', '/api/me/saved', '/api/me/notifications',
 ];
 
 const NAV_SECTIONS = ['Learn', 'My Clinic', 'Connect', 'Practice Growth'];

@@ -100,8 +100,14 @@ export default function NotificationBell() {
         )}
       </button>
 
+      {/*
+        On desktop the panel must clear the 280px sidebar entirely — anchored to the
+        bell it overlapped the sidebar and covered the bell that opened it. The bell
+        sits at x≈228, so a 64px offset puts the panel at ≈292: just past the sidebar
+        edge with a small gap. Below `lg` it drops under the navy top bar instead.
+      */}
       {open && (
-        <div className="absolute left-0 top-11 z-50 w-[320px] overflow-hidden rounded-card bg-white shadow-lift lg:left-auto lg:right-[-300px]">
+        <div className="absolute right-0 top-11 z-50 w-[320px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-card bg-white shadow-lift lg:left-16 lg:right-auto lg:top-0">
           <div className="flex items-center justify-between gap-3 border-b border-ink/8 px-4 py-3">
             <p className="text-[11px] font-medium uppercase tracking-label text-ink2/55">Notifications</p>
             {unread > 0 && (

@@ -58,6 +58,8 @@ round trips:
 | Practitioners → approve a flagged applicant | That practitioner can now sign in |
 | Lessons → publish a lesson | `/library`, and the Dashboard's learning count |
 | Toolkit → add a resource | `/toolkit` |
+| Lessons/Media/Toolkit → publish anything | The practitioner sidebar bell gains an unread notification |
+| Community → reply to someone else's post | The post author is notified; replying to your own post is silent |
 | Toolkit → **unpublish a saved resource** | `/my-clinic` — the saved card disappears, and returns when republished |
 | Media → upload a file | `/resources` (stored in local R2) |
 | Pathways → build a pathway with modules | `/learning`, then `/cpd` after completion |
@@ -139,6 +141,13 @@ confirm it vanishes from My Clinic, then republish and confirm it returns:
 
 ```bash
 node scripts/verify-saved-items.mjs
+```
+
+To prove notification emission — publish as admin, confirm the bell count rises, then
+mark all read:
+
+```bash
+node scripts/verify-notifications.mjs
 ```
 
 Point it at the dev server instead with `BASE=http://localhost:3100 node scripts/smoke-local.mjs`.
