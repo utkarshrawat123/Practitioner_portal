@@ -226,10 +226,10 @@ export default function AdminPathways() {
                 <>
                   <label className="block"><span className={label}>Video title</span>
                     <input className={input} required value={mod.title} onChange={(e) => setMod({ ...mod, title: e.target.value })} placeholder="e.g. Session 1 — Gut health foundations" /></label>
-                  <div className="inline-flex rounded-sm ring-1 ring-ink/10 p-0.5 text-xs">
+                  <div className="inline-flex rounded-pill bg-blush p-1 text-[12px]">
                     {(['link', 'file'] as const).map((s) => (
                       <button key={s} type="button" onClick={() => setVid({ ...vid, source: s, error: '' })}
-                        className={`px-3 py-1.5 uppercase tracking-[0.15em] ${vid.source === s ? 'bg-ink text-cream' : 'text-ink2/70'}`}>
+                        className={`rounded-pill px-3.5 py-1.5 uppercase tracking-label transition-colors ${vid.source === s ? 'bg-white text-ink shadow-card' : 'text-ink2/60 hover:text-ink'}`}>
                         {s === 'link' ? 'Paste link' : 'Upload file'}
                       </button>
                     ))}

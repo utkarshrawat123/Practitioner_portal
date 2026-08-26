@@ -82,7 +82,7 @@ export default function AdminReporting() {
   }, [rows, tierFilter, flagFilter, search, sortKey, sortDir]);
 
   if (loading) {
-    return <div className="mt-6 h-32 animate-pulse rounded-sm bg-stone" />;
+    return <div className="mt-6 h-32 animate-pulse rounded-card bg-stone/60" />;
   }
 
   return (

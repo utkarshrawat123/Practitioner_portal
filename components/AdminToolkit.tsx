@@ -112,10 +112,10 @@ export default function AdminToolkit() {
           <input className={input} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
         <div>
           <span className={label}>Content</span>
-          <div className="mt-1 inline-flex rounded-sm ring-1 ring-ink/10 p-0.5 text-xs">
+          <div className="mt-1 inline-flex rounded-pill bg-blush p-1 text-[12px]">
             {(['link', 'file', 'text'] as const).map((k) => (
               <button key={k} type="button" onClick={() => setForm({ ...form, contentKind: k })}
-                className={`px-3 py-1.5 uppercase tracking-[0.15em] ${form.contentKind === k ? 'bg-ink text-cream' : 'text-ink2/70'}`}>
+                className={`rounded-pill px-3.5 py-1.5 uppercase tracking-label transition-colors ${form.contentKind === k ? 'bg-white text-ink shadow-card' : 'text-ink2/60 hover:text-ink'}`}>
                 {k}
               </button>
             ))}
