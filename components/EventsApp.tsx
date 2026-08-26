@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Empty, FilterPills, GhostButton, Label, Loading, Pill } from '@/components/ui';
+import { filterEventsForTab, type EventTab } from '@/lib/events/tabs';
 
 interface EventItem {
   id: number; title: string; description: string | null; startsAt: string; endsAt: string | null;
   location: string | null; eventType: 'online' | 'in_person'; capacity: number | null;
   recordingUrl: string | null; registered: boolean; registrationCount: number; spotsLeft: number | null;
 }
-type Tab = 'upcoming' | 'live' | 'ondemand' | 'mine';
+type Tab = EventTab;
 const TABS: { id: Tab; label: string }[] = [
   { id: 'upcoming', label: 'Upcoming' }, { id: 'live', label: 'Live Online' },
   { id: 'ondemand', label: 'On-Demand' }, { id: 'mine', label: 'My Events' },
@@ -49,13 +50,7 @@ export default function EventsApp() {
   }
 
   const now = Date.now();
-  const filtered = (events ?? []).filter((e) => {
-    const future = new Date(e.startsAt).getTime() >= now;
-    if (tab === 'upcoming') return future && !e.recordingUrl;
-    if (tab === 'live') return future && e.eventType === 'online';
-    if (tab === 'ondemand') return !!e.recordingUrl;
-    return e.registered;
-  });
+  const filtered = filterEventsForTab(events ?? [], tab, now);
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10 lg:px-10 lg:py-12">
@@ -85,6 +80,7 @@ export default function EventsApp() {
                 <Pill tone={e.eventType === 'online' ? 'sage' : 'outline'}>
                   {e.eventType === 'online' ? 'Online' : 'In person'}
                 </Pill>
+                {new Date(e.startsAt).getTime() < now && <Pill tone="outline">Past</Pill>}
                 {e.registered && <Pill>Registered</Pill>}
               </div>
               <p className="mt-3 font-heading text-[19px] leading-snug text-ink">{e.title}</p>
@@ -101,6 +97,10 @@ export default function EventsApp() {
             <div className="flex shrink-0 gap-2">
               {e.recordingUrl ? (
                 <Button href={e.recordingUrl} newTab>Watch recording</Button>
+              ) : new Date(e.startsAt).getTime() < now ? (
+                <span className="rounded-pill bg-blush px-4 py-2 text-[13px] text-ink2/60">
+                  Recording to follow
+                </span>
               ) : e.registered ? (
                 <GhostButton onClick={() => toggleReg(e)}>
                   {busy === e.id ? '…' : 'Cancel'}
