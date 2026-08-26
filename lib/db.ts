@@ -1601,6 +1601,37 @@ export async function eventRegistrationCount(eventId: number): Promise<number> {
   return num(r?.n);
 }
 
+/** The three content types a practitioner can save into My Clinic. */
+export type SavedItemType = 'toolkit' | 'media' | 'lesson';
+
+/** Idempotent — saving an already-saved item is a no-op, not an error. */
+export async function saveItem(practitionerId: number, itemType: SavedItemType, itemId: number): Promise<void> {
+  await run(
+    `INSERT INTO saved_items (practitioner_id, item_type, item_id) VALUES (?, ?, ?)
+     ON CONFLICT(practitioner_id, item_type, item_id) DO NOTHING`,
+    [practitionerId, itemType, itemId]
+  );
+}
+
+/** Removing something that was never saved is a no-op, not an error. */
+export async function unsaveItem(practitionerId: number, itemType: SavedItemType, itemId: number): Promise<void> {
+  await run(
+    `DELETE FROM saved_items WHERE practitioner_id = ? AND item_type = ? AND item_id = ?`,
+    [practitionerId, itemType, itemId]
+  );
+}
+
+/** Lightweight refs so list pages can light up their save toggles in one call. */
+export async function savedItemRefs(
+  practitionerId: number
+): Promise<{ itemType: SavedItemType; itemId: number }[]> {
+  const rows = await all(
+    `SELECT item_type, item_id FROM saved_items WHERE practitioner_id = ?`,
+    [practitionerId]
+  );
+  return rows.map((r) => ({ itemType: r.item_type as SavedItemType, itemId: num(r.item_id) }));
+}
+
 export interface CommunityPost {
   id: number; practitionerId: number; authorName: string; postType: string;
   title: string; body: string; pinned: boolean; hidden: boolean; createdAt: string;

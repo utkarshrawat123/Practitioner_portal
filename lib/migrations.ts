@@ -378,6 +378,28 @@ ALTER TABLE practitioner_referrals ADD COLUMN approved_by TEXT;
 CREATE INDEX IF NOT EXISTS idx_referrals_qualifying_order ON practitioner_referrals(qualifying_order_id);
 `,
   },
+  {
+    // "My Clinic" saved items. One polymorphic table following the
+    // pathway_modules (content_kind, content_id) precedent.
+    //
+    // `item_type` is deliberately NOT called content_kind: that name already
+    // means the payload kind (file/link/text) on toolkit_resources and media.
+    //
+    // No FK on item_id — a deleted source row leaves an orphan, which the read
+    // path drops via its join. Same trade pathway_modules already makes.
+    id: '019_saved_items',
+    sql: `
+CREATE TABLE IF NOT EXISTS saved_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  practitioner_id INTEGER NOT NULL REFERENCES practitioners(id),
+  item_type TEXT NOT NULL,
+  item_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(practitioner_id, item_type, item_id)
+);
+CREATE INDEX IF NOT EXISTS idx_saved_items_practitioner ON saved_items(practitioner_id);
+`,
+  },
 ];
 
 /** Applies any not-yet-run migrations, in order, exactly once. Idempotent. */
