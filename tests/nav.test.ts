@@ -34,7 +34,7 @@ describe('buildPractitionerNav', () => {
 
   it('groups the in-clinic tools under My Clinic', () => {
     const clinic = buildPractitionerNav(qualified).find((s) => s.title === 'My Clinic')!;
-    expect(clinic.items.map((i) => i.href)).toEqual(['/toolkit', '/resources', '/assistant']);
+    expect(clinic.items.map((i) => i.href)).toEqual(['/my-clinic', '/toolkit', '/resources', '/assistant']);
   });
 
   it('surfaces every practitioner route — nothing is reachable only from the dashboard', () => {

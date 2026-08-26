@@ -37,6 +37,7 @@ export const PRACTITIONER_NAV: NavSection[] = [
   {
     title: 'My Clinic',
     items: [
+      { label: 'Saved', href: '/my-clinic' },
       { label: 'Clinical Toolkit', href: '/toolkit' },
       { label: 'Resources', href: '/resources' },
       { label: 'Ask the Expert', href: '/assistant' },
@@ -69,6 +70,7 @@ export const ALL_PRACTITIONER_ROUTES = [
   '/learning',
   '/library',
   '/cpd',
+  '/my-clinic',
   '/toolkit',
   '/resources',
   '/assistant',
