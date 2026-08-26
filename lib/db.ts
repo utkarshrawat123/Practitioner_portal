@@ -466,7 +466,7 @@ export function referralBonusGbp(): number {
 }
 
 export async function creditReferral(referralId: number, orderId: string, bonus: number): Promise<void> {
-  await run(
+  const res = await run(
     `UPDATE practitioner_referrals
         SET status = 'credited',
             first_sale_at = COALESCE(first_sale_at, datetime('now')),
@@ -477,6 +477,18 @@ export async function creditReferral(referralId: number, orderId: string, bonus:
       WHERE id = ? AND status != 'credited'`,
     [orderId, bonus, referralId]
   );
+  // Guarded UPDATE: only the call that actually credited it notifies.
+  if (res.rowsAffected > 0) {
+    const referral = await getReferralById(referralId);
+    if (referral) {
+      await notifyPractitioners([referral.referrerId], {
+        kind: 'referral',
+        title: 'A referral was credited',
+        body: 'Your referral bonus has been added to your earnings.',
+        href: '/referrals',
+      });
+    }
+  }
 }
 
 /**
@@ -974,12 +986,40 @@ export async function updateLessonFields(
   );
 }
 
+/** Approved practitioner ids allowed to see `resource`, minus `exclude`. */
+async function notifiableIds(
+  resource: { audience?: string | null } | null,
+  exclude?: number
+): Promise<number[]> {
+  const rows = await all(
+    `SELECT id, qualification_status FROM practitioners WHERE status = 'approved'`
+  );
+  return rows
+    .filter((r) =>
+      resource === null
+        ? true
+        : hasAccess({ qualificationStatus: r.qualification_status as QualificationStatus }, resource)
+    )
+    .map((r) => num(r.id))
+    .filter((id) => id !== exclude);
+}
+
 export async function setLessonStatus(
   id: number,
   status: 'published' | 'rejected' | 'draft'
 ): Promise<LessonRow> {
   await run(`UPDATE lessons SET status = ?, decided_at = datetime('now') WHERE id = ?`, [status, id]);
-  return (await getLesson(id))!;
+  const lesson = (await getLesson(id))!;
+  if (status === 'published') {
+    // Lessons carry no audience column, so everyone approved is eligible.
+    await notifyPractitioners(await notifiableIds(null), {
+      kind: 'content',
+      title: `New lesson: ${lesson.title}`,
+      body: lesson.summary?.slice(0, 140) ?? null,
+      href: '/library',
+    });
+  }
+  return lesson;
 }
 
 export async function listPublishedLessons(
@@ -1098,7 +1138,17 @@ export async function listPublishedMedia(type?: string): Promise<MediaRow[]> {
 
 export async function setMediaPublished(id: number, published: boolean): Promise<MediaRow> {
   await run(`UPDATE media SET published = ? WHERE id = ?`, [published ? 1 : 0, id]);
-  return (await getMedia(id))!;
+  const media = (await getMedia(id))!;
+  if (published) {
+    // Media carries no audience column either.
+    await notifyPractitioners(await notifiableIds(null), {
+      kind: 'content',
+      title: `New resource: ${media.title}`,
+      body: media.description,
+      href: '/resources',
+    });
+  }
+  return media;
 }
 
 export async function deleteMedia(id: number): Promise<void> {
@@ -1207,7 +1257,18 @@ export async function updateToolkitResource(
   if (cols.length === 0) return getToolkitResource(id);
   vals.push(id);
   await run(`UPDATE toolkit_resources SET ${cols.join(', ')} WHERE id = ?`, vals);
-  return getToolkitResource(id);
+  const updated = await getToolkitResource(id);
+  // Only when this call flips it to published — repeated saves of an already
+  // published item stay silent.
+  if (patch.published === true && updated) {
+    await notifyPractitioners(await notifiableIds(updated), {
+      kind: 'content',
+      title: `New in the toolkit: ${updated.title}`,
+      body: updated.description,
+      href: '/toolkit',
+    });
+  }
+  return updated;
 }
 
 export async function deleteToolkitResource(id: number): Promise<void> {
@@ -1433,7 +1494,16 @@ export async function updatePathway(id: number, patch: Partial<PathwayInput>): P
   if (patch.audience !== undefined) { sets.push('audience = ?'); args.push(patch.audience); }
   if (patch.published !== undefined) { sets.push('published = ?'); args.push(patch.published ? 1 : 0); }
   if (sets.length) { args.push(id); await run(`UPDATE pathways SET ${sets.join(', ')} WHERE id = ?`, args); }
-  return getPathway(id);
+  const updatedPathway = await getPathway(id);
+  if (patch.published === true && updatedPathway) {
+    await notifyPractitioners(await notifiableIds(updatedPathway), {
+      kind: 'content',
+      title: `New pathway: ${updatedPathway.title}`,
+      body: updatedPathway.description,
+      href: '/learning',
+    });
+  }
+  return updatedPathway;
 }
 export async function deletePathway(id: number): Promise<void> {
   await run(`DELETE FROM module_completions WHERE module_id IN (SELECT id FROM pathway_modules WHERE pathway_id = ?)`, [id]);
@@ -1829,6 +1899,16 @@ export async function deleteCommunityPost(id: number): Promise<void> {
 }
 export async function createCommunityReply(p: { postId: number; practitionerId: number; authorName: string; body: string }): Promise<number> {
   const res = await run(`INSERT INTO community_replies (post_id, practitioner_id, author_name, body) VALUES (?, ?, ?, ?)`, [p.postId, p.practitionerId, p.authorName, p.body]);
+  const post = await getCommunityPost(p.postId);
+  // Never notify yourself about your own reply.
+  if (post && post.practitionerId !== p.practitionerId) {
+    await notifyPractitioners([post.practitionerId], {
+      kind: 'reply',
+      title: `${p.authorName} replied to your post`,
+      body: post.title,
+      href: '/community',
+    });
+  }
   return res.lastInsertRowid;
 }
 export async function listCommunityReplies(postId: number, opts: { includeHidden?: boolean } = {}): Promise<CommunityReply[]> {
@@ -2157,7 +2237,19 @@ export async function markCartSent(id: number): Promise<void> {
 }
 
 export async function markCartPaid(id: number): Promise<void> {
-  await run(`UPDATE patient_carts SET status = 'paid', paid_at = datetime('now') WHERE id = ? AND status != 'paid'`, [id]);
+  const res = await run(`UPDATE patient_carts SET status = 'paid', paid_at = datetime('now') WHERE id = ? AND status != 'paid'`, [id]);
+  // Only the call that actually flipped it to paid notifies — a webhook retry must not.
+  if (res.rowsAffected > 0) {
+    const row = await one(`SELECT practitioner_id, patient_name FROM patient_carts WHERE id = ?`, [id]);
+    if (row) {
+      await notifyPractitioners([num(row.practitioner_id)], {
+        kind: 'cart',
+        title: 'A patient cart was paid',
+        body: `${row.patient_name as string} completed their order.`,
+        href: '/carts',
+      });
+    }
+  }
 }
 
 // ============================================================
