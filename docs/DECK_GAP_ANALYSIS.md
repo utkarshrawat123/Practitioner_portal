@@ -149,6 +149,13 @@ if practitioners demonstrably cannot find things. The revised order is:
 5. Notifications + header chrome
 6. Global search — deprioritised, see above
 
+### Correction — 2026-08-26
+
+§6 item 3 ("Events: On Demand + My Events tabs") was **already built**. All four
+tabs existed; what was broken is that the filter made past events invisible, now
+fixed and covered by `tests/events-tabs.test.ts`. The remaining events gap is only
+"breakfast clubs & networking" as a modelled event type.
+
 ### Still open (not decided)
 
 - Photography (`UI_REDESIGN.md` §7 Q3) — no brand assets available
