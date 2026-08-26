@@ -75,7 +75,7 @@ export default function AdminEvents() {
             </div>
             <div className="flex shrink-0 gap-2 text-xs">
               <button onClick={() => patch(e.id, { published: !e.published })} className="rounded-pill bg-white px-3 py-1 text-[13px] text-ink2 shadow-card transition-colors hover:text-ink">{e.published ? 'Unpublish' : 'Publish'}</button>
-              <button onClick={() => remove(e.id)} className="border border-terracotta px-3 py-1 text-terracotta">Delete</button>
+              <button onClick={() => remove(e.id)} className="rounded-pill px-3 py-1 text-[13px] text-terracotta ring-1 ring-terracotta/30 transition-colors hover:bg-terracotta/10">Delete</button>
             </div>
           </div>
         ))}

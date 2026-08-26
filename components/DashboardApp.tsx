@@ -60,7 +60,7 @@ function CopyButton({ value, children }: { value: string; children: React.ReactN
           setTimeout(() => setCopied(false), 2000);
         } catch { /* clipboard unavailable */ }
       }}
-      className="rounded-pill border border-ink/15 bg-white px-4 py-2 text-[12px] text-ink transition-colors hover:border-ink/30"
+      className="rounded-pill ring-1 ring-ink/15 bg-white px-4 py-2 text-[12px] text-ink transition-colors hover:border-ink/30"
     >
       {copied ? 'Copied ✓' : children}
     </button>
@@ -164,7 +164,7 @@ export default function DashboardApp() {
               <input
                 id="email" type="email" required value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-ink/12 bg-cream px-4 py-3 text-[15px] outline-none transition-colors focus:border-terracotta-mid"
+                className="mt-2 w-full rounded-xl ring-1 ring-ink/12 bg-cream px-4 py-3 text-[15px] outline-none transition-colors focus:border-terracotta-mid"
                 placeholder="you@practice.com"
               />
               <Button type="submit" className="mt-5 w-full">Send login link</Button>

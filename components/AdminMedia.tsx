@@ -158,7 +158,7 @@ export default function AdminMedia() {
       {/* Add form */}
       <form onSubmit={submit} className="rounded-card bg-white shadow-card p-6">
         <h2 className="font-heading text-xl text-ink">Add media</h2>
-        {error && <p className="mt-3 border border-terracotta bg-cream px-3 py-2 text-sm text-terracotta">{error}</p>}
+        {error && <p className="mt-3 rounded-card bg-terracotta/10 px-4 py-3 text-[14px] text-terracotta">{error}</p>}
         <div className="mt-4 space-y-4">
           <div><label className={label}>Title</label><input className={input} value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
           <div>

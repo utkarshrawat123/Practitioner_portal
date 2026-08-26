@@ -112,7 +112,7 @@ export default function AssistantApp() {
       )}
 
       {error && (
-        <p className="mt-6 border border-terracotta bg-cream px-4 py-3 text-sm text-terracotta">{error}</p>
+        <p className="mt-6 rounded-card ring-1 ring-terracotta/30 bg-cream px-4 py-3 text-sm text-terracotta">{error}</p>
       )}
 
       {result && result.output.status === 'out_of_scope' && (

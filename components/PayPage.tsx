@@ -46,7 +46,7 @@ export default function PayPage({ token }: { token: string }) {
       </header>
       <div className="mx-auto max-w-2xl px-6 py-10">
         {paid ? (
-          <div className="border border-sage bg-white p-8 text-center">
+          <div className="rounded-card ring-1 ring-olive/30 bg-white p-8 text-center">
             <h1 className="font-heading text-3xl text-forest">Payment successful</h1>
             <p className="mt-2 text-ink2/80">Thank you, {cart.patientName}. Your order is confirmed.</p>
           </div>

@@ -120,7 +120,7 @@ export default function CartsApp({ practitionerName }: { practitionerName: strin
             <p className="text-xs text-ink2/70">Pay link for {created.cart.patientName}:</p>
             <p className="mt-1 break-all text-xs text-ink">{created.link}</p>
             <div className="mt-2 flex gap-2">
-              <button onClick={() => copyLink(created.link)} className="flex-1 border border-ink px-3 py-1.5 text-xs uppercase tracking-[0.15em]">{copied ? 'Copied' : 'Copy link'}</button>
+              <button onClick={() => copyLink(created.link)} className="flex-1 rounded-card ring-1 ring-ink/15 px-3 py-1.5 text-xs uppercase tracking-[0.15em]">{copied ? 'Copied' : 'Copy link'}</button>
               {created.cart.patientEmail && (
                 <button onClick={() => sendToPatient(created.cart.id)} className="flex-1 inline-flex items-center justify-center rounded-pill bg-navy px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50">Send to patient</button>
               )}

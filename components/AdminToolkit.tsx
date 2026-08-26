@@ -150,7 +150,7 @@ export default function AdminToolkit() {
             </div>
             <div className="flex shrink-0 gap-2 text-xs">
               <button onClick={() => patch(r.id, { published: !r.published })} className="ring-1 ring-ink/10 px-2 py-1">{r.published ? 'Hide' : 'Publish'}</button>
-              <button onClick={() => remove(r.id)} className="border border-terracotta px-2 py-1 text-terracotta">Delete</button>
+              <button onClick={() => remove(r.id)} className="rounded-pill px-3 py-1 text-[13px] text-terracotta ring-1 ring-terracotta/30 transition-colors hover:bg-terracotta/10">Delete</button>
             </div>
           </div>
         ))}

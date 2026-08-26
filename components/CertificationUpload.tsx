@@ -88,7 +88,7 @@ export default function CertificationUpload({ token, supportEmail }: { token: st
         Hi {state.name.split(' ')[0]} — to complete your student application, please upload proof of study:
         a course enrolment confirmation, student ID, or certificate. PDF or image, up to 10&nbsp;MB.
       </p>
-      {error && <p className="mt-4 border border-terracotta bg-cream px-4 py-3 text-sm text-terracotta">{error}</p>}
+      {error && <p className="mt-4 rounded-card ring-1 ring-terracotta/30 bg-cream px-4 py-3 text-sm text-terracotta">{error}</p>}
       <input
         ref={fileRef}
         type="file"

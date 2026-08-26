@@ -184,7 +184,7 @@ export default function AdminPathways() {
               </button>
               <div className="flex shrink-0 gap-2 text-xs">
                 <button onClick={() => patchPathway(p.id, { published: !p.published })} className="ring-1 ring-ink/10 px-2 py-1">{p.published ? 'Unpublish' : 'Publish'}</button>
-                <button onClick={() => removePathway(p.id)} className="border border-terracotta px-2 py-1 text-terracotta">Delete</button>
+                <button onClick={() => removePathway(p.id)} className="rounded-pill px-3 py-1 text-[13px] text-terracotta ring-1 ring-terracotta/30 transition-colors hover:bg-terracotta/10">Delete</button>
               </div>
             </div>
           ))}
@@ -208,7 +208,7 @@ export default function AdminPathways() {
                     <button onClick={() => moveModule(i, -1)} disabled={i === 0} className="ring-1 ring-ink/10 px-2 disabled:opacity-40">↑</button>
                     <button onClick={() => moveModule(i, 1)} disabled={i === modules.length - 1} className="ring-1 ring-ink/10 px-2 disabled:opacity-40">↓</button>
                     <button onClick={() => toggleRequired(m)} className="ring-1 ring-ink/10 px-2 py-1">{m.required ? 'Make optional' : 'Make required'}</button>
-                    <button onClick={() => removeModule(m)} className="border border-terracotta px-2 py-1 text-terracotta">✕</button>
+                    <button onClick={() => removeModule(m)} className="rounded-pill px-3 py-1 text-[13px] text-terracotta ring-1 ring-terracotta/30 transition-colors hover:bg-terracotta/10">✕</button>
                   </div>
                 </div>
               ))}

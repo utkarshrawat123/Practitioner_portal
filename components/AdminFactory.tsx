@@ -58,7 +58,7 @@ export default function AdminFactory() {
       </form>
 
       {created && (
-        <div className="mt-6 border border-forest bg-cream p-5">
+        <div className="mt-6 rounded-card bg-blush p-6">
           <p className="font-heading text-lg text-terracotta">Draft assets created 🎉</p>
           <ul className="mt-3 space-y-1 text-sm text-ink2/80">
             <li>• <strong>Lesson</strong> #{created.lesson.id} — review in the <strong>Lessons</strong> tab (status: {created.lesson.status})</li>

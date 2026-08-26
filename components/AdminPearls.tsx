@@ -71,7 +71,7 @@ export default function AdminPearls() {
                 <button onClick={() => patch(p.id, { status: p.status === 'published' ? 'draft' : 'published' })} className="ring-1 ring-ink/10 px-2 py-1">
                   {p.status === 'published' ? 'Unpublish' : 'Publish'}
                 </button>
-                <button onClick={() => remove(p.id)} className="border border-terracotta px-2 py-1 text-terracotta">Delete</button>
+                <button onClick={() => remove(p.id)} className="rounded-pill px-3 py-1 text-[13px] text-terracotta ring-1 ring-terracotta/30 transition-colors hover:bg-terracotta/10">Delete</button>
               </div>
             </div>
           </div>

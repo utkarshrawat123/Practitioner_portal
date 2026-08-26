@@ -405,7 +405,7 @@ export default function AdminDashboard() {
                   </div>
                 )}
                 {selected.qualificationStatus === 'student' && (
-                  <div className="mt-4 border border-sage bg-cream p-4 text-sm">
+                  <div className="mt-4 rounded-card bg-sage-pale px-4 py-3 p-4 text-sm">
                     <p className="font-semibold">Student certification</p>
                     {selected.certificationUrl ? (
                       <>
@@ -442,7 +442,7 @@ export default function AdminDashboard() {
                   )}
                   {selected.pendingSync && (
                     <button disabled={busy} onClick={() => act(selected.id, 'retry-sync')}
-                      className="border border-ink px-5 py-2.5 text-xs uppercase tracking-[0.15em] disabled:opacity-50">
+                      className="rounded-card ring-1 ring-ink/15 px-5 py-2.5 text-xs uppercase tracking-[0.15em] disabled:opacity-50">
                       Retry sync
                     </button>
                   )}

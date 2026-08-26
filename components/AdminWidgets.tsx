@@ -114,7 +114,7 @@ export default function AdminWidgets() {
               <button onClick={() => patch(w.id, { published: !w.published })} className="rounded-pill bg-white px-3 py-1 text-[13px] text-ink2 shadow-card transition-colors hover:text-ink">
                 {w.published ? 'Hide' : 'Show'}
               </button>
-              <button onClick={() => remove(w.id)} className="border border-terracotta px-3 py-1 text-terracotta">Delete</button>
+              <button onClick={() => remove(w.id)} className="rounded-pill px-3 py-1 text-[13px] text-terracotta ring-1 ring-terracotta/30 transition-colors hover:bg-terracotta/10">Delete</button>
             </div>
           </div>
         ))}

@@ -56,7 +56,7 @@ export default function ApplyForm() {
 
   if (result?.kind === 'approved') {
     return (
-      <div className="border border-sage bg-white p-8">
+      <div className="rounded-card ring-1 ring-olive/30 bg-white p-8">
         <h2 className="font-heading text-3xl text-ink">Welcome to the community</h2>
         <p className="mt-4">
           Your registration was verified and your practitioner account is approved. Your unique
@@ -84,7 +84,7 @@ export default function ApplyForm() {
 
   if (result?.kind === 'flagged') {
     return (
-      <div className="border border-sage bg-white p-8">
+      <div className="rounded-card ring-1 ring-olive/30 bg-white p-8">
         <h2 className="font-heading text-3xl text-ink">Thank you — application received</h2>
         {result.certificationRequested ? (
           <p className="mt-4">
@@ -107,7 +107,7 @@ export default function ApplyForm() {
   return (
     <form onSubmit={onSubmit} className="rounded-card bg-white shadow-card p-8">
       {result?.kind === 'error' && (
-        <p className="mb-6 border border-terracotta bg-cream px-4 py-3 text-sm text-terracotta">
+        <p className="mb-6 rounded-card ring-1 ring-terracotta/30 bg-cream px-4 py-3 text-sm text-terracotta">
           {result.message}
         </p>
       )}
