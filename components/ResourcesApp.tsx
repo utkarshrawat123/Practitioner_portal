@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import MediaCard from '@/components/MediaCard';
 import { Button, Empty, FilterPills, Label } from '@/components/ui';
+import SaveButton from '@/components/SaveButton';
+import { useSavedRefs } from '@/lib/useSavedRefs';
 
 interface MediaRow {
   id: number; title: string; type: 'video' | 'document' | 'slides' | 'image';
@@ -21,6 +23,7 @@ export default function ResourcesApp() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [rows, setRows] = useState<MediaRow[]>([]);
   const [filter, setFilter] = useState('');
+  const { isSaved, setSaved } = useSavedRefs();
 
   const load = useCallback(async (type: string) => {
     const res = await fetch('/api/resources' + (type ? `?type=${type}` : ''));
@@ -59,7 +62,18 @@ export default function ResourcesApp() {
         </div>
       ) : (
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {rows.map((m) => <MediaCard key={m.id} item={m} />)}
+          {rows.map((m) => (
+            <MediaCard key={m.id} item={m}>
+              <div className="mt-3">
+                <SaveButton
+                  itemType="media"
+                  itemId={m.id}
+                  saved={isSaved('media', m.id)}
+                  onToggle={(v) => setSaved('media', m.id, v)}
+                />
+              </div>
+            </MediaCard>
+          ))}
         </div>
       )}
     </div>

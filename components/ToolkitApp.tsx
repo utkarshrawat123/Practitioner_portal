@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Empty, FilterPills, GhostButton, Label, Loading, Pill } from '@/components/ui';
+import SaveButton from '@/components/SaveButton';
+import { useSavedRefs } from '@/lib/useSavedRefs';
 
 interface Resource {
   id: number; title: string; type: string; description: string | null;
@@ -42,12 +44,15 @@ function CopyBody({ body }: { body: string }) {
   );
 }
 
-function ResourceCard({ r }: { r: Resource }) {
+function ResourceCard({
+  r, saved, onToggle,
+}: { r: Resource; saved: boolean; onToggle: (v: boolean) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <Card className="flex flex-col p-6">
-      <div>
+      <div className="flex items-start justify-between gap-3">
         <Pill tone="sage">{TYPE_LABELS[r.type] ?? r.type}</Pill>
+        <SaveButton itemType="toolkit" itemId={r.id} saved={saved} onToggle={onToggle} />
       </div>
       <p className="mt-3 font-heading text-[19px] leading-snug text-ink">{r.title}</p>
       {r.description && <p className="mt-1.5 text-[14px] leading-relaxed text-ink2/70">{r.description}</p>}
@@ -74,6 +79,7 @@ export default function ToolkitApp() {
   const [resources, setResources] = useState<Resource[] | null>(null);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [filter, setFilter] = useState('');
+  const { isSaved, setSaved } = useSavedRefs();
 
   const load = useCallback(async (type: string) => {
     const res = await fetch('/api/me/toolkit' + (type ? `?type=${type}` : ''));
@@ -115,7 +121,14 @@ export default function ToolkitApp() {
           <Empty>No resources here yet — check back soon.</Empty>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {resources.map((r) => <ResourceCard key={r.id} r={r} />)}
+            {resources.map((r) => (
+              <ResourceCard
+                key={r.id}
+                r={r}
+                saved={isSaved('toolkit', r.id)}
+                onToggle={(v) => setSaved('toolkit', r.id, v)}
+              />
+            ))}
           </div>
         )}
       </div>

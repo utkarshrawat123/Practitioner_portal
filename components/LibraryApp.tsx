@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TOPICS } from '@/lib/lessons/topics';
 import { Button, Card, Empty, GhostButton, Label, Pill, inputClass } from '@/components/ui';
+import SaveButton from '@/components/SaveButton';
+import { useSavedRefs } from '@/lib/useSavedRefs';
 
 interface Quiz { question: string; options: string[]; correctIndex: number; explanation: string }
 interface Lesson {
@@ -88,6 +90,7 @@ export default function LibraryApp() {
   const [topic, setTopic] = useState('');
   const [q, setQ] = useState('');
   const [openId, setOpenId] = useState<number | null>(null);
+  const { isSaved, setSaved } = useSavedRefs();
 
   const load = useCallback(async () => {
     const params = new URLSearchParams();
@@ -185,10 +188,13 @@ export default function LibraryApp() {
 
           <div className="mt-6 space-y-4">
             {lessons.map((l) => (
-              <button
+              <div
                 key={l.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setOpenId(l.id)}
-                className="block w-full rounded-card bg-white p-6 text-left shadow-card transition-shadow hover:shadow-lift"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenId(l.id); } }}
+                className="block w-full cursor-pointer rounded-card bg-white p-6 text-left shadow-card transition-shadow hover:shadow-lift"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -198,11 +204,19 @@ export default function LibraryApp() {
                       {l.topics.map((t) => <Pill key={t} tone="sage">{topicLabel(t)}</Pill>)}
                     </div>
                   </div>
-                  {completed.has(l.id) && (
-                    <span className="shrink-0"><Pill tone="outline">Completed ✓</Pill></span>
-                  )}
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    {completed.has(l.id) && <Pill tone="outline">Completed ✓</Pill>}
+                    <span role="presentation" onClick={(e) => e.stopPropagation()}>
+                      <SaveButton
+                        itemType="lesson"
+                        itemId={l.id}
+                        saved={isSaved('lesson', l.id)}
+                        onToggle={(v) => setSaved('lesson', l.id, v)}
+                      />
+                    </span>
+                  </div>
                 </div>
-              </button>
+              </div>
             ))}
             {lessons.length === 0 && <Empty>No published lessons match your filters yet.</Empty>}
           </div>
