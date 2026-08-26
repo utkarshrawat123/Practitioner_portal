@@ -58,6 +58,7 @@ round trips:
 | Practitioners → approve a flagged applicant | That practitioner can now sign in |
 | Lessons → publish a lesson | `/library`, and the Dashboard's learning count |
 | Toolkit → add a resource | `/toolkit` |
+| Toolkit → **unpublish a saved resource** | `/my-clinic` — the saved card disappears, and returns when republished |
 | Media → upload a file | `/resources` (stored in local R2) |
 | Pathways → build a pathway with modules | `/learning`, then `/cpd` after completion |
 | Events → create an event | `/events`; registering emits an `.ics` |
@@ -74,9 +75,12 @@ a test enforces this, so nothing can end up orphaned behind a dashboard tile:
 
 - **(top)** Dashboard
 - **Learn** — Learning Pathways · Lessons · My CPD
-- **My Clinic** — Clinical Toolkit · Resources · Ask the Expert
+- **My Clinic** — Saved · Clinical Toolkit · Resources · Ask the Expert
 - **Connect** — Community · Events
 - **Practice Growth** — Patient Carts · Refer & Earn · Leaderboard
+
+Saving: look for the **Save** chip on toolkit items, resources and lessons. Everything
+saved lands on **My Clinic → Saved**.
 
 ---
 
@@ -128,6 +132,13 @@ magic-link flow, walks every route, then verifies admin auth is actually enforce
 
 ```bash
 node scripts/smoke-local.mjs
+```
+
+To prove the saved-items gating specifically — save an item, have an admin unpublish it,
+confirm it vanishes from My Clinic, then republish and confirm it returns:
+
+```bash
+node scripts/verify-saved-items.mjs
 ```
 
 Point it at the dev server instead with `BASE=http://localhost:3100 node scripts/smoke-local.mjs`.

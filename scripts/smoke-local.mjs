@@ -68,7 +68,7 @@ async function checkApi(area, path, cookie, expectStatus = 200) {
 const PRACTITIONER_PAGES = [
   '/dashboard', '/learning', '/library', '/cpd',
   '/toolkit', '/resources', '/assistant',
-  '/community', '/events',
+  '/community', '/events', '/my-clinic',
   '/carts', '/referrals', '/leaderboard',
 ];
 
@@ -76,7 +76,7 @@ const PRACTITIONER_APIS = [
   '/api/me', '/api/me/stats', '/api/me/pathways', '/api/me/cpd', '/api/me/toolkit',
   '/api/resources', '/api/library', '/api/me/community', '/api/me/events',
   '/api/me/carts', '/api/me/referrals', '/api/me/leaderboard', '/api/me/widgets',
-  '/api/me/pearls', '/api/me/catalog',
+  '/api/me/pearls', '/api/me/catalog', '/api/me/saved',
 ];
 
 const NAV_SECTIONS = ['Learn', 'My Clinic', 'Connect', 'Practice Growth'];
