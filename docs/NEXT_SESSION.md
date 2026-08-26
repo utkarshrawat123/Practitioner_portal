@@ -101,7 +101,10 @@ visible in readiness; a wrong address is invisible and reaches practitioners.
 
 ## 5. Gotchas that cost time (both sessions)
 
-1. **`npm run build` corrupts `.next` if a dev server is running.** Kill dev, `rm -rf .next`, restart.
+1. **`npm run build` breaks ANY running server — `dev` *and* `preview:cf`.** Hit again
+   2026-08-26: running the build gate while `preview:cf` was serving clobbered the files
+   under the live worker; wrangler errored and exited. Stop every server first, then build.
+   If `.next` is corrupted: `rm -rf .next` and restart.
 2. **`preview:cf` needs `outputFileTracingIncludes`** in `next.config.mjs` for `@libsql/**`. **Do not remove that block.**
 3. **`rm -rf .open-next` fails with `EBUSY`** while any `workerd`/`wrangler` process lives.
    Hit again this session. Fix: stop every `workerd`/`node` process, `rm -rf .open-next`, restart.
