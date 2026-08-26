@@ -167,28 +167,37 @@ fixed and covered by `tests/events-tabs.test.ts`. The remaining events gap is on
 ## 8. Verification pass — 2026-08-26
 
 Every remaining "missing" claim in §3 and §4 re-checked **against the code**, not the
-deck. Two were already wrong, so treat this table as the current truth.
+deck. Two turned out to be wrong, so treat this table as the current truth and §3–§4 as
+the original reading.
 
 | Claim | Verdict |
 |---|---|
-| Events: On-Demand + My Events tabs missing | ❌ **WRONG — already built.** All four tabs existed. The real defect was the filter hiding past events; fixed, . |
-|  carries an  column | ❌ **WRONG.** Only  has . Media and lessons gate on /. |
-| Saved resources / My Clinic missing | ✅ was true — **now built** (, migration ). |
-| Global search missing | ✅ **Confirmed missing.** No search route; only a per-page lesson search in . Deprioritised anyway once Ask Lorna was dropped. |
+| Events: On-Demand + My Events tabs missing | ❌ **WRONG — already built.** All four tabs existed. The real defect was a filter that hid past events; fixed and covered by `tests/events-tabs.test.ts`. |
+| `media` carries an `audience` column | ❌ **WRONG.** Only `toolkit_resources` has `audience`. Media and lessons gate on `published` / `status`. |
+| Saved resources / "My Clinic" missing | ✅ Was true — **now built**: `/my-clinic`, migration `019_saved_items`. |
+| Global search missing | ✅ **Confirmed missing.** No search route exists; only a per-page lesson search inside `LibraryApp`. Deprioritised anyway once Ask Lorna was dropped. |
 | Consultation + mentoring booking missing | ✅ **Confirmed missing** — and there is no coming-soon stub either, contrary to §4. Nothing exists at all. |
-| Notifications missing | ✅ **Confirmed missing** as a general model. Chat has its own unread badge (), and admin has ; neither is a notifications system. |
-| Header chrome (search icon, avatar) missing | ✅ **Confirmed missing.**  is imported in  but unused. |
-| Pathway browse by health area (icon grid) | ⚠️ **Partly.** The eight categories exist and group the catalogue, but there are no icons —  imports nothing from . |
-| Video welcome from Lorna | ✅ **Confirmed missing.**  contains no video element. |
-| Polls / surveys / NPD trials | ✅ **Confirmed missing.** Matches for "poll" are all  polling, unrelated. |
-| Practitioner-facing contraindications / product knowledge | ✅ **Confirmed missing.**  holds the dossiers for the AI; no browsing UI. |
-| "Our processes" page | ✅ **Confirmed missing.** |
-| Personalisation by specialism/interest | ✅ **Confirmed missing.** No specialism or interest field anywhere. |
+| Notifications missing | ✅ **Confirmed missing** as a general model. Live chat has its own unread badge (`ChatWidget`) and admin has `adminUnreadCount()`, but neither is a notifications system. |
+| Header chrome (search icon, profile avatar) missing | ✅ **Confirmed missing.** `UserRound` is imported in `SideNav` but never rendered. |
+| Pathway browse by health area (icon grid) | ⚠️ **Partly built.** The eight categories exist and group the catalogue, but there are no icons — `LearningCatalogue` imports nothing from `lucide-react`. |
+| Video welcome from Lorna | ✅ **Confirmed missing.** `WelcomeExperience` contains no video element. |
+| Polls / surveys / NPD trials | ✅ **Confirmed missing.** Every match for "poll" is `setInterval` polling, unrelated. |
+| Practitioner-facing contraindications / product knowledge | ✅ **Confirmed missing.** `knowledge/` holds dossiers for the AI; there is no browsing UI. |
+| "Our processes" content page | ✅ **Confirmed missing.** |
+| Personalisation by specialism or interest | ✅ **Confirmed missing.** No specialism or interest field exists anywhere. |
 
 ### Two data facts worth knowing
 
-- **All 12  dossiers are still ** — 12 of 12. Unchanged,
-  and still the longest-lead launch item.
-- **No seeded event has a recording**, so the On-Demand tab renders "Recording to follow"
-  cards rather than players. That is correct behaviour, not a bug — but it means the tab
-  cannot be judged visually until a real recording URL exists.
+- **All 12 `knowledge/` dossiers are still `AWAITING APPROVAL`** — 12 of 12, unchanged.
+  Still the longest-lead launch item, and still not something code can resolve.
+- **No seeded event carries a recording URL**, so the On-Demand tab renders
+  "Recording to follow" cards rather than players. That is correct behaviour, not a
+  bug — but the tab cannot be judged visually until a real recording exists.
+
+### Revised build order after this pass
+
+1. **Notifications + header chrome** — confirmed missing, self-contained, no product decision needed
+2. **Consultation + mentoring booking** — blocked: needs a real booking destination from the business
+3. **Category icons on the learning catalogue** — small polish, finishes a partly-built item
+4. **Global search** — still demoted; only worth it if practitioners report they cannot find things
+5. Deliberately later: polls/surveys, NPD trials, personalisation, native app, patient testing area
