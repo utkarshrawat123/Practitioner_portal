@@ -1632,6 +1632,89 @@ export async function savedItemRefs(
   return rows.map((r) => ({ itemType: r.item_type as SavedItemType, itemId: num(r.item_id) }));
 }
 
+export interface SavedItem {
+  itemType: SavedItemType;
+  itemId: number;
+  savedAt: string;
+  title: string;
+  description: string | null;
+  /** Where the card links to. */
+  href: string;
+  /** Small type line under the title, e.g. "Protocol" or "Video". */
+  meta: string | null;
+}
+
+/**
+ * Hydrated saved items, newest first.
+ *
+ * Access is re-checked HERE, on read, never trusted from save time: a
+ * qualified-only toolkit item must disappear if the practitioner stops being
+ * qualified. Deleted and unpublished rows drop out the same way — the lookup
+ * simply does not return them, so a stale save renders as nothing rather than
+ * as a broken card.
+ *
+ * Only toolkit_resources carries an `audience` column; media and lessons gate
+ * on published/status alone.
+ */
+export async function listSavedItems(
+  practitionerId: number,
+  qualificationStatus: QualificationStatus | null
+): Promise<SavedItem[]> {
+  const saved = await all(
+    `SELECT item_type, item_id, created_at FROM saved_items
+     WHERE practitioner_id = ? ORDER BY created_at DESC, id DESC`,
+    [practitionerId]
+  );
+  if (saved.length === 0) return [];
+
+  const practitioner = qualificationStatus ? { qualificationStatus } : null;
+  const out: SavedItem[] = [];
+
+  for (const s of saved) {
+    const itemType = s.item_type as SavedItemType;
+    const itemId = num(s.item_id);
+    const savedAt = String(s.created_at);
+
+    if (itemType === 'toolkit') {
+      const r = await one(`SELECT * FROM toolkit_resources WHERE id = ? AND published = 1`, [itemId]);
+      if (!r) continue;
+      const resource = rowToToolkit(r);
+      if (!hasAccess(practitioner, resource)) continue;
+      out.push({
+        itemType, itemId, savedAt,
+        title: resource.title,
+        description: resource.description,
+        href: '/toolkit',
+        meta: resource.type,
+      });
+    } else if (itemType === 'media') {
+      const r = await one(`SELECT * FROM media WHERE id = ? AND published = 1`, [itemId]);
+      if (!r) continue;
+      const media = rowToMedia(r);
+      out.push({
+        itemType, itemId, savedAt,
+        title: media.title,
+        description: media.description,
+        href: media.url,
+        meta: media.type,
+      });
+    } else if (itemType === 'lesson') {
+      const r = await one(`SELECT * FROM lessons WHERE id = ? AND status = 'published'`, [itemId]);
+      if (!r) continue;
+      const lesson = rowToLesson(r);
+      out.push({
+        itemType, itemId, savedAt,
+        title: lesson.title,
+        description: lesson.summary,
+        href: '/library',
+        meta: 'Lesson',
+      });
+    }
+  }
+
+  return out;
+}
+
 export interface CommunityPost {
   id: number; practitionerId: number; authorName: string; postType: string;
   title: string; body: string; pinned: boolean; hidden: boolean; createdAt: string;
