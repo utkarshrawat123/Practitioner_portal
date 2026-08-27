@@ -43,8 +43,10 @@ constraint and may need revisiting once it is known.
 
 A full-width `bg-navy-soft` card immediately below the `h1`, holding four tiles.
 
-- Layout: `grid sm:grid-cols-2 lg:grid-cols-4`, separated by `border-r border-white/10`
-  with `max-lg:border-0` so the rule does not strand itself when the row wraps.
+- Layout: `grid gap-px sm:grid-cols-2 lg:grid-cols-4` over a `bg-white/10` wrapper, so the
+  1px gaps themselves draw the hairlines and stay correct however the grid wraps. (The
+  first draft used `border-r` + `max-lg:border-0`; the gap technique needs no breakpoint
+  special-casing at all.)
 - Each tile: uppercase `tracking-label` micro-label in `terracotta-light`, a large
   Fraunces figure in white, and a `→` affordance. The whole tile is a button that opens
   the relevant section.
@@ -61,7 +63,8 @@ Tiles, and where each number comes from:
 | Referrals to approve | `referralsAwaitingApproval` from the new endpoint | `referrals` |
 | New this week | `newPractitioners7d` from the new endpoint | `applications`, tab all |
 
-**Zero state:** figures render `0` muted (`text-white/40`). The band does not collapse or
+**Zero state:** figures render `0` muted (`text-white/55` — 5.86:1; `/40` measured 4.35:1,
+which would only have passed at large-text sizes). The band does not collapse or
 disappear — it is wayfinding as much as alerting, and a band that vanishes when quiet
 teaches the admin to distrust its absence.
 
@@ -75,6 +78,9 @@ teaches the admin to distrust its absence.
 - Card descriptions: `text-ink2/60` → `text-ink2/75`.
 - Cards gain `focus-visible:ring-2 focus-visible:ring-terracotta-mid focus-visible:ring-offset-2`
   — they are `<button>`s and keyboard users currently get only the UA default.
+- **Also swept:** the applications table and detail panel in the same file carried
+  `text-ink2/60` (3.40:1) and `text-ink2/70` (4.41:1). Both are under the floor and both
+  are now `/75`. Same file, no primitive touched, so decision 2 still holds.
 - Corner badges stay exactly as they are on Applications and Live Chat.
 
 ### 3.3 Counts — only where one genuinely exists
@@ -103,7 +109,11 @@ source on a different refresh cadence would let the band and the badge disagree.
 ```
 
 Composed from `listPractitioners('flagged')`, `listReferralsAwaitingApproval()`, and one
-new `lib/db.ts` helper `countPractitionersSince(sqlUtc: string): Promise<number>`.
+new `lib/db.ts` helper `countPractitionersSince(days: number): Promise<number>`.
+
+**Deviation from the original draft:** the helper takes a day count rather than a
+pre-built SQL timestamp, keeping the `datetime()` arithmetic inside the data layer. The
+modifier is bound as a parameter and the count floored, so a caller cannot reach the SQL.
 
 It **replaces** the existing standalone flagged-count `fetch` in `AdminDashboard`, so the
 landing makes one overview request rather than growing a second one. Fetched on mount and
