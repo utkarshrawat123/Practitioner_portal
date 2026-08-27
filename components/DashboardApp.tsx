@@ -86,7 +86,7 @@ export default function DashboardApp() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [widgets, setWidgets] = useState<Widget[]>([]);
-  const [pathways, setPathways] = useState<PathwayCard[]>([]);
+  const [pathways, setPathways] = useState<PathwayCard[] | null>(null);
   const [pearls, setPearls] = useState<Pearl[]>([]);
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
@@ -192,10 +192,16 @@ export default function DashboardApp() {
   const p = me.practitioner;
   const empty = stats && !stats.stale && stats.clicksAllTime === 0 && stats.ordersAllTime === 0;
 
-  const inProgress = pathways
+  const pathwayList = pathways ?? [];
+  const inProgress = pathwayList
     .filter((x) => x.progress.percent > 0 && !x.progress.complete)
     .sort((a, b) => b.progress.percent - a.progress.percent);
-  const current = inProgress[0] ?? pathways.find((x) => x.progress.percent === 0) ?? null;
+  const current = inProgress[0] ?? pathwayList.find((x) => x.progress.percent === 0) ?? null;
+  // Pathways, not lessons. This tile only appears once nothing is in progress —
+  // i.e. exactly when the practitioner has finished things — so it should report
+  // the unit they actually completed and that CPD rewards with a certificate. A
+  // lesson tally here was read as a course count twice.
+  const completedPathways = pathwayList.filter((x) => x.progress.complete).length;
 
   return (
     <Page>
@@ -226,8 +232,10 @@ export default function DashboardApp() {
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-blush p-6">
               <div>
                 <p className="font-heading text-[26px] leading-none text-ink">
-                  {stats ? stats.lessonsCompleted : '—'}{' '}
-                  <span className="font-body text-[15px] text-ink2/60">lessons completed</span>
+                  {pathways === null ? '—' : completedPathways}{' '}
+                  <span className="font-body text-[15px] text-ink2/60">
+                    {completedPathways === 1 ? 'pathway completed' : 'pathways completed'}
+                  </span>
                 </p>
                 <p className="mt-2 text-[13px] text-ink2/70">
                   Explore structured pathways to earn CPD certificates.
