@@ -22,6 +22,7 @@ import AdminFactory from '@/components/AdminFactory';
 import AdminCalendar from '@/components/AdminCalendar';
 import AdminPearls from '@/components/AdminPearls';
 import AdminReferrals from '@/components/AdminReferrals';
+import AdminTriageBand from '@/components/AdminTriageBand';
 
 interface Verification {
   reasonCode: string;
@@ -59,11 +60,9 @@ const GROUPS: { title: string; cards: SectionCard[] }[] = [
     { id: 'pearls', label: 'Pearls', desc: 'Clinical pearls', Icon: Lightbulb },
     { id: 'calendar', label: 'Calendar', desc: 'Content schedule', Icon: Calendar },
   ] },
-  { title: 'Community and events', cards: [
+  { title: 'Community & communication', cards: [
     { id: 'community', label: 'Community', desc: 'Posts and replies', Icon: Users },
     { id: 'events', label: 'Events', desc: 'Webinars and meetups', Icon: CalendarDays },
-  ] },
-  { title: 'Communication', cards: [
     { id: 'chat', label: 'Live Chat', desc: 'Practitioner support', Icon: MessageSquare },
   ] },
   { title: 'Insights and ops', cards: [
@@ -101,7 +100,13 @@ export default function AdminDashboard() {
   const [section, setSection] = useState<string | null>(null);
   const [tab, setTab] = useState('flagged');
   const [rows, setRows] = useState<Practitioner[]>([]);
-  const [flaggedCount, setFlaggedCount] = useState(0);
+  // Triage-band counts. Unread chat is NOT here — the 2.5s poller below owns
+  // that figure, and a second source would let band and badge disagree.
+  const [overview, setOverview] = useState({
+    flaggedApplications: 0,
+    referralsAwaitingApproval: 0,
+    newPractitioners7d: 0,
+  });
   const [selected, setSelected] = useState<Practitioner | null>(null);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [busy, setBusy] = useState(false);
@@ -126,14 +131,14 @@ export default function AdminDashboard() {
 
   useEffect(() => { load(section, tab); }, [section, tab, load]);
 
-  // Keep the Flagged count badge fresh: refetch when authed and whenever the
-  // section changes (e.g. returning home after approving someone).
+  // Keep the triage counts fresh: refetch when authed and whenever the section
+  // changes (e.g. returning home after approving someone).
   useEffect(() => {
     if (authed !== true) return;
     let alive = true;
-    fetch('/api/admin/practitioners?status=flagged')
+    fetch('/api/admin/overview')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (alive && d) setFlaggedCount(d.practitioners.length); })
+      .then((d) => { if (alive && d) setOverview(d); })
       .catch(() => {});
     return () => { alive = false; };
   }, [authed, section]);
@@ -216,7 +221,7 @@ export default function AdminDashboard() {
     return (
       <form onSubmit={login} className="mx-auto mt-16 max-w-sm rounded-card bg-white p-8 shadow-card">
         <p className="font-heading text-[26px] leading-tight text-ink">Admin console</p>
-        <label className="mt-6 mb-1.5 block text-[11px] font-medium uppercase tracking-label text-ink2/55">Admin password</label>
+        <label className="mt-6 mb-1.5 block text-[11px] font-medium uppercase tracking-label text-ink2/75">Admin password</label>
         <input
           type="password" value={password} onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-xl border-0 bg-white px-4 py-3 text-[15px] shadow-card outline-none ring-1 ring-ink/5 focus:ring-2 focus:ring-terracotta-mid/50"
@@ -267,7 +272,7 @@ export default function AdminDashboard() {
         ) : (
           <button
             onClick={goHome}
-            className="group inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-label text-ink2/55 transition-colors hover:text-terracotta"
+            className="group inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-label text-ink2/75 transition-colors hover:text-terracotta"
           >
             <ChevronLeft size={13} className="transition-transform group-hover:-translate-x-0.5" /> All sections
           </button>
@@ -286,7 +291,7 @@ export default function AdminDashboard() {
         you were in Media, Reporting or anywhere else.
       */}
       <header className="mb-8">
-        <p className="text-[11px] font-medium uppercase tracking-label text-ink2/55">
+        <p className="text-[11px] font-medium uppercase tracking-label text-ink2/75">
           {section === null ? 'Admin' : currentGroupTitle}
         </p>
         <h1 className="mt-2 font-heading text-[34px] leading-[1.15] tracking-[-0.01em] text-ink lg:text-[40px]">
@@ -296,20 +301,30 @@ export default function AdminDashboard() {
 
       {section === null ? (
         <div className="space-y-8">
+          <AdminTriageBand
+            counts={{ ...overview, unreadChats: chatUnread }}
+            onOpen={(target, nextTab) => {
+              if (nextTab !== undefined) setTab(nextTab);
+              openSection(target);
+            }}
+          />
           {GROUPS.map((g) => (
             <div key={g.title}>
-              <p className="mb-3 text-[11px] font-medium uppercase tracking-label text-ink2/55">{g.title}</p>
+              <div className="mb-3 flex items-center gap-3">
+                <p className="text-[11px] font-medium uppercase tracking-label text-ink2">{g.title}</p>
+                <span className="h-px flex-1 bg-ink/10" aria-hidden="true" />
+              </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {g.cards.map(({ id, label, desc, Icon }) => {
-                  const badge = id === 'applications' ? flaggedCount : id === 'chat' ? chatUnread : 0;
+                  const badge = id === 'applications' ? overview.flaggedApplications : id === 'chat' ? chatUnread : 0;
                   return (
                     <button
                       key={id}
                       onClick={() => openSection(id)}
-                      className="group relative flex flex-col items-start rounded-card bg-white p-5 text-left shadow-card transition-shadow hover:shadow-lift"
+                      className="group relative flex flex-col items-start rounded-card bg-white p-5 text-left shadow-card transition-shadow hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-mid focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
                     >
                       {badge > 0 && (
-                        <span className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1.5 text-[11px] font-semibold text-white">
+                        <span className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1.5 text-[11px] font-semibold tabular-nums text-white">
                           {badge}
                         </span>
                       )}
@@ -317,7 +332,7 @@ export default function AdminDashboard() {
                         <Icon size={18} strokeWidth={1.7} />
                       </span>
                       <span className="text-[15px] font-medium text-ink">{label}</span>
-                      <span className="mt-0.5 text-[13px] text-ink2/60">{desc}</span>
+                      <span className="mt-0.5 text-[13px] text-ink2/75">{desc}</span>
                     </button>
                   );
                 })}
@@ -372,7 +387,7 @@ export default function AdminDashboard() {
             <div className="min-w-0 overflow-x-auto">
             <table className="w-full border-collapse bg-white text-sm">
               <thead>
-                <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-[0.1em] text-ink2/70">
+                <tr className="border-b border-ink/10 text-left text-xs uppercase tracking-[0.1em] text-ink2/75">
                   <th className="p-3">Name</th><th className="p-3">Register</th>
                   <th className="p-3">Status</th><th className="p-3">Reason</th><th className="p-3">Applied</th>
                 </tr>
@@ -386,12 +401,12 @@ export default function AdminDashboard() {
                       selected?.id === p.id ? 'bg-sage/30' : ''
                     }`}
                   >
-                    <td className="p-3">{p.name}<br /><span className="text-xs text-ink2/60">{p.email}</span></td>
+                    <td className="p-3">{p.name}<br /><span className="text-xs text-ink2/75">{p.email}</span></td>
                     <td className="p-3">{p.registerBody} #{p.registerNumber}</td>
                     <td className="p-3">
                       <span className={
                         p.status === 'approved' ? 'text-terracotta' :
-                        p.status === 'flagged' ? 'text-terracotta' : 'text-ink2/70'
+                        p.status === 'flagged' ? 'text-terracotta' : 'text-ink2/75'
                       }>
                         {p.status}{p.pendingSync ? ' (sync pending)' : ''}
                       </span>
@@ -401,7 +416,7 @@ export default function AdminDashboard() {
                   </tr>
                 ))}
                 {rows.length === 0 && (
-                  <tr><td colSpan={5} className="p-6 text-center text-ink2/60">Nothing here.</td></tr>
+                  <tr><td colSpan={5} className="p-6 text-center text-ink2/75">Nothing here.</td></tr>
                 )}
               </tbody>
             </table>
@@ -444,11 +459,11 @@ export default function AdminDashboard() {
                           Open certification{selected.certificationFilename ? ` (${selected.certificationFilename})` : ''} →
                         </a>
                         {selected.certificationUploadedAt && (
-                          <p className="mt-1 text-xs text-ink2/60">Uploaded {selected.certificationUploadedAt}</p>
+                          <p className="mt-1 text-xs text-ink2/75">Uploaded {selected.certificationUploadedAt}</p>
                         )}
                       </>
                     ) : (
-                      <p className="mt-1 text-ink2/70">
+                      <p className="mt-1 text-ink2/75">
                         Not yet uploaded — the student has been emailed a secure upload link.
                       </p>
                     )}
@@ -474,7 +489,7 @@ export default function AdminDashboard() {
                     </button>
                   )}
                 </div>
-                <h3 className="mt-6 text-[11px] font-medium uppercase tracking-label text-ink2/70">Audit trail</h3>
+                <h3 className="mt-6 text-[11px] font-medium uppercase tracking-label text-ink2/75">Audit trail</h3>
                 <ul className="mt-2 space-y-2 text-xs">
                   {events.map((e) => (
                     <li key={e.id} className="border-l-2 border-sage pl-3">
