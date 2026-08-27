@@ -11,6 +11,24 @@ export PATH="/c/Users/UtkarshRawat/AppData/Local/node/node-v22.20.0-win-x64:$PAT
 
 ---
 
+## 0. Quickest start — double-click it
+
+```
+start-portal.cmd
+```
+
+In `C:UsersUtkarshRawatProjectspractitioner-portal`. It cd's to the project, kills a
+stale worker still holding `.open-next`, puts node on PATH if it is missing, and starts the
+Cloudflare preview. `start-portal.cmd dev` runs the fast `:3100` server instead.
+
+Two things that look like failures and are not:
+
+- **Running npm from your home folder** gives `Could not read package.json`. You are in the
+  wrong directory — that is exactly what the script prevents.
+- **The build goes quiet for a minute or two** during `Collecting build traces`. It is not hung.
+
+---
+
 ## 1. Which server to run
 
 | Command | Port | Use it for |
