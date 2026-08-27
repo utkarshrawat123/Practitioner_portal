@@ -318,10 +318,13 @@ export default function AdminDashboard() {
                 {g.cards.map(({ id, label, desc, Icon }) => {
                   const badge = id === 'applications' ? overview.flaggedApplications : id === 'chat' ? chatUnread : 0;
                   return (
-                    // Focus uses outline, not ring: a Tailwind ring is drawn with
-                    // box-shadow and lost to shadow-card here — measured in the browser,
-                    // both ring slots resolved to `0 0 #0000` while the card shadow
-                    // rendered. outline is a separate property, so nothing overwrites it.
+                    // Focus uses outline rather than a Tailwind ring. A ring is drawn
+                    // with box-shadow, and this card also has `transition-shadow`, so a
+                    // ring-based indicator animates in over 150ms — focus indicators
+                    // should be immediate. outline is a separate, non-transitioned
+                    // property. (A browser measurement suggested the ring never painted
+                    // at all; that turned out to be an artefact of a non-compositing
+                    // pane freezing the transition, not a real defect.)
                     <button
                       key={id}
                       onClick={() => openSection(id)}

@@ -158,17 +158,38 @@ layout. `npm test` passing proves the endpoint works and nothing more.
 | "Awaiting review" tile | opens Applications, selects Flagged, table shows 2 rows — matches the band figure |
 | "New this week" tile | opens Applications, selects All, table shows 8 rows |
 
-### The bug this pass caught
+### A false positive I nearly shipped — worth adding to §6
 
-The section cards' focus ring **never rendered**. Under a real `:focus-visible`
-state the triage tile's inset ring painted while the card's did not — the card's
-`box-shadow` kept both ring slots at `0 0 #0000` and drew only `shadow-card`.
+Mid-pass, measurement said the section cards' focus ring **never rendered**: the
+tile's inset ring painted while the card's `box-shadow` kept both ring slots at
+`0 0 #0000`. I committed a fix explaining it as "a Tailwind ring is composed
+into box-shadow, so it competes with `shadow-*`".
 
-**A Tailwind `ring` is composed into `box-shadow`, so it competes with any
-`shadow-*` on the same element.** Fixed by moving the cards to `outline`, a
-separate property nothing can overwrite. The class list read correctly in both
-cases, so grep could not have found this — it is a fresh instance of the
-`NEXT_SESSION.md` §6.5 rule.
+**That explanation was wrong, and so was the finding.** Checking further:
+
+- `shadow-card` + `ring-1` composes correctly — the ring paints. So rings do not
+  simply lose to shadows.
+- In the compiled CSS, `.focus-visible:ring-2:focus-visible` is both later and
+  more specific than `.shadow-card, .shadow-lift`, so it wins `box-shadow`.
+- `document.hasFocus()` is **false** and `visibilityState` is `hidden` in this
+  pane. `:focus` and `:focus-visible` therefore cannot be measured here at all,
+  and CSS transitions do not advance without animation frames.
+- The card carries `transition-shadow`; the triage tile carries
+  `transition-colors`. Only the card's indicator is transitioned — so only the
+  card read as its pre-transition value. That difference, not a cascade
+  conflict, explains the whole observation.
+
+**The original ring code was most likely fine.** The change to `outline` is kept
+on its own merit: a focus indicator should appear instantly, and `outline` is
+not transitioned by `transition-shadow`, so it cannot animate in. It is also
+immune to this measurement trap.
+
+**New gotcha, generalised:** a hidden or non-compositing browser pane cannot
+measure `:focus`/`:focus-visible` and freezes transitions. Any computed-style
+reading of a transitioned or focus-dependent property there is unreliable.
+"Verify styling in a browser, not with grep" is necessary but not sufficient —
+the browser has to be *composited and focused*. This sits alongside §6.7
+(headless overlay scrollbars) as a case where the measuring instrument lies.
 
 ### Not verified
 
