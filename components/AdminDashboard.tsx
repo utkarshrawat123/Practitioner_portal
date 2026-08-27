@@ -318,10 +318,14 @@ export default function AdminDashboard() {
                 {g.cards.map(({ id, label, desc, Icon }) => {
                   const badge = id === 'applications' ? overview.flaggedApplications : id === 'chat' ? chatUnread : 0;
                   return (
+                    // Focus uses outline, not ring: a Tailwind ring is drawn with
+                    // box-shadow and lost to shadow-card here — measured in the browser,
+                    // both ring slots resolved to `0 0 #0000` while the card shadow
+                    // rendered. outline is a separate property, so nothing overwrites it.
                     <button
                       key={id}
                       onClick={() => openSection(id)}
-                      className="group relative flex flex-col items-start rounded-card bg-white p-5 text-left shadow-card transition-shadow hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta-mid focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
+                      className="group relative flex flex-col items-start rounded-card bg-white p-5 text-left shadow-card transition-shadow hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-mid"
                     >
                       {badge > 0 && (
                         <span className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1.5 text-[11px] font-semibold tabular-nums text-white">
