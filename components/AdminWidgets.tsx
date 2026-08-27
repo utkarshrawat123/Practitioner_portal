@@ -103,10 +103,10 @@ export default function AdminWidgets() {
           <div key={w.id} className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-white shadow-card p-4">
             <div className="min-w-0">
               <p className="font-heading text-lg text-ink">{w.title}
-                {!w.published && <span className="ml-2 text-xs uppercase tracking-[0.15em] text-ink2/50">hidden</span>}
+                {!w.published && <span className="ml-2 text-[11px] font-medium uppercase tracking-label text-ink2/50">hidden</span>}
               </p>
               {w.body && <p className="truncate text-sm text-ink2/70">{w.body}</p>}
-              <p className="mt-1 text-xs uppercase tracking-[0.15em] text-ink2/50">Audience: {w.audience}</p>
+              <p className="mt-1 text-[11px] font-medium uppercase tracking-label text-ink2/50">Audience: {w.audience}</p>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <button onClick={() => move(i, -1)} disabled={i === 0} className="ring-1 ring-ink/10 px-2 py-1 disabled:opacity-40">↑</button>

@@ -214,26 +214,39 @@ export default function AdminDashboard() {
 
   if (authed === false) {
     return (
-      <form onSubmit={login} className="mt-10 max-w-sm rounded-card bg-white shadow-card p-8">
-        <label className="mb-1.5 block text-xs uppercase tracking-[0.15em]">Admin password</label>
+      <form onSubmit={login} className="mx-auto mt-16 max-w-sm rounded-card bg-white p-8 shadow-card">
+        <p className="font-heading text-[26px] leading-tight text-ink">Admin console</p>
+        <label className="mt-6 mb-1.5 block text-[11px] font-medium uppercase tracking-label text-ink2/55">Admin password</label>
         <input
           type="password" value={password} onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-xl border-0 bg-white px-4 py-3 text-[15px] shadow-card outline-none ring-1 ring-ink/5 focus:ring-2 focus:ring-terracotta-mid/50"
         />
         {loginError && <p className="mt-2 text-sm text-terracotta">{loginError}</p>}
-        <button className="mt-5 w-full inline-flex items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50 hover:bg-terracotta">
+        <button className="mt-5 inline-flex w-full items-center justify-center rounded-pill bg-navy px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-navy-mid disabled:opacity-50">
           Log in
         </button>
       </form>
     );
   }
 
+  // Title + group for the open section, derived from GROUPS so a new section
+  // cannot end up with a stale or missing heading.
+  const openCard = section === null
+    ? null
+    : GROUPS.flatMap((g) => g.cards.map((c) => ({ ...c, group: g.title }))).find((c) => c.id === section);
+  const currentTitle = section === null
+    ? 'Admin console'
+    : section === 'applications'
+      ? 'Practitioner applications'
+      : openCard?.label ?? 'Admin console';
+  const currentGroupTitle = openCard?.group ?? 'Applications';
+
   return (
-    <div className="mt-8">
+    <div>
       {chatToast && (
         <button
           onClick={() => { openSection('chat'); setChatToast(false); }}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-card bg-navy px-5 py-4 text-left text-cream shadow-2xl"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-card bg-navy px-5 py-4 text-left text-white shadow-2xl"
         >
           <span className="relative flex h-3 w-3">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-terracotta opacity-75" />
@@ -248,49 +261,63 @@ export default function AdminDashboard() {
         </button>
       )}
 
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-5 flex items-center justify-between gap-4">
         {section === null ? (
           <span />
         ) : (
           <button
             onClick={goHome}
-            className="flex items-center gap-1 text-xs uppercase tracking-[0.15em] text-ink2 transition-colors hover:text-terracotta"
+            className="group inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-label text-ink2/55 transition-colors hover:text-terracotta"
           >
-            <ChevronLeft size={14} /> All sections
+            <ChevronLeft size={13} className="transition-transform group-hover:-translate-x-0.5" /> All sections
           </button>
         )}
         <button
           onClick={logout}
-          className="whitespace-nowrap text-xs uppercase tracking-[0.2em] text-ink2 transition-colors hover:text-terracotta"
+          className="whitespace-nowrap rounded-pill bg-white px-4 py-1.5 text-[13px] text-ink2 shadow-card transition-colors hover:text-terracotta"
         >
           Log out
         </button>
       </div>
 
+      {/*
+        The title follows the open section. It used to be a static
+        "Practitioner applications" in the page shell, which stayed wrong while
+        you were in Media, Reporting or anywhere else.
+      */}
+      <header className="mb-8">
+        <p className="text-[11px] font-medium uppercase tracking-label text-ink2/55">
+          {section === null ? 'Admin' : currentGroupTitle}
+        </p>
+        <h1 className="mt-2 font-heading text-[34px] leading-[1.15] tracking-[-0.01em] text-ink lg:text-[40px]">
+          {currentTitle}
+        </h1>
+      </header>
+
       {section === null ? (
         <div className="space-y-8">
           {GROUPS.map((g) => (
             <div key={g.title}>
-              <p className="mb-3 text-xs uppercase tracking-[0.15em] text-terracotta">{g.title}</p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-label text-ink2/55">{g.title}</p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {g.cards.map(({ id, label, desc, Icon }) => {
                   const badge = id === 'applications' ? flaggedCount : id === 'chat' ? chatUnread : 0;
                   return (
                     <button
                       key={id}
                       onClick={() => openSection(id)}
-                      className="group relative flex flex-col items-start rounded-xl rounded-card bg-white shadow-card p-4 text-left transition-colors hover:border-terracotta"
+                      className="group relative flex flex-col items-start rounded-card bg-white p-5 text-left shadow-card transition-shadow hover:shadow-lift"
                     >
                       {badge > 0 && (
-                        <span className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1.5 text-[11px] font-semibold text-cream">
+                        <span className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1.5 text-[11px] font-semibold text-white">
                           {badge}
                         </span>
                       )}
-                      <span className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta/10 text-terracotta">
-                        <Icon size={18} />
+                      <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blush text-terracotta transition-colors group-hover:bg-terracotta group-hover:text-white">
+                        <Icon size={18} strokeWidth={1.7} />
                       </span>
-                      <span className="text-sm font-medium text-ink">{label}</span>
-                      <span className="mt-0.5 text-xs text-ink2/60">{desc}</span>
+                      <span className="text-[15px] font-medium text-ink">{label}</span>
+                      <span className="mt-0.5 text-[13px] text-ink2/60">{desc}</span>
                     </button>
                   );
                 })}
@@ -330,12 +357,12 @@ export default function AdminDashboard() {
         <AdminReferrals />
       ) : (
         <>
-          <div className="mb-4 flex gap-2 text-xs uppercase tracking-[0.15em]">
+          <div className="mb-5 flex flex-wrap gap-2">
             {APP_FILTERS.map((f) => (
               <button
                 key={f.id}
                 onClick={() => { setTab(f.id); setSelected(null); }}
-                className={`px-3 py-1.5 ${tab === f.id ? 'bg-navy text-white' : 'bg-stone/40 text-ink2'}`}
+                className={`rounded-pill px-4 py-1.5 text-[13px] transition-colors ${tab === f.id ? 'bg-terracotta-mid text-white' : 'bg-white text-ink2 shadow-card hover:text-ink'}`}
               >
                 {f.label}
               </button>
@@ -442,12 +469,12 @@ export default function AdminDashboard() {
                   )}
                   {selected.pendingSync && (
                     <button disabled={busy} onClick={() => act(selected.id, 'retry-sync')}
-                      className="rounded-card ring-1 ring-ink/15 px-5 py-2.5 text-xs uppercase tracking-[0.15em] disabled:opacity-50">
+                      className="rounded-card ring-1 ring-ink/15 px-5 py-2.5 text-[11px] font-medium uppercase tracking-label disabled:opacity-50">
                       Retry sync
                     </button>
                   )}
                 </div>
-                <h3 className="mt-6 text-xs uppercase tracking-[0.15em] text-ink2/70">Audit trail</h3>
+                <h3 className="mt-6 text-[11px] font-medium uppercase tracking-label text-ink2/70">Audit trail</h3>
                 <ul className="mt-2 space-y-2 text-xs">
                   {events.map((e) => (
                     <li key={e.id} className="border-l-2 border-sage pl-3">

@@ -141,7 +141,7 @@ export default function AdminLessons() {
 
           <div className="mt-6 flex flex-wrap gap-3">
             <button disabled={busy} onClick={() => act('save')}
-              className="rounded-card ring-1 ring-ink/15 px-5 py-2.5 text-xs uppercase tracking-[0.15em] disabled:opacity-50">
+              className="rounded-card ring-1 ring-ink/15 px-5 py-2.5 text-[11px] font-medium uppercase tracking-label disabled:opacity-50">
               Save edits
             </button>
             {selected?.status !== 'published' && (

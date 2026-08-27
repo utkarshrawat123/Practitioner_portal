@@ -116,7 +116,7 @@ export default function AdminChat() {
       <div className="mb-4 flex gap-2 border-b border-ink/10">
         {(['conversations', 'insights'] as const).map((v) => (
           <button key={v} onClick={() => setView(v)}
-            className={`px-4 py-2 text-xs uppercase tracking-[0.15em] ${
+            className={`px-4 py-2 text-[11px] font-medium uppercase tracking-label ${
               view === v ? 'border-b-2 border-terracotta text-terracotta' : 'text-ink2/70'
             }`}>
             {v === 'conversations' ? 'Conversations' : 'Insights & FAQs'}
@@ -126,7 +126,7 @@ export default function AdminChat() {
 
       {view === 'insights' ? <ChatInsights /> : (
       <>
-      <div className="mb-3 flex gap-2 text-xs uppercase tracking-[0.15em]">
+      <div className="mb-3 flex gap-2 text-[11px] font-medium uppercase tracking-label">
         {(['open', 'closed', 'all'] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-3 py-1.5 ${filter === f ? 'bg-navy text-white' : 'bg-stone/40 text-ink2'}`}>
@@ -135,7 +135,7 @@ export default function AdminChat() {
         ))}
       </div>
       <div className="mb-3 rounded-lg rounded-card bg-white shadow-card p-3">
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-terracotta">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-label text-terracotta">
           Online now ({online.length})
         </div>
         {online.length === 0 ? (
@@ -173,7 +173,7 @@ export default function AdminChat() {
                 </span>
                 <span className="flex items-center gap-2">
                   {c.adminUnread > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1 text-[11px] font-semibold text-cream">
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1 text-[11px] font-semibold text-white">
                       {c.adminUnread}
                     </span>
                   )}
@@ -198,7 +198,7 @@ export default function AdminChat() {
                   <p className="text-[11px] text-ink2/60">{active.practitionerEmail}</p>
                 </div>
                 <button onClick={() => toggleStatus(active.id, active.status === 'open' ? 'closed' : 'open')}
-                  className="text-xs uppercase tracking-[0.15em] text-ink2 hover:text-terracotta">
+                  className="text-[11px] font-medium uppercase tracking-label text-ink2 hover:text-terracotta">
                   {active.status === 'open' ? 'Close' : 'Reopen'}
                 </button>
               </div>
@@ -220,7 +220,7 @@ export default function AdminChat() {
                   rows={1} placeholder="Type your reply…"
                   className="max-h-24 flex-1 resize-none rounded-lg w-full rounded-xl border-0 bg-white px-4 py-2.5 text-[14px] text-ink shadow-card outline-none ring-1 ring-ink/5 placeholder:text-ink2/40 focus:ring-2 focus:ring-terracotta-mid/50" />
                 <button disabled={sending || !draft.trim()}
-                  className="rounded-lg bg-terracotta px-4 py-2 text-sm font-medium text-cream disabled:opacity-50">
+                  className="rounded-lg bg-terracotta px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
                   Send
                 </button>
               </form>

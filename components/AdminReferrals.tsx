@@ -63,7 +63,7 @@ export default function AdminReferrals() {
       {/* Approval queue — only populated when REFERRAL_REQUIRE_APPROVAL=true. */}
       {pending.length > 0 && (
         <div className="mt-4 rounded-card bg-blush p-5">
-          <h3 className="text-xs uppercase tracking-[0.15em] text-ink2/70">
+          <h3 className="text-[11px] font-medium uppercase tracking-label text-ink2/70">
             Awaiting approval ({pending.length})
           </h3>
           <ul className="mt-3 space-y-2">

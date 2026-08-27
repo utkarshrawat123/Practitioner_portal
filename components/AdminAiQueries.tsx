@@ -76,7 +76,7 @@ export default function AdminAiQueries() {
 
       {selected && (
         <div className="h-fit rounded-card bg-white shadow-card p-6 text-sm">
-          <p className="text-xs uppercase tracking-[0.15em] text-ink2/70">Query #{selected.id}</p>
+          <p className="text-[11px] font-medium uppercase tracking-label text-ink2/70">Query #{selected.id}</p>
           <p className="mt-2"><span className="font-semibold">Practitioner:</span> {selected.practitionerName ?? '—'}</p>
           <p className="mt-2 whitespace-pre-wrap border-l-2 border-sage bg-cream p-3">{selected.profileInput}</p>
           {selected.safetyFlags.length > 0 && (

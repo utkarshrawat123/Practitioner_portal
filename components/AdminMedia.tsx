@@ -203,8 +203,8 @@ export default function AdminMedia() {
               <MediaCard key={m.id} item={m}>
                 <div className="mt-3 flex items-center gap-3 border-t border-ink/10 pt-3 text-xs">
                   <span className={m.published ? 'text-terracotta' : 'text-ink2/60'}>{m.published ? 'Visible' : 'Hidden'}</span>
-                  <button onClick={() => toggle(m.id, !m.published)} className="uppercase tracking-[0.15em] text-ink2/70 hover:text-terracotta">{m.published ? 'Hide' : 'Show'}</button>
-                  <button onClick={() => remove(m.id)} className="uppercase tracking-[0.15em] text-terracotta hover:underline">Delete</button>
+                  <button onClick={() => toggle(m.id, !m.published)} className="rounded-pill px-3 py-1 text-[13px] text-ink2/70 transition-colors hover:bg-blush hover:text-ink">{m.published ? 'Hide' : 'Show'}</button>
+                  <button onClick={() => remove(m.id)} className="rounded-pill px-3 py-1 text-[13px] text-terracotta ring-1 ring-terracotta/30 transition-colors hover:bg-terracotta/10">Delete</button>
                 </div>
               </MediaCard>
             ))}

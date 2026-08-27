@@ -5,19 +5,33 @@ export const metadata = { title: 'Admin | WN Practitioner Community' };
 
 export default function AdminPage() {
   return (
-    <>
-      <header className="border-b border-stone bg-cream">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
-          <AdminLogoLink className="shrink-0 font-heading text-2xl tracking-wide text-ink">
-            Wild Nutrition<sup className="align-super text-xs">®</sup>
-            <span className="ml-3 align-middle text-xs uppercase tracking-[0.2em] text-ink2/60">Admin</span>
+    <div className="min-h-screen bg-cream">
+      {/*
+        Navy bar rather than the old cream strip with a hard bottom border: it
+        echoes the practitioner sidebar, so admin reads as the same product
+        seen from the other side rather than a different tool.
+      */}
+      <header className="bg-navy">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5 lg:px-10">
+          <AdminLogoLink className="shrink-0">
+            <span className="block font-body text-[15px] font-semibold uppercase tracking-[0.18em] text-white">
+              Wild Nutrition<sup className="align-super text-[8px]">®</sup>
+            </span>
+            <span className="mt-1 block font-body text-[9px] uppercase tracking-[0.3em] text-terracotta-light">
+              Admin console
+            </span>
           </AdminLogoLink>
         </div>
       </header>
-      <div className="mx-auto max-w-7xl px-6 py-10">
-        <h1 className="font-heading text-3xl text-ink">Practitioner applications</h1>
+
+      {/*
+        The page title lives in AdminDashboard, not here: it has to change with
+        the selected section. It used to be a static "Practitioner applications"
+        that stayed put while you were in Media or Reporting.
+      */}
+      <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-12">
         <AdminDashboard />
       </div>
-    </>
+    </div>
   );
 }
