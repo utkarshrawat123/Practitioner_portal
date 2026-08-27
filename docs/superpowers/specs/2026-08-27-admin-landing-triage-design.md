@@ -142,12 +142,57 @@ layout. `npm test` passing proves the endpoint works and nothing more.
   landing at ≥4.5:1, no horizontal overflow, focus ring visible on keyboard traversal.
   Grep cannot verify a grep-driven change (`NEXT_SESSION.md` §6.5).
 
+## 5b. What verification actually found — 2026-08-27
+
+| Check | Result |
+|---|---|
+| `npm test` | 525 passed / 112 files (520 baseline + 5 new) |
+| `npm run build` | clean; `/api/admin/overview` registered |
+| `preview:cf` — endpoint on real workerd + local D1 | 401 unauthed; authed `{"flaggedApplications":2,"referralsAwaitingApproval":0,"newPractitioners7d":6}` |
+| Contrast, every text node, 1280px | **0 failures** |
+| Contrast, every text node, 375px | **0 failures** |
+| Horizontal overflow | none at either width (`scrollWidth === clientWidth`) |
+| Band tokens | tiles `rgb(17,32,49)`, labels `rgb(235,186,165)`, figures 32px Fraunces with `tabular-nums` active, zero-state `rgba(255,255,255,0.55)` |
+| Group headings | solid `rgb(51,64,79)` (10.57:1) across all four groups; 1px `ink/10` rule |
+| Tile touch target | 122–123px tall at both widths |
+| "Awaiting review" tile | opens Applications, selects Flagged, table shows 2 rows — matches the band figure |
+| "New this week" tile | opens Applications, selects All, table shows 8 rows |
+
+### The bug this pass caught
+
+The section cards' focus ring **never rendered**. Under a real `:focus-visible`
+state the triage tile's inset ring painted while the card's did not — the card's
+`box-shadow` kept both ring slots at `0 0 #0000` and drew only `shadow-card`.
+
+**A Tailwind `ring` is composed into `box-shadow`, so it competes with any
+`shadow-*` on the same element.** Fixed by moving the cards to `outline`, a
+separate property nothing can overwrite. The class list read correctly in both
+cases, so grep could not have found this — it is a fresh instance of the
+`NEXT_SESSION.md` §6.5 rule.
+
+### Not verified
+
+**A live keyboard traversal.** The Browser pane in this environment does not
+composite (viewport reports 0×0), so ref-clicks and real key events are
+unavailable, and `:focus-visible` cannot be driven from script —
+`el.focus({focusVisible:true})` is not honoured. What *was* confirmed: the
+compiled CSS carries `outline-color: rgb(195,138,107)`, `outline-width: 2px`,
+`outline-offset: 2px` under `:focus-visible`, and those declarations render
+visibly when applied to the element. **Worth one manual Tab through the landing
+before this is called done.**
+
+Timers are also throttled in the hidden pane, so multi-step interaction scripts
+stall; each click and its assertion had to run as separate calls.
+
 ## 6. Out of scope / follow-ups
 
 - **Fix `Label` and the `/60` descriptions at source** in `components/ui/index.tsx` — the
   contrast defect is systemic across ~43 components. Deliberately deferred (decision 2).
 - Per-card counts for content sections — needs queue semantics that do not exist in the
   data model yet.
+- **The `ring` vs `shadow-*` conflict is repo-wide**, not local to this page. Any element
+  combining a Tailwind ring with a `shadow-*` utility has the same latent problem; worth a
+  sweep, and worth adding to `NEXT_SESSION.md` §6.
 - 21st.dev components are **not** imported. They assume shadcn/ui + framer-motion and
   would fight this project's own tokens. Conventions taken (`tabular-nums`, the
   `border-r`/`max-lg:border-0` divided row); no dependency added.
