@@ -1,0 +1,219 @@
+# Admin landing page — triage band + section-grid hierarchy
+
+Date: 2026-08-27. Branch: `feat/admin-landing-triage` off `cloudflare-migration`.
+Target: the section grid in `components/AdminDashboard.tsx` (the `GROUPS` array and its
+render block), plus one new admin API route.
+
+## 1. Problem
+
+The admin landing is 17 identical white cards in a uniform `sm:grid-cols-2 lg:grid-cols-4`
+grid, split into five titled groups. Concretely:
+
+1. **No prioritisation.** Applications — the only genuinely time-critical queue — renders
+   identically to Calendar. The one signal it carries is a small corner badge.
+2. **No live state.** 2 of 17 cards carry a count. To find out whether anything needs
+   attention, an admin must click into sections one at a time.
+3. **Two orphaned groups.** *Applications* and *Communication* hold a single card each. In
+   a 4-column grid each wastes three columns, so the page is taller than its content.
+4. **Failing text contrast** (measured, not grepped — see §5):
+
+   | Token | Used for | Ratio on white | WCAG AA (<18px needs 4.5:1) |
+   |---|---|---|---|
+   | `text-ink2/55` | group headings, micro-labels | 2.99:1 | fail |
+   | `text-ink2/60` | card descriptions | 3.40:1 | fail |
+   | `text-ink2/75` | — | 5.04:1 | pass |
+
+## 2. Decisions taken
+
+Confirmed with the user on 2026-08-27:
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Strip, promoted Applications card, or both? | **Strip only.** The triage band owns all urgency; Applications stays a normal card with its existing badge. Both would make the same number shout twice. |
+| 2 | How wide should the contrast fix go? | **Admin landing only.** The failing values come from the shared `Label` primitive (`components/ui/index.tsx`), used by ~43 components; fixing it at source needs a far wider re-verification pass than this change. Logged as a follow-up. |
+| 3 | Merge the single-card *Communication* group? | **Merge** into *Community and events* → "Community & communication". Four groups, no orphan row. |
+
+**Not received:** the user's message stated "Important constraint from the" and was
+truncated. They said to proceed anyway. This design was therefore built without that
+constraint and may need revisiting once it is known.
+
+## 3. Design
+
+### 3.1 Triage band (new)
+
+A full-width `bg-navy-soft` card immediately below the `h1`, holding four tiles.
+
+- Layout: `grid gap-px sm:grid-cols-2 lg:grid-cols-4` over a `bg-white/10` wrapper, so the
+  1px gaps themselves draw the hairlines and stay correct however the grid wraps. (The
+  first draft used `border-r` + `max-lg:border-0`; the gap technique needs no breakpoint
+  special-casing at all.)
+- Each tile: uppercase `tracking-label` micro-label in `terracotta-light`, a large
+  Fraunces figure in white, and a `→` affordance. The whole tile is a button that opens
+  the relevant section.
+- Figures use `tabular-nums` so digits do not reflow as the pollers update them.
+- Chosen navy because white-on-navy is 17.35:1 — contrast is trivially safe — and it
+  echoes the practitioner sidebar, so admin reads as the same product from the other side.
+
+Tiles, and where each number comes from:
+
+| Tile | Source | Opens |
+|---|---|---|
+| Awaiting review | `flaggedApplications` from the new endpoint | `applications`, tab `flagged` |
+| Unread chats | **existing `chatUnread` state** — not the endpoint (see §3.3) | `chat` |
+| Referrals to approve | `referralsAwaitingApproval` from the new endpoint | `referrals` |
+| New this week | `newPractitioners7d` from the new endpoint | `applications`, tab all |
+
+**Zero state:** figures render `0` muted (`text-white/55` — 5.86:1; `/40` measured 4.35:1,
+which would only have passed at large-text sizes). The band does not collapse or
+disappear — it is wayfinding as much as alerting, and a band that vanishes when quiet
+teaches the admin to distrust its absence.
+
+### 3.2 Section grid
+
+- Five groups become four: *Communication* (Live Chat) folds into
+  **"Community & communication"**.
+- Group headings: `text-ink2` solid (10.57:1) at 11px uppercase `tracking-label`, followed
+  by a `flex-1 border-t border-ink/10` hairline, giving the page vertical rhythm it
+  currently lacks.
+- Card descriptions: `text-ink2/60` → `text-ink2/75`.
+- Cards gain `focus-visible:ring-2 focus-visible:ring-terracotta-mid focus-visible:ring-offset-2`
+  — they are `<button>`s and keyboard users currently get only the UA default.
+- **Also swept:** the applications table and detail panel in the same file carried
+  `text-ink2/60` (3.40:1) and `text-ink2/70` (4.41:1). Both are under the floor and both
+  are now `/75`. Same file, no primitive touched, so decision 2 still holds.
+- Corner badges stay exactly as they are on Applications and Live Chat.
+
+### 3.3 Counts — only where one genuinely exists
+
+`lib/db.ts` has helpers for flagged applications, admin unread chat, and referrals awaiting
+approval. It has **no** queue for factory drafts, pearls, calendar, media, lessons,
+pathways or toolkit — there is no `factory` function in `lib/db.ts` at all.
+
+Those cards therefore get **no number**, not a decorative `0`. This is the
+*absence omits, never substitutes* rule: a `0` on a card with no underlying queue asserts
+"nothing to do here", which is a claim the data cannot support.
+
+**Unread chats is deliberately excluded from the endpoint.** `AdminDashboard` already runs
+a 2.5s poller that owns `chatUnread` for the toast. Serving the same figure from a second
+source on a different refresh cadence would let the band and the badge disagree.
+
+### 3.4 New endpoint
+
+`GET /api/admin/overview` — `isAuthed`-gated, `export const dynamic = 'force-dynamic'`,
+401 `{error:'Unauthorised'}` when unauthed, matching every other admin route.
+
+```
+{ flaggedApplications: number,
+  referralsAwaitingApproval: number,
+  newPractitioners7d: number }
+```
+
+Composed from `listPractitioners('flagged')`, `listReferralsAwaitingApproval()`, and one
+new `lib/db.ts` helper `countPractitionersSince(days: number): Promise<number>`.
+
+**Deviation from the original draft:** the helper takes a day count rather than a
+pre-built SQL timestamp, keeping the `datetime()` arithmetic inside the data layer. The
+modifier is bound as a parameter and the count floored, so a caller cannot reach the SQL.
+
+It **replaces** the existing standalone flagged-count `fetch` in `AdminDashboard`, so the
+landing makes one overview request rather than growing a second one. Fetched on mount and
+whenever `section` changes back to null (i.e. on returning home after a decision).
+
+## 4. Testing
+
+`tests/api-admin-overview.test.ts`, following the `tests/api-admin-referrals.test.ts`
+pattern (temp `DB_PATH`, `resetDbForTests()` in `afterEach`, SHA-256 cookie):
+
+1. 401s without the admin cookie.
+2. Returns all three keys for an authed admin.
+3. Counts a flagged practitioner and ignores an approved one.
+4. **7-day boundary:** a practitioner created 8 days ago is excluded; one created 6 days
+   ago is included.
+
+**No component tests exist in this repo**, so nothing in the suite can vouch for the
+layout. `npm test` passing proves the endpoint works and nothing more.
+
+## 5. Verification
+
+- `npm test` — full suite green (baseline 520).
+- `npm run build` — the real type-check gate; stop all servers first.
+- `npm run preview:cf` — required: new route + new D1 query.
+- **Browser-measured computed styles** at 1280px and 390px: every text colour on the
+  landing at ≥4.5:1, no horizontal overflow, focus ring visible on keyboard traversal.
+  Grep cannot verify a grep-driven change (`NEXT_SESSION.md` §6.5).
+
+## 5b. What verification actually found — 2026-08-27
+
+| Check | Result |
+|---|---|
+| `npm test` | 525 passed / 112 files (520 baseline + 5 new) |
+| `npm run build` | clean; `/api/admin/overview` registered |
+| `preview:cf` — endpoint on real workerd + local D1 | 401 unauthed; authed `{"flaggedApplications":2,"referralsAwaitingApproval":0,"newPractitioners7d":6}` |
+| Contrast, every text node, 1280px | **0 failures** |
+| Contrast, every text node, 375px | **0 failures** |
+| Horizontal overflow | none at either width (`scrollWidth === clientWidth`) |
+| Band tokens | tiles `rgb(17,32,49)`, labels `rgb(235,186,165)`, figures 32px Fraunces with `tabular-nums` active, zero-state `rgba(255,255,255,0.55)` |
+| Group headings | solid `rgb(51,64,79)` (10.57:1) across all four groups; 1px `ink/10` rule |
+| Tile touch target | 122–123px tall at both widths |
+| "Awaiting review" tile | opens Applications, selects Flagged, table shows 2 rows — matches the band figure |
+| "New this week" tile | opens Applications, selects All, table shows 8 rows |
+
+### A false positive I nearly shipped — worth adding to §6
+
+Mid-pass, measurement said the section cards' focus ring **never rendered**: the
+tile's inset ring painted while the card's `box-shadow` kept both ring slots at
+`0 0 #0000`. I committed a fix explaining it as "a Tailwind ring is composed
+into box-shadow, so it competes with `shadow-*`".
+
+**That explanation was wrong, and so was the finding.** Checking further:
+
+- `shadow-card` + `ring-1` composes correctly — the ring paints. So rings do not
+  simply lose to shadows.
+- In the compiled CSS, `.focus-visible:ring-2:focus-visible` is both later and
+  more specific than `.shadow-card, .shadow-lift`, so it wins `box-shadow`.
+- `document.hasFocus()` is **false** and `visibilityState` is `hidden` in this
+  pane. `:focus` and `:focus-visible` therefore cannot be measured here at all,
+  and CSS transitions do not advance without animation frames.
+- The card carries `transition-shadow`; the triage tile carries
+  `transition-colors`. Only the card's indicator is transitioned — so only the
+  card read as its pre-transition value. That difference, not a cascade
+  conflict, explains the whole observation.
+
+**The original ring code was most likely fine.** The change to `outline` is kept
+on its own merit: a focus indicator should appear instantly, and `outline` is
+not transitioned by `transition-shadow`, so it cannot animate in. It is also
+immune to this measurement trap.
+
+**New gotcha, generalised:** a hidden or non-compositing browser pane cannot
+measure `:focus`/`:focus-visible` and freezes transitions. Any computed-style
+reading of a transitioned or focus-dependent property there is unreliable.
+"Verify styling in a browser, not with grep" is necessary but not sufficient —
+the browser has to be *composited and focused*. This sits alongside §6.7
+(headless overlay scrollbars) as a case where the measuring instrument lies.
+
+### Not verified
+
+**A live keyboard traversal.** The Browser pane in this environment does not
+composite (viewport reports 0×0), so ref-clicks and real key events are
+unavailable, and `:focus-visible` cannot be driven from script —
+`el.focus({focusVisible:true})` is not honoured. What *was* confirmed: the
+compiled CSS carries `outline-color: rgb(195,138,107)`, `outline-width: 2px`,
+`outline-offset: 2px` under `:focus-visible`, and those declarations render
+visibly when applied to the element. **Worth one manual Tab through the landing
+before this is called done.**
+
+Timers are also throttled in the hidden pane, so multi-step interaction scripts
+stall; each click and its assertion had to run as separate calls.
+
+## 6. Out of scope / follow-ups
+
+- **Fix `Label` and the `/60` descriptions at source** in `components/ui/index.tsx` — the
+  contrast defect is systemic across ~43 components. Deliberately deferred (decision 2).
+- Per-card counts for content sections — needs queue semantics that do not exist in the
+  data model yet.
+- **The `ring` vs `shadow-*` conflict is repo-wide**, not local to this page. Any element
+  combining a Tailwind ring with a `shadow-*` utility has the same latent problem; worth a
+  sweep, and worth adding to `NEXT_SESSION.md` §6.
+- 21st.dev components are **not** imported. They assume shadcn/ui + framer-motion and
+  would fight this project's own tokens. Conventions taken (`tabular-nums`, the
+  `border-r`/`max-lg:border-0` divided row); no dependency added.

@@ -758,6 +758,19 @@ export async function listPractitioners(status?: Status): Promise<Practitioner[]
   return rows.map(rowToPractitioner);
 }
 
+/**
+ * Practitioners who signed up within the last `days` days — the admin triage
+ * band's "new this week" figure. The modifier is bound as a parameter rather
+ * than interpolated, and `days` is floored, so a caller cannot reach the SQL.
+ */
+export async function countPractitionersSince(days: number): Promise<number> {
+  const row = await one(
+    `SELECT COUNT(*) AS n FROM practitioners WHERE created_at >= datetime('now', ?)`,
+    [`-${Math.max(0, Math.floor(days))} days`]
+  );
+  return num(row?.n);
+}
+
 export async function addEvent(practitionerId: number, type: string, detail: string): Promise<void> {
   await run(`INSERT INTO events (practitioner_id, type, detail) VALUES (?, ?, ?)`, [
     practitionerId,

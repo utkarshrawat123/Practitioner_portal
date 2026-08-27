@@ -12,12 +12,18 @@ export default function AdminPage() {
         seen from the other side rather than a different tool.
       */}
       <header className="bg-navy">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5 lg:px-10">
-          <AdminLogoLink className="shrink-0">
-            <span className="block font-body text-[15px] font-semibold uppercase tracking-[0.18em] text-white">
-              Wild Nutrition<sup className="align-super text-[8px]">®</sup>
+        {/*
+          Centred rather than tucked into the top-left corner: the console has no
+          other header furniture to balance against, so a left-aligned lockup read
+          as an afterthought. justify-center + text-center keeps it optically
+          centred at every width, and the type is a step larger to match.
+        */}
+        <div className="mx-auto flex max-w-7xl items-center justify-center gap-4 px-6 py-6 lg:px-10">
+          <AdminLogoLink className="shrink-0 text-center">
+            <span className="block font-body text-[19px] font-semibold uppercase tracking-[0.18em] text-white">
+              Wild Nutrition<sup className="align-super text-[10px]">®</sup>
             </span>
-            <span className="mt-1 block font-body text-[9px] uppercase tracking-[0.3em] text-terracotta-light">
+            <span className="mt-1.5 block font-body text-[11px] uppercase tracking-[0.3em] text-terracotta-light">
               Admin console
             </span>
           </AdminLogoLink>
