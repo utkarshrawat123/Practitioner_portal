@@ -1,7 +1,7 @@
-# Pick up here — session handover (updated 2026-08-25, session 2)
+# Pick up here — session handover (updated 2026-08-27, session 3)
 
-Read `HANDOVER.md` first for the app itself. **This file is only "where we are right
-now and what to do next."**
+Read `HANDOVER.md` for the app itself. **This file is only "where we are right now and
+what to do next."** It supersedes the session-2 version of this file entirely.
 
 ---
 
@@ -9,148 +9,208 @@ now and what to do next."**
 
 ```
 repo     https://github.com/utkarshrawat123/Practitioner_portal
-default  cloudflare-migration    @ 5de6544  (reskin merged in; decisions recorded)
-open     feat/go-live-hardening  @ 15b4fa9  (complete, green, NOT merged)
-open     feat/saved-items        @ 09a79d5  (spec only, no code yet)
+default  cloudflare-migration @ cae122d   (all work merged; 1 commit ahead of origin — PUSH IT)
 local    C:\Users\UtkarshRawat\Projects\practitioner-portal
-tests    477 passing / 104 files
+tests    520 passing / 111 files
 build    clean
-deploy   NOT deployed — no company credentials yet
+smoke    57/57
+deploy   NOT deployed — still waiting on company credentials
 ```
 
-**Everything runs locally with zero credentials.** Mock-until-keyed is the hard rule.
+**No unmerged branches.** 52 commits landed this session (`2e33944..cae122d`).
 
-### Environment on this machine (Windows only — no Mac, no admin rights)
+> ⚠️ **First thing to do:** `git push origin cloudflare-migration` — HEAD is one commit
+> ahead of origin (the admin shell restyle). Everything before it is pushed.
 
-Node is **not on PATH** inside tool shells. Export it first, every time:
+### Running it — the easy way
+
+**Double-click `start-portal.cmd`** in the project root. It cds to the project, kills a
+stale worker, puts node on PATH, and starts the Cloudflare preview on `:8787`. It prints
+the sign-in details while it builds.
+
+```
+start-portal.cmd          -> real Cloudflare runtime, :8787, ~3 min build
+start-portal.cmd dev      -> fast Node dev server,    :3100, seconds
+```
+
+Sign in: `http://localhost:8787/dashboard` → `sarah.whitfield@example.com` → the magic
+link appears **on screen**. Admin: `/admin`, password `preview-admin`.
+
+In tool shells node is not on PATH; export first:
+`export PATH="/c/Users/UtkarshRawat/AppData/Local/node/node-v22.20.0-win-x64:$PATH"`
+
+---
+
+## 2. What shipped this session
+
+### Features
+
+| Thing | Where |
+|---|---|
+| **Go-live hardening** — contact details behind `SUPPORT_EMAIL`, readiness catches "present but wrong" config | `lib/support.ts`, `lib/readiness.ts` |
+| **Nav regroup** — sidebar grouped to the deck pillars; every route reachable | `lib/nav.ts`, `components/SideNav.tsx` |
+| **Full brand reskin** — all practitioner pages + all 17 admin components | everywhere |
+| **Saved items / "My Clinic"** — save toolkit/resources/lessons, one page | migration `019`, `/my-clinic` |
+| **Notifications** — sidebar bell, fan-out on 4 triggers | migration `020`, `/api/me/notifications` |
+| **Events filter fix** — past events no longer vanish | `lib/events/tabs.ts` |
+| **Admin brand shell** — navy header, per-section title | `app/admin/page.tsx`, `AdminDashboard` |
+| **One-click launcher** | `start-portal.cmd` |
+
+### New verification tooling (use these)
 
 ```bash
-export PATH="/c/Users/UtkarshRawat/AppData/Local/node/node-v22.20.0-win-x64:$PATH"
+node scripts/smoke-local.mjs          # 57 checks: every page + API, admin auth enforced
+node scripts/verify-saved-items.mjs   # save -> admin unpublishes -> card vanishes -> republish
+node scripts/verify-notifications.mjs # publish as admin -> bell count rises -> mark all read
 ```
 
-```bash
-npm test            # 477
-npm run dev         # :3100
-npm run preview:cf  # :8787 — real workerd + local D1/R2
-npm run build       # STOP the dev server first (see §5)
-```
-
-Local admin password: **`preview-admin`**. Practitioner sign-in: `/dashboard` → enter a
-seeded email → the magic link appears **on screen**. Seeded accounts include
-`sarah.whitfield@example.com`.
+All three need the server running on `:8787` first.
 
 ---
 
-## 2. Decisions taken this session (these unblock the roadmap)
+## 3. Decisions taken (recorded in `docs/DECK_GAP_ANALYSIS.md` §7)
 
-Recorded in full in `docs/DECK_GAP_ANALYSIS.md` §7.
+1. **Fraunces ships** as the Gestura substitute. Swap point documented in `app/fonts.ts`.
+2. **Ask Lorna is dropped.** Ask the Expert stays as the only AI surface. Consequence:
+   **global search lost its main justification** and is deprioritised.
+3. **Nav regroups, routes do not move.** Practice Growth = Carts + Refer & Earn +
+   Leaderboard. My Clinic = Saved + Toolkit + Resources + Ask the Expert.
+4. **Shopify stays stubbed** — no dev-store proof. See the risk note in §5.
+5. **Support email = `utkarshrawatofficial@gmail.com` for now**, set as config in
+   `.env.local` / `.dev.vars` (both gitignored), **not** hardcoded. Swapping to a company
+   address is a one-line config change.
 
-| # | Decision |
+---
+
+## 4. Corrections — four claims in the docs were wrong
+
+Treat old doc claims as **leads to verify, not facts**. Four were wrong this session:
+
+| Claim | Truth |
 |---|---|
-| 1 | **Fraunces ships** as the Gestura substitute. The reskin no longer waits on sign-off; the swap point in `app/fonts.ts` stays documented. |
-| 2 | **Ask Lorna is dropped from scope.** Ask the Expert stays as the only AI surface. Consequence: **global search loses its main justification** and drops to item 6. |
-| 3 | **Nav regroups, routes do not move.** *Practice Growth* = Carts + Refer & Earn + Leaderboard. *My Clinic* = saved resources + Toolkit. No renames, no data migration. |
-| 4 | **Shopify stays stubbed** — no dev-store proof. See the risk note in §4. |
+| "Events On-Demand + My Events tabs are missing" | **Already built.** The real defect was a filter that hid past events. |
+| "`media` carries an `audience` column" (my own spec) | **It does not.** Only `toolkit_resources` and `pathways` do. |
+| "Consultation booking is a coming-soon stub" | **No stub exists.** Nothing at all is there. |
+| "Zero legacy patterns remain" (mine, twice) | **False.** See §6 — grep verified its own grep. |
 
-Revised build order: saved resources → nav regroup → Events On-Demand/My Events tabs →
-consultation booking → notifications → global search (demoted).
-
----
-
-## 3. What this session did
-
-**Merged:** `feat/brand-ui-redesign` fast-forwarded into `cloudflare-migration`. The repo
-had no unmerged branches at that point.
-
-**`feat/go-live-hardening` (complete, green, unmerged)** — removed every hardcoded
-personal/placeholder contact detail from shippable code and closed the readiness blind
-spot. 8 commits, TDD throughout, 437 → 468 tests.
-
-The design rule, which matters more than the diff: **absence omits, never substitutes.**
-No configured address means no contact line — never a wrong one. A missing address is
-visible in readiness; a wrong address is invisible and reaches practitioners.
-
-| Change | Where |
-|---|---|
-| `lib/support.ts` — `supportEmail()`, `fbGroupUrl()`, `outboundUserAgent()`, all null-when-unset | new |
-| Practitioner emails + SMTP reply-to | `lib/emails/templates.ts`, `lib/providers/smtp.ts` |
-| Chat alerts skip rather than mail a personal inbox | `lib/chat/alerts.ts` |
-| Outbound User-Agent to **external register sites** | `lib/registers/http.ts`, `lib/media/thumbnail.ts` |
-| Duplicate-application error copy | `app/api/apply/route.ts` |
-| Client surfaces take config **as props from server pages** | `SideNav`, `CertificationUpload`, `CommunityApp` |
-| Readiness: `support_email`, `fb_group`, `d1_id` + localhost-`PORTAL_URL` warning | `lib/readiness.ts` |
-
-**`feat/saved-items`** — spec only, no code:
-`docs/superpowers/specs/2026-08-25-saved-items-my-clinic-design.md`.
+`docs/DECK_GAP_ANALYSIS.md` §8 now holds a verification pass of every remaining gap claim,
+checked against code rather than the deck.
 
 ---
 
-## 4. Blocked on other people (no code possible)
+## 5. Blocked on other people — no code possible
 
-| Item | Blocker |
-|---|---|
-| **Support address + Facebook group URL** | **Business decision — needed before launch.** `SUPPORT_EMAIL` is required by readiness; until it is set, practitioners have no contact route (by design, not by accident). |
-| **Resend sender domain** | **DNS records — has a lead time of days.** Request from IT *at the same time as the API key*, not after. Most likely cause of a delayed launch. |
-| Go-live (Track A) | IT: Cloudflare account + D1/R2, Resend key, Gemini key **with billing** (current keys are 429 quota-exhausted), Shopify Admin token + webhook secret. |
-| KB clinical content | All **12** `knowledge/` dossiers are `AWAITING APPROVAL` drafts. Enforced by test. **Longest-lead item — start it in parallel, it will not compress at the end.** |
-| Shopify end-to-end proof | **Deliberately not done.** The `wn_cart_token` → `note_attributes` reconciliation has only run against stubbed fetches. The first real draft order happens in production — watch it on launch day. |
-| Real-device mobile pass | Only checked at 375px in devtools |
-| Referral email invites | Deliberately not built — consent/GDPR call for the business |
+| Item | Who | Note |
+|---|---|---|
+| **12/12 KB dossiers `AWAITING APPROVAL`** | Clinical | **Longest lead.** Gates the AI assistant for real practitioners; enforced by a test. Nothing in code moves this. Start it first. |
+| **Resend sender domain** | IT | **DNS records — days of lead time.** Request at the same time as the API key, not after. Most likely cause of a delayed launch. |
+| Cloudflare account + D1/R2 | IT | |
+| Gemini key **with billing** | IT | Current keys are 429 quota-exhausted. A key without quota looks configured and behaves broken. |
+| Shopify Admin token + webhook secret | IT | |
+| **Real support address** | Business | Currently the personal Gmail, by your decision. One line of config. |
+| **Facebook group URL** | Business | Unset, so the link is hidden rather than wrong. |
+| Shopify end-to-end proof | You (free, self-serve) | Deliberately skipped. `wn_cart_token` → `note_attributes` reconciliation has only run against stubbed fetches. **Watch the first real draft order.** |
+| Real-device mobile pass | You | Only emulated widths checked. |
 
----
-
-## 5. Gotchas that cost time (both sessions)
-
-1. **`npm run build` breaks ANY running server — `dev` *and* `preview:cf`.** Hit again
-   2026-08-26: running the build gate while `preview:cf` was serving clobbered the files
-   under the live worker; wrangler errored and exited. Stop every server first, then build.
-   If `.next` is corrupted: `rm -rf .next` and restart.
-2. **`preview:cf` needs `outputFileTracingIncludes`** in `next.config.mjs` for `@libsql/**`. **Do not remove that block.**
-3. **`rm -rf .open-next` fails with `EBUSY`** while any `workerd`/`wrangler` process lives.
-   Hit again this session. Fix: stop every `workerd`/`node` process, `rm -rf .open-next`, restart.
-4. **`.dev.vars`** (gitignored) supplies secrets to `wrangler dev` — the way to exercise keyed paths locally.
-5. **Windows CRLF + the KB bundle** — `knowledge/**` and `kb.bundle.json` are pinned to LF. Don't undo it.
-6. **Bash→Node path mangling:** a `/tmp/...` path passed to `node -e` becomes `C:\tmp\...`. Use `C:/...` form.
-7. **`grep -c` exits non-zero when the count is 0**, which silently truncates an `&&` chain. Use `;`.
-8. **`NEXT_PUBLIC_*` is a trap for runtime config.** Next inlines it at build time. Verified that
-   `NEXT_PUBLIC_FB_GROUP_URL` is *not* currently inlined (it is read server-side and passed as a prop),
-   but the name still invites the mistake. **Renaming it to `FB_GROUP_URL` is a pending suggestion.**
-9. **Docs drift is real** — re-check `HANDOVER.md` §13 and the test count after any chunk of work.
+Go-live once credentials land: ~30 min via `docs/CLOUDFLARE_GO_LIVE.md`. Target is
+`ready: true` **and an empty `warnings` array** at `/api/admin/readiness` — both.
 
 ---
 
-## 6. Local demo data
+## 6. Gotchas — read this before touching anything
 
-The local D1 (`.wrangler/state/`, shared between `dev` and `preview:cf`) is seeded:
-8 practitioners (2 deliberately **flagged**), 4 lessons, 3 media, 2 pathways with modules,
-4 toolkit items, 3 events, 3 pearls, 3 widgets, 3 community posts, 3 carts (2 paid),
-1 **credited £50 referral**.
-
-Wipe with: stop servers → delete `.wrangler/state/` → restart (schema self-migrates).
+1. **`npm run build` breaks ANY running server — `dev` *and* `preview:cf`.** Killed the
+   worker twice this session. Stop servers first. Intermittent, so it will not reliably
+   remind you.
+2. **`rm -rf .open-next` fails with `EBUSY`** while a `workerd`/`wrangler` process lives.
+   `start-portal.cmd` handles the normal case. One orphan (`workerd`) survived both
+   `taskkill /F` and `Stop-Process -Force` today; a reboot clears it.
+3. **`preview:cf` takes ~3 minutes and goes silent** at `Collecting build traces`. It is
+   not hung. Nothing serves until it finishes.
+4. **Running npm from the home folder** gives `Could not read package.json`. Wrong
+   directory, not a broken app.
+5. **Grep cannot verify a grep-driven change.** Two "zero legacy patterns remain" claims
+   were false. The survivors were:
+   - `border p-3 ${cond ? 'border-terracotta' : 'border-stone'}` — tokens **split by a
+     template literal**, so `border border-stone` never matched.
+   - `border border-terracotta`, `border-sage`, `border-forest` — never in the pattern.
+   **Verify styling by measuring computed styles in a browser**, not by searching source.
+6. **`npm test` passing does not mean it compiles.** 515 tests passed against a
+   `NotificationBell` with a JSX syntax error, because no test imports it. `npm run build`
+   is a required gate, not a nicety.
+7. **Headless Chrome uses overlay scrollbars**, so it cannot reproduce Windows scrollbar
+   bugs. A `scrollbarW: 0` measurement there proves nothing about the user's browser.
+8. **Watching a port proves something is serving, not that your change is.** A monitor
+   reported "LAUNCHER WORKS" while the launcher had failed and the *old* server answered.
+9. **Bash→Node path mangling:** `/tmp/x` passed to `node -e` becomes `C:\tmp\x`. Use `C:/…`.
+10. **Backticks inside a bash-quoted `node -e` script get executed by bash.** It silently
+    stripped every code reference from a doc. Write the script to a file instead.
+11. **`grep -c` exits non-zero on zero matches**, truncating an `&&` chain.
+12. **Windows CRLF + KB bundle** — `knowledge/**` and `kb.bundle.json` pinned to LF.
+13. **OpenNext warns it is not fully Windows-compatible** on every build. Has not caused a
+    failure; deploys run on Cloudflare's Linux builders. First suspect for a bizarre
+    local-only runtime error; WSL is the escape hatch.
 
 ---
 
 ## 7. Where to pick up
 
-1. **Merge `feat/go-live-hardening`** into `cloudflare-migration` (green, verified in workerd).
-2. **Decide the `FB_GROUP_URL` rename** (§5.8) — cheapest before merge.
-3. **Build `feat/saved-items`** from its spec, then write its plan the same way
-   (`docs/superpowers/plans/`). Branch it off `cloudflare-migration` *after* the merge in step 1
-   so it inherits the reskin primitives.
-4. **Then the nav regroup** — needs section headers in `SideNav`, which does not have them yet.
-   It also rescues `/resources`, `/library` and `/assistant`, which are **not in the sidebar at all**
-   today and reachable only from Dashboard quick-links.
+### Immediately
+
+1. **`git push origin cloudflare-migration`** — one commit ahead.
+2. **Chase the KB clinical approvals and the Resend DNS request.** Both are long-lead and
+   neither is code.
+
+### Requested but NOT started
+
+**"Use UI/UX skills and 21st.dev to improve the admin landing page."** Asked at the very
+end of the session; nothing was done. Notes for whoever picks it up:
+
+- The `ui-ux-pro-max` skill is available and is the right starting point.
+- **21st.dev components are React + Tailwind, usually assuming shadcn/ui and often
+  framer-motion.** This project has its own design system (`components/ui/index.tsx`) built
+  from sampled deck colours. Pulling components in wholesale would fight those tokens and
+  add dependencies. Recommendation: take *layout and interaction ideas* from 21st.dev,
+  implement with the existing primitives — do not import the components.
+- The admin landing is `AdminDashboard`'s section grid (the `GROUPS` array). It is now
+  brand-styled but still a plain 4-column grid of equal cards. Obvious improvements: give
+  Applications visual priority when items are flagged, surface live counts on the cards,
+  and add an at-a-glance strip (pending applications, unread chats, recent sign-ups).
+
+### Then, from the verified gap list (`DECK_GAP_ANALYSIS.md` §8)
+
+1. **Category icons** on the learning catalogue — small, finishes a partly-built item
+2. **Consultation + mentoring booking** — blocked: needs a real booking destination
+3. **Global search** — demoted; only if practitioners report they cannot find things
+4. Deliberately later: polls/surveys, NPD trials, personalisation, native app, patient
+   testing area (health-data/consent conversation first)
 
 ---
 
-## 8. Standing conventions (do not violate)
+## 8. What has and has not been verified
 
-- **TDD** — failing test first. Two gates before "done": `npm test` + `npm run build`.
-  Anything touching D1/R2/cron/routes **also** needs `npm run preview:cf`.
+**Verified exhaustively:** styling. Every practitioner page and all 15 admin sections
+measured in a browser via computed styles. Zero hard-bordered boxes, zero square action
+buttons, no horizontal overflow at 390px or 1280px.
+
+**Verified by tests:** 520 tests, plus three round-trip scripts against real workerd, plus
+migrations `019`/`020` confirmed applied to real local D1.
+
+**NOT verified:** nobody has used the app as a practitioner for an hour — real workflows
+end to end. That is the gap tests cannot close. `docs/LOCAL_TEST_DRIVE.md` has the
+admin↔practitioner round trips to work through.
+
+---
+
+## 9. Standing conventions (do not violate)
+
+- **TDD** — failing test first. Gates: `npm test` + `npm run build`. Anything touching
+  D1/R2/cron/routes **also** needs `npm run preview:cf`.
 - **Mock-until-keyed is sacred** — no feature may hard-require a key to boot.
-- **Absence omits, never substitutes** — never invent a contact detail, URL or fallback identity.
-- Edited `knowledge/`? → `npm run bundle-kb` and commit `lib/ai/kb.bundle.json`.
-- Adding a cron schedule? → edit **both** `wrangler.toml [triggers]` **and** `lib/cron/map.ts`.
+- **Absence omits, never substitutes** — never invent a contact detail, URL or fallback.
+- **Verify styling in a browser, not with grep** (§6.5).
+- Edited `knowledge/`? → `npm run bundle-kb`, commit `lib/ai/kb.bundle.json`.
+- New cron schedule? → edit **both** `wrangler.toml [triggers]` and `lib/cron/map.ts`.
 - Never reference `care@wildnutrition.com`.
-- Never touch `Utkarshraw123/practitioner-portal` (separate personal portfolio repo).
+- **Never touch `Utkarshraw123/practitioner-portal`** — separate personal portfolio repo.
 - Small branches off `cloudflare-migration`, each ending green.
