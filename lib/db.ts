@@ -1057,28 +1057,70 @@ export async function toggleCompletion(practitionerId: number, lessonId: number)
       practitionerId,
       lessonId,
     ]);
+    // Un-ticking a lesson means "I have not done this", so the module records
+    // for it must go too — otherwise the pathway would sit at 100% for a lesson
+    // the practitioner just un-ticked. Note this also clears a module that was
+    // completed from the pathway side: the two records cannot be told apart, and
+    // leaving it would contradict the un-tick.
+    await run(
+      `DELETE FROM module_completions
+        WHERE practitioner_id = ?
+          AND module_id IN (
+            SELECT id FROM pathway_modules WHERE content_kind = 'lesson' AND content_id = ?
+          )`,
+      [practitionerId, lessonId]
+    );
     return false;
   }
   await run(`INSERT INTO lesson_completions (practitioner_id, lesson_id) VALUES (?, ?)`, [
     practitionerId,
     lessonId,
   ]);
+  // Record the module side explicitly for every pathway that carries this
+  // lesson — a lesson can appear in more than one.
+  await run(
+    `INSERT INTO module_completions (practitioner_id, module_id)
+     SELECT ?, pm.id FROM pathway_modules pm
+      WHERE pm.content_kind = 'lesson' AND pm.content_id = ?
+     ON CONFLICT(practitioner_id, module_id) DO NOTHING`,
+    [practitionerId, lessonId]
+  );
   return true;
 }
 
+/**
+ * Every lesson this practitioner has completed, however they did it: directly
+ * from /library (`lesson_completions`) or as a pathway module
+ * (`module_completions` on a module whose content is that lesson).
+ *
+ * `pathwayProgress` has always unioned the first into the second. Before this
+ * unioned back, a lesson finished inside a pathway was invisible to every
+ * lesson count — which is how a practitioner who had completed two whole
+ * pathways saw "0 lessons completed" on their dashboard.
+ *
+ * UNION (not UNION ALL) dedupes a lesson completed both ways.
+ */
+const COMPLETED_LESSONS_SQL = `
+  SELECT lesson_id FROM lesson_completions WHERE practitioner_id = ?
+  UNION
+  SELECT pm.content_id AS lesson_id
+    FROM module_completions mc
+    JOIN pathway_modules pm ON pm.id = mc.module_id
+   WHERE mc.practitioner_id = ? AND pm.content_kind = 'lesson'`;
+
 export async function completedLessonIds(practitionerId: number): Promise<number[]> {
-  const rows = await all(
-    `SELECT lesson_id FROM lesson_completions WHERE practitioner_id = ? ORDER BY lesson_id`,
-    [practitionerId]
-  );
+  const rows = await all(`${COMPLETED_LESSONS_SQL} ORDER BY lesson_id`, [
+    practitionerId,
+    practitionerId,
+  ]);
   return rows.map((r) => num(r.lesson_id));
 }
 
 export async function countCompletions(practitionerId: number): Promise<number> {
-  const row = await one(
-    `SELECT COUNT(*) AS n FROM lesson_completions WHERE practitioner_id = ?`,
-    [practitionerId]
-  );
+  const row = await one(`SELECT COUNT(*) AS n FROM (${COMPLETED_LESSONS_SQL})`, [
+    practitionerId,
+    practitionerId,
+  ]);
   return num(row?.n);
 }
 
