@@ -3,9 +3,9 @@ import ApplyForm from '@/components/ApplyForm';
 export default function ApplyPage() {
   return (
     <div>
-      <section className="bg-sage/40">
+      <section className="bg-blush">
         <div className="mx-auto max-w-5xl px-6 py-16 text-center">
-          <p className="text-xs uppercase tracking-[0.25em] text-forest">For Practitioners</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-terracotta">For Practitioners</p>
           <h1 className="mx-auto mt-4 max-w-2xl font-heading text-4xl leading-tight text-ink md:text-5xl">
             Join our expert practitioner community
           </h1>
