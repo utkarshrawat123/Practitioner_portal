@@ -5,13 +5,23 @@ import { motion, useInView, useScroll, useTransform, type MotionValue } from 'fr
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 
-// Brand-aligned deep-forest palette (matches the platform's forest #3a4f41 +
-// terracotta #a45248 + cream #f8f6f3), a darker cinematic take for the takeover.
-const FOREST = '#24352C';
-const FOREST_DARK = '#182420';
-const TERRACOTTA = '#a45248';
-const CREAM = '#f8f6f3';
-const CARD = '#2E4038';
+/**
+ * Brand tokens, mirrored from tailwind.config.ts.
+ *
+ * This screen previously hardcoded the PRE-RESKIN palette (forest #3a4f41,
+ * terracotta #a45248, cream #f8f6f3) so it stayed green while the rest of the
+ * app moved to navy — re-pointing the Tailwind tokens could not reach raw hex.
+ *
+ * Raw values are still needed here because the radial gradient and the
+ * framer-motion inline styles cannot take Tailwind classes. Keep in step with
+ * tailwind.config.ts if the palette changes.
+ */
+const NAVY = '#061B32';        // navy.DEFAULT — page ground, matches the sidebar
+const NAVY_MID = '#16283C';    // navy.mid — lifts the gradient
+const NAVY_SOFT = '#112031';   // navy.soft — the mission card
+const CREAM = '#FAF6F3';       // cream
+const TERRA_MID = '#C38A6B';   // terracotta.mid — button fill (navy text = 5.9:1)
+const TERRA_LIGHT = '#EBBAA5'; // terracotta.light — accents on navy (9.5:1)
 
 function Grain() {
   return (
@@ -79,10 +89,10 @@ function StartButton() {
   return (
     <button onClick={start} disabled={busy}
       className="group mt-10 inline-flex items-center gap-3 rounded-full px-7 py-3 text-sm font-medium transition-all hover:gap-4 disabled:opacity-60"
-      style={{ backgroundColor: TERRACOTTA, color: FOREST, fontFamily: 'var(--font-inter)' }}>
+      style={{ backgroundColor: TERRA_MID, color: NAVY, fontFamily: 'var(--font-sans)' }}>
       Start Exploring
       <span className="flex h-7 w-7 items-center justify-center rounded-full transition-transform group-hover:scale-110"
-        style={{ backgroundColor: FOREST, color: CREAM }}>
+        style={{ backgroundColor: NAVY, color: CREAM }}>
         <ArrowRight size={16} />
       </span>
     </button>
@@ -91,30 +101,30 @@ function StartButton() {
 
 export default function WelcomeExperience({ firstName }: { firstName: string | null }) {
   return (
-    <div className="relative isolate" style={{ backgroundColor: FOREST, color: CREAM, fontFamily: 'var(--font-inter)' }}>
+    <div className="relative isolate" style={{ backgroundColor: NAVY, color: CREAM, fontFamily: 'var(--font-sans)' }}>
       <Grain />
       {/* Scene 1 — Hero */}
       <section className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center"
-        style={{ background: `radial-gradient(circle at 70% 20%, rgba(164,82,72,0.16), ${FOREST} 45%, ${FOREST_DARK})` }}>
+        style={{ background: `radial-gradient(circle at 70% 20%, rgba(195,138,107,0.18), ${NAVY_MID} 45%, ${NAVY})` }}>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}
           className="mb-10 text-sm tracking-[0.35em]"
-          style={{ fontFamily: 'var(--font-fraunces)', color: CREAM }}>
+          style={{ fontFamily: 'var(--font-display)', color: CREAM }}>
           WILD NUTRITION
         </motion.div>
         <WordPullUp text={firstName ? `Welcome, ${firstName}.` : 'Welcome.'}
           className="block max-w-5xl text-[10vw] font-light leading-[0.9] md:text-[7vw]"
-          style={{ fontFamily: 'var(--font-fraunces)', color: CREAM }} />
+          style={{ fontFamily: 'var(--font-display)', color: CREAM }} />
         <motion.p initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
           className="mt-8 max-w-lg text-base leading-relaxed"
-          style={{ color: 'rgba(248,246,243,0.7)' }}>
+          style={{ color: 'rgba(250,246,243,0.75)' }}>
           Lorna and the team built this platform because practitioners told us they wanted
           practical support that saves time in clinic and helps them deliver the best outcomes.
         </motion.p>
         <motion.div animate={{ y: [0, 8, 0] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
           className="absolute bottom-10 text-xs uppercase tracking-[0.25em]"
-          style={{ color: 'rgba(248,246,243,0.6)' }}>
+          style={{ color: 'rgba(250,246,243,0.6)' }}>
           Scroll to continue
         </motion.div>
       </section>
@@ -122,17 +132,17 @@ export default function WelcomeExperience({ firstName }: { firstName: string | n
       {/* Scene 2 — Mission */}
       <section className="relative flex min-h-screen items-center justify-center px-6 py-24">
         <div className="mx-auto w-full max-w-3xl rounded-2xl px-6 py-14 sm:px-12 sm:py-16"
-          style={{ backgroundColor: CARD }}>
-          <p className="text-xs font-medium uppercase tracking-[0.28em]" style={{ color: TERRACOTTA }}>
+          style={{ backgroundColor: NAVY_SOFT }}>
+          <p className="text-xs font-medium uppercase tracking-[0.28em]" style={{ color: TERRA_LIGHT }}>
             Practitioner Education
           </p>
           <h2 className="mt-6 text-3xl leading-snug sm:text-4xl md:text-5xl md:leading-tight">
             <WordPullUp text="This platform was shaped by"
-              style={{ fontFamily: 'var(--font-inter)', fontWeight: 400 }} />{' '}
+              style={{ fontFamily: 'var(--font-sans)', fontWeight: 400 }} />{' '}
             <WordPullUp text="Lorna Driver-Davies,"
-              style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', color: TERRACOTTA }} />{' '}
+              style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', color: TERRA_LIGHT }} />{' '}
             <WordPullUp text="Head of Practitioner Education at Wild Nutrition."
-              style={{ fontFamily: 'var(--font-inter)', fontWeight: 400 }} />
+              style={{ fontFamily: 'var(--font-sans)', fontWeight: 400 }} />
           </h2>
           <ScrollReveal text="Our mission is to support practitioners beyond the consultation room."
             className="mt-8 text-lg leading-relaxed" style={{ color: CREAM }} />
